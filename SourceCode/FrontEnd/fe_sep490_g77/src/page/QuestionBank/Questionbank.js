@@ -1,9 +1,12 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Input, Button, Card, Pagination } from 'antd';
 import { SearchOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import 'tailwindcss/tailwind.css';
 
 const QuestionBank = () => {
+  const navigate = useNavigate();
+
   // Dữ liệu mẫu
   const questionBanks = [
     {
@@ -32,6 +35,11 @@ const QuestionBank = () => {
     },
   ];
 
+  // Hàm điều hướng sang trang chi tiết khi click vào card
+  const handleCardClick = (id) => {
+    navigate(`/question-bank-detail/${id}`);
+  };
+
   return (
     <div className="p-4 bg-gray-100 min-h-screen">
       {/* Tiêu đề */}
@@ -41,13 +49,11 @@ const QuestionBank = () => {
 
       {/* Thanh tìm kiếm + nút tạo ngân hàng */}
       <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-        {/* Thanh tìm kiếm bên trái (rút gọn) */}
         <div className="flex items-center gap-2">
           <Input placeholder="Search..." className="w-24" size="small" />
           <Button type="primary" icon={<SearchOutlined />} shape="circle" size="small" />
         </div>
 
-        {/* Nút tạo ngân hàng bên phải */}
         <Button type="primary" className="bg-blue-500 hover:bg-blue-600 text-white">
           Tạo ngân hàng đề thi
         </Button>
@@ -56,11 +62,14 @@ const QuestionBank = () => {
       {/* Danh sách card */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
         {questionBanks.map((bank) => (
-          <Card key={bank.id} className="text-center shadow hover:shadow-md">
+          <Card
+            key={bank.id}
+            className="text-center shadow hover:shadow-md cursor-pointer"
+            onClick={() => handleCardClick(bank.id)} // Gọi hàm điều hướng
+          >
             <h2 className="font-bold text-lg mb-2">{bank.title}</h2>
             <p>Ngày tạo: {bank.createdAt}</p>
             <p>{bank.count} câu hỏi</p>
-            {/* Nút edit và delete với màu sắc nổi bật */}
             <div className="flex justify-center mt-4 gap-2">
               <Button
                 type="primary"
@@ -85,8 +94,7 @@ const QuestionBank = () => {
           </Card>
         ))}
       </div>
-
-      {/* Phân trang */}
+{/* Phân trang */}
       <div className="flex justify-center">
         <Pagination defaultCurrent={1} total={50} />
       </div>
