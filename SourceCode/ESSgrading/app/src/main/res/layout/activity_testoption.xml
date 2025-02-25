@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.drawerlayout.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/drawerLayout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- Nội dung chính -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:background="@color/light_gray">
+
+        <!-- Include Header -->
+        <include layout="@layout/header" />
+
+        <!-- Hiển thị mã đề -->
+        <TextView
+            android:id="@+id/txtExCode"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Mã đề"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:padding="10dp"
+            android:background="@android:color/white"
+            android:layout_margin="16dp"
+            android:textColor="@android:color/black"
+            app:cornerRadius="20dp"
+            android:focusable="false"/>
+
+        <!-- Nội dung chính -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <Button
+                android:id="@+id/btnCorrectAnswers"
+                android:layout_width="250dp"
+                android:layout_height="wrap_content"
+                android:text="Đáp án đúng"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:drawableLeft="@drawable/ic_key"
+                android:drawablePadding="8dp"
+                android:backgroundTint="@color/deepblue"
+                android:textColor="@android:color/white"
+                android:gravity="center"
+                android:padding="10dp"
+                android:layout_margin="10dp"
+                android:focusable="false"/>
+
+            <Button
+                android:id="@+id/btnGrading"
+                android:layout_width="250dp"
+                android:layout_height="wrap_content"
+                android:text="Chấm bài kiểm tra"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:drawableLeft="@drawable/ic_search"
+                android:drawablePadding="8dp"
+                android:backgroundTint="@color/deepblue"
+                android:textColor="@android:color/white"
+                android:gravity="center"
+                android:padding="10dp"
+                android:layout_margin="10dp"
+                android:focusable="false"/>
+        </LinearLayout>
+
+        <!-- Include Footer -->
+        <include layout="@layout/footer" />
+    </LinearLayout>
+
+    <!-- Navigation Drawer -->
+    <com.google.android.material.navigation.NavigationView
+        android:id="@+id/navigationView"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:layout_gravity="start"
+        app:headerLayout="@layout/nav_header"
+        app:menu="@menu/drawer_menu"/>
+
+</androidx.drawerlayout.widget.DrawerLayout>
