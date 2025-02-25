@@ -43,24 +43,24 @@ const Home = () => {
         <Sidebar />
 
         {/* Nội dung chính */}
-        <div className="flex-1 min-h-screen p-8 ml-64"> 
+        <div className="flex-1 min-h-screen p-8 ml-56"> 
           {/* Tiêu đề */}
           <h1 className="text-3xl font-bold text-blue-700 text-center mb-6">
             ESS - Hệ Thống Hỗ Trợ Thi Cử
           </h1>
 
           {/* Grid hiển thị 4 card tính năng */}
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mx-auto max-w-5xl">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mx-auto max-w-4xl">
             {features.map((item, index) => (
               <Card
                 key={index}
                 hoverable
-                className="shadow-md hover:shadow-lg transition-shadow duration-300 cursor-pointer p-6 flex flex-col items-center"
+                className="shadow-md hover:shadow-lg transition-shadow duration-300 cursor-pointer p-6 flex flex-col items-center text-center"
                 onClick={() => navigate(item.path)}
               >
                 <img src={item.img} alt={item.title} className="mb-3 w-20 h-20" />
                 <h2 className="text-lg font-bold mb-2">{item.title}</h2>
-                <p className="text-gray-600 text-center">{item.description}</p>
+                <p className="text-gray-600">{item.description}</p>
               </Card>
             ))}
           </div>
