@@ -53,14 +53,14 @@ const LoginPage = () => {
 
                         <input
                             type="text"
-                            placeholder="Email or username"
+                            placeholder="Email hoặc tên"
                             className="w-full px-3 py-2 border border-gray-300 rounded-full mb-4"
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
                         />
                         <input
                             type="password"
-                            placeholder="Password"
+                            placeholder="Mật khẩu"
                             className="w-full px-3 py-2 border border-gray-300 rounded-full mb-4"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
@@ -72,7 +72,7 @@ const LoginPage = () => {
                             // onClick={handleLogin}
                             className="w-full bg-blue-600 text-white py-2 rounded-full hover:bg-blue-700 mb-4"
                         >
-                            Continue
+                            Đăng nhập
                         </button>
 
                         <div className="flex items-center mb-4">
@@ -97,8 +97,11 @@ const LoginPage = () => {
                         />
 
                         <div className="flex justify-center items-center mt-4">
-                            <input type="checkbox" id="stay-signed-in" className="mr-2" />
-                            <label htmlFor="stay-signed-in" className="text-xl text-black">Stay signed in</label>
+                            {/* <input type="checkbox" id="stay-signed-in" className="mr-2" />
+                            <label htmlFor="stay-signed-in" className="text-xl text-black">Bạn quên mật khẩu ?</label> */}
+                            <span className="text-black text-sm text-center block mb-6">
+                                Bạn chưa có quên mật khẩu ? <a className='text-blue-600' href='/forgot-password'>Quên mật khẩu</a>
+                            </span>
                         </div>
                     </div>
                 </div>
