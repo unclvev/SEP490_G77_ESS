@@ -37,7 +37,7 @@ const RegistrationPage = () => {
               name="rePassword"
               placeholder="Mật khẩu xác nhận"
             />
-            <div className="text-gray-500 text-xs mt-4">
+            {/* <div className="text-gray-500 text-xs mt-4">
               By signing up, you agree to our{' '}
               <a href="/" className="text-black">
                 User Agreement
@@ -46,7 +46,7 @@ const RegistrationPage = () => {
               <a href="/" className="text-black">
                 User Privacy Notice
               </a>.
-            </div>
+            </div> */}
             <Button type="primary" htmlType="submit" className="w-full mt-4">
               Tạo tài khoản
             </Button>
