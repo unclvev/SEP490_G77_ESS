@@ -13,7 +13,7 @@ const ForgotPasswordPage = () => {
   };
 
   return (
-    // Thay nền trắng bằng gradient nhẹ từ xanh nhạt xuống trắng
+    
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-blue-100 to-white">
       
       {/* Biểu tượng và Tiêu đề */}

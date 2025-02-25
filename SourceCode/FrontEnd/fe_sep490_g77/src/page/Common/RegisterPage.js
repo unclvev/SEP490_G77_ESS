@@ -25,19 +25,19 @@ const RegistrationPage = () => {
         }}
       ></div>
       <div className="flex-1 flex items-center justify-center bg-gray-100">
-        <Card title="Create an account" className="w-full max-w-md">
+        <Card title="Tạo tài khoản cho riêng bạn" className="w-full max-w-md">
           <form className="space-y-4 mt-4">
-            <Input type="text" name="userName" placeholder="Username" />
+            <Input type="text" name="userName" placeholder="Tên" />
             <Input type="email" name="email" placeholder="Email" />
-            <Input type="text" name="address" placeholder="Address" />
-            <Input type="text" name="phoneNumber" placeholder="Phone Number" />
-            <Input type="password" name="password" placeholder="Password" />
+            <Input type="date" name="date" />
+            <Input type="text" name="phoneNumber" placeholder="Số điện thoại" />
+            <Input type="password" name="password" placeholder="Mật khẩu" />
             <Input
               type="password"
               name="rePassword"
-              placeholder="Re-enter Password"
+              placeholder="Mật khẩu xác nhận"
             />
-            <div className="text-gray-500 text-xs mt-4">
+            {/* <div className="text-gray-500 text-xs mt-4">
               By signing up, you agree to our{' '}
               <a href="/" className="text-black">
                 User Agreement
@@ -46,9 +46,9 @@ const RegistrationPage = () => {
               <a href="/" className="text-black">
                 User Privacy Notice
               </a>.
-            </div>
+            </div> */}
             <Button type="primary" htmlType="submit" className="w-full mt-4">
-              Create account
+              Tạo tài khoản
             </Button>
             <span className="text-black text-sm text-center block mb-6">
                             Bạn đã có tài khoản ? <a className='text-blue-600' href='/login'>Đăng nhập</a>
