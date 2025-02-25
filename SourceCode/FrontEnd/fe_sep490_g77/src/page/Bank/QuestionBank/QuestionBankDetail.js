@@ -1,6 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { Button, Collapse } from "antd";
+import { Button, Collapse, Dropdown, Menu } from "antd";
+import { MoreOutlined, EditOutlined, DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import "tailwindcss/tailwind.css";
 
 const { Panel } = Collapse;
@@ -38,6 +39,15 @@ const QuestionBankDetail = () => {
     ],
   };
 
+  // Menu cho dấu ba chấm
+  const menu = (
+    <Menu>
+      <Menu.Item key="1" icon={<PlusOutlined />}>Thêm cấu trúc con</Menu.Item>
+      <Menu.Item key="2" icon={<EditOutlined />}>Sửa</Menu.Item>
+      <Menu.Item key="3" icon={<DeleteOutlined />} danger>Xóa</Menu.Item>
+    </Menu>
+  );
+
   return (
     <div className="p-4 bg-gray-100 min-h-screen">
       {/* Tiêu đề */}
@@ -66,14 +76,39 @@ const QuestionBankDetail = () => {
         <h2 className="text-xl font-semibold mb-4">Cấu trúc ngân hàng câu hỏi</h2>
         <Collapse accordion>
           {detail.structure.map((item, index) => (
-            <Panel header={item.title} key={index}>
+            <Panel
+              header={
+                <div className="flex justify-between items-center">
+                  <span>{item.title}</span>
+                  <Dropdown overlay={menu} trigger={["click"]}>
+                    <MoreOutlined className="text-xl cursor-pointer" />
+                  </Dropdown>
+                </div>
+              }
+              key={index}
+            >
               <Collapse accordion>
                 {item.children.map((subItem, subIndex) => (
-                  <Panel header={subItem.title} key={`${index}-${subIndex}`}>
+                  <Panel
+                    header={
+                      <div className="flex justify-between items-center">
+                        <span>{subItem.title}</span>
+                        <Dropdown overlay={menu} trigger={["click"]}>
+                          <MoreOutlined className="text-xl cursor-pointer" />
+                        </Dropdown>
+                      </div>
+                    }
+                    key={`${index}-${subIndex}`}
+                  >
                     <ul className="list-disc list-inside space-y-1 pl-4">
                       {subItem.children.length > 0 ? (
                         subItem.children.map((content, contentIndex) => (
-                          <li key={`${index}-${subIndex}-${contentIndex}`}>{content}</li>
+                          <li key={`${index}-${subIndex}-${contentIndex}`} className="flex justify-between">
+                            {content}
+                            <Dropdown overlay={menu} trigger={["click"]}>
+                              <MoreOutlined className="text-xl cursor-pointer" />
+                            </Dropdown>
+                          </li>
                         ))
                       ) : (
                         <li className="italic text-gray-500">Không có nội dung</li>
