@@ -1,57 +1,90 @@
-import React from 'react';
-import { Button } from 'antd';
-import 'tailwindcss/tailwind.css';
+import React from "react";
+import { useNavigate } from "react-router-dom";
+import { Button, Collapse } from "antd";
+import "tailwindcss/tailwind.css";
+
+const { Panel } = Collapse;
 
 const QuestionBankDetail = () => {
-  // Ví dụ dữ liệu mô phỏng
+  const navigate = useNavigate();
+
+  // Điều hướng đến trang phân quyền
+  const handleNavigateDecentralization = () => {
+    navigate("/decentralization");
+  };
+
+  // Điều hướng đến trang danh sách câu hỏi
+  const handleNavigateQuestionList = () => {
+    navigate("/question-list");
+  };
+
+  // Cấu trúc câu hỏi
   const detail = {
     id: 2,
-    title: 'NGÂN HÀNG CÂU HỎI TOÁN 2',
+    title: "NGÂN HÀNG CÂU HỎI TOÁN 2",
     structure: [
-      'Số và phép tính',
-      'Số tự nhiên',
-      'Các phép tính với số tự nhiên',
-      'Hình học và đo lường',
-      'Hình học trực quan',
-      'Hình phẳng và hình không gian',
-      'Hình học tọa độ',
-      'Một số yếu tố thống kê và xác suất',
-      'Một số yếu tố xác suất'
-    ]
+      {
+        title: "Số và phép tính",
+        children: [{ title: "Số tự nhiên", children: ["Các phép tính với số tự nhiên"] }],
+      },
+      {
+        title: "Hình học và đo lường",
+        children: [{ title: "Hình học trực quan", children: ["Hình phẳng và hình không gian", "Hình học tọa độ"] }],
+      },
+      {
+        title: "Một số yếu tố thống kê và xác suất",
+        children: [{ title: "Một số yếu tố xác suất", children: [] }],
+      },
+    ],
   };
 
   return (
     <div className="p-4 bg-gray-100 min-h-screen">
-      {/* Tiêu đề trang */}
-      <h1 className="text-2xl md:text-3xl font-bold mb-6 text-center">
-        {detail.title}
-      </h1>
+      {/* Tiêu đề */}
+      <h1 className="text-2xl md:text-3xl font-bold mb-6 text-center">{detail.title}</h1>
 
-      {/* Khu vực 2 nút bên phải (Tạo câu hỏi, Nhập câu hỏi) */}
-      <div className="flex justify-end gap-4 mb-6">
-        <Button type="primary" className="bg-blue-500 hover:bg-blue-600 text-white">
-          + Tạo câu hỏi trong ngân hàng
-        </Button>
-        <Button className="bg-blue-100 hover:bg-blue-200">
-          + Nhập câu hỏi
-        </Button>
+      {/* Nhóm nút chức năng */}
+      <div className="flex justify-between items-center mb-8">
+        <div className="flex gap-4">
+          <Button className="bg-indigo-500 hover:bg-indigo-600 text-white">Cấu trúc</Button>
+          <Button className="bg-indigo-500 hover:bg-indigo-600 text-white" onClick={handleNavigateDecentralization}>
+            Phân quyền
+          </Button>
+          <Button className="bg-indigo-500 hover:bg-indigo-600 text-white" onClick={handleNavigateQuestionList}>
+            Xem số lượng câu hỏi
+          </Button>
+        </div>
+
+        <div className="flex gap-4">
+          <Button type="primary" className="bg-blue-500 hover:bg-blue-600 text-white">+ Tạo câu hỏi trong ngân hàng</Button>
+          <Button className="bg-blue-100 hover:bg-blue-200">+ Nhập câu hỏi</Button>
+        </div>
       </div>
 
-      {/* Nhóm 3 nút chức năng (Cấu trúc, Phân quyền, Xem số lượng câu hỏi) */}
-      <div className="flex gap-4 mb-8">
-        <Button type="primary">Cấu trúc</Button>
-        <Button>Phân quyền</Button>
-        <Button>Xem số lượng câu hỏi</Button>
-      </div>
-
-      {/* Nội dung Cấu trúc (dạng bullet list) */}
+      {/* Cấu trúc câu hỏi dưới dạng Collapse */}
       <div className="bg-white p-4 shadow-md rounded">
         <h2 className="text-xl font-semibold mb-4">Cấu trúc ngân hàng câu hỏi</h2>
-        <ul className="list-disc list-inside space-y-1">
-          {detail.structure.map((item, idx) => (
-            <li key={idx}>{item}</li>
+        <Collapse accordion>
+          {detail.structure.map((item, index) => (
+            <Panel header={item.title} key={index}>
+              <Collapse accordion>
+                {item.children.map((subItem, subIndex) => (
+                  <Panel header={subItem.title} key={`${index}-${subIndex}`}>
+                    <ul className="list-disc list-inside space-y-1 pl-4">
+                      {subItem.children.length > 0 ? (
+                        subItem.children.map((content, contentIndex) => (
+                          <li key={`${index}-${subIndex}-${contentIndex}`}>{content}</li>
+                        ))
+                      ) : (
+                        <li className="italic text-gray-500">Không có nội dung</li>
+                      )}
+                    </ul>
+                  </Panel>
+                ))}
+              </Collapse>
+            </Panel>
           ))}
-        </ul>
+        </Collapse>
       </div>
     </div>
   );
