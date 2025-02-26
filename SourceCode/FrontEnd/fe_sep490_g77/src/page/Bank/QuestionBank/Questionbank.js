@@ -42,7 +42,7 @@ const QuestionBank = () => {
           <Card 
             key={bank.id} 
             className="text-center shadow hover:shadow-md cursor-pointer" 
-            onClick={() => handleCardClick(bank.id)} // ✅ THÊM HÀM NÀY ĐỂ ĐIỀU HƯỚNG
+            onClick={() => handleCardClick(bank.id)} // ✅ THÊM HÀM NÀY ĐỂ ĐIỀU HƯỚNG ihihuuguguguguguguguggugugu
           >
             <h2 className="font-bold text-lg mb-2">{bank.title}</h2>
             <p>Ngày tạo: {bank.createdAt}</p>
