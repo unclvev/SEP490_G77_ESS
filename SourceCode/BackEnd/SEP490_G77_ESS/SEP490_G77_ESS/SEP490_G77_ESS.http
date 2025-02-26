@@ -1,0 +1,6 @@
+@SEP490_G77_ESS_HostAddress = http://localhost:5057
+
+GET {{SEP490_G77_ESS_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
