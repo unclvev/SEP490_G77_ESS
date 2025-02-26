@@ -1,17 +1,33 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { FileTextOutlined, BookOutlined, CheckCircleOutlined, QrcodeOutlined } from "@ant-design/icons";
+import { 
+  FileTextOutlined, 
+  BookOutlined, 
+  CheckCircleOutlined, 
+  QrcodeOutlined, 
+  HomeOutlined 
+} from "@ant-design/icons";
 
 const Sidebar = () => {
   return (
     <div className="w-72 bg-blue-700 h-screen fixed left-0 top-0 text-white p-6 flex flex-col items-center">
-      {/* Logo thêm vào Sidebar */}
+      {/* Logo trong hình tròn */}
       <div className="mb-6">
-        <img src="/logo.png" alt="Exam Support System" className="w-36 mx-auto" />
+        <img 
+          src="/logo.png" 
+          alt="Exam Support System" 
+          className="w-36 h-36 rounded-full mx-auto object-cover"
+        />
       </div>
 
       {/* Danh sách menu */}
       <ul className="w-full space-y-6">
+        <li>
+          <Link to="/" className="flex items-center space-x-4 text-lg hover:text-gray-300">
+            <HomeOutlined className="text-2xl text-white" />
+            <span className="font-semibold">Trang chủ</span>
+          </Link>
+        </li>
         <li>
           <Link to="/exam" className="flex items-center space-x-4 text-lg hover:text-gray-300">
             <FileTextOutlined className="text-2xl text-yellow-300" />

@@ -2,7 +2,7 @@ import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Home from "./page/Home/Home";
 import MainLayout from "./Layout/MainLayout";
-import QuestionBank from "./page/Bank/QuestionBank/Questionbank";
+import QuestionBank from "./page/Bank/QuestionBank/QuestionBank";
 import QuestionBankDetail from "./page/Bank/QuestionBank/QuestionBankDetail";
 import CreateQuestionBank from "./page/Bank/QuestionBank/CreateQuestionBank";
 import Decentralization from "./page/Bank/QuestionBank/Decentralization";
