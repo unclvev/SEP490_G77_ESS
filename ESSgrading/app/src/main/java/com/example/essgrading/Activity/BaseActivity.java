@@ -1,6 +1,7 @@
 package com.example.essgrading.Activity;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.ImageView;
@@ -21,6 +22,7 @@ public class BaseActivity extends AppCompatActivity {
     protected DrawerLayout drawerLayout;
     protected NavigationView navigationView;
     protected TextView headerTitle;
+    protected TextView userEmail; // Thêm biến cho email
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -35,6 +37,9 @@ public class BaseActivity extends AppCompatActivity {
         if (drawerLayout == null || navigationView == null) {
             return;
         }
+
+        // Lấy email từ SharedPreferences và cập nhật lên header
+        updateHeaderEmail();
 
         View menuIcon = findViewById(R.id.menuIcon);
         if (menuIcon != null) {
@@ -79,6 +84,19 @@ public class BaseActivity extends AppCompatActivity {
             drawerLayout.closeDrawer(GravityCompat.START);
         } else {
             super.onBackPressed();
+        }
+    }
+
+    // Cập nhật email trong header
+    private void updateHeaderEmail() {
+        View headerView = navigationView.getHeaderView(0);
+        userEmail = headerView.findViewById(R.id.userEmail);
+
+        SharedPreferences prefs = getSharedPreferences("UserPrefs", MODE_PRIVATE);
+        String email = prefs.getString("userEmail", "example@gmail.com"); // Giá trị mặc định
+
+        if (userEmail != null) {
+            userEmail.setText(email);
         }
     }
 
