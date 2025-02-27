@@ -1,8 +1,10 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using SEP490_G77_ESS.Models;
+using SEP490_G77_ESS.DTO;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using SEP490_G77_ESS.DTO.ExamDTO;
 
 namespace SEP490_G77_ESS.Controllers.ExamManager
 {
@@ -11,7 +13,7 @@ namespace SEP490_G77_ESS.Controllers.ExamManager
     public class ExamController : ControllerBase
     {
         [HttpPost]
-        public async Task<IActionResult> CreateExam([FromBody] Exam newExam)
+        public async Task<IActionResult> CreateExam([FromBody] ExamDTO newExam)
         {
             return Ok(new { message = $"Đã tạo bài kiểm tra '{newExam.Examname}' thành công với ID giả lập {newExam.ExamId}." });
         }
@@ -20,10 +22,10 @@ namespace SEP490_G77_ESS.Controllers.ExamManager
         public async Task<ActionResult<IEnumerable<Exam>>> GetExamByUser()
         {
             // Tạo danh sách dữ liệu giả
-            var fakeExams = new List<Exam>
+            var fakeExams = new List<ExamDTO>
             {
-                new Exam { ExamId = 1, Examname = "Toán cấp 1", Createdate = DateTime.UtcNow, AccId = 1 },
-                new Exam { ExamId = 2, Examname = "Toán nâng cao", Createdate = DateTime.UtcNow, AccId = 1 }
+                new ExamDTO { ExamId = 1, Examname = "Toán cấp 1", Createdate = DateTime.UtcNow, AccId = 1 },
+                new ExamDTO { ExamId = 2, Examname = "Toán nâng cao", Createdate = DateTime.UtcNow, AccId = 1 }
             };
 
             return Ok(fakeExams);

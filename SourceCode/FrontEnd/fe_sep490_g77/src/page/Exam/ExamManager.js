@@ -1,17 +1,16 @@
 import React, { useEffect, useState } from "react";
-import { Card, Dropdown, Menu, Button, Input, Spin, message, Modal } from "antd";
-import { SettingOutlined, EditOutlined, DeleteOutlined, PlusOutlined, ExclamationCircleOutlined } from "@ant-design/icons";
+import { Card, Button, Input, Spin, message, Modal } from "antd";
+import { SettingOutlined, EditOutlined, DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
-
-const { confirm } = Modal;
 
 const ExamManagement = () => {
   const navigate = useNavigate();
   const [exams, setExams] = useState([]);
   const [loading, setLoading] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [selectedExam, setSelectedExam] = useState(null);
-  const [newExamName, setNewExamName] = useState("");
+  const [newName, setNewExamName] = useState("");
 
   useEffect(() => {
     fetchExams();
@@ -20,7 +19,7 @@ const ExamManagement = () => {
   const fetchExams = async () => {
     setLoading(true);
     try {
-      const response = await fetch("http://localhost:5057/api/exam"); // Cập nhật URL theo server của bạn
+      const response = await fetch("https://localhost:7052/api/exam");
       const data = await response.json();
       setExams(data);
     } catch (error) {
@@ -30,33 +29,25 @@ const ExamManagement = () => {
     }
   };
 
-  const deleteExamById = async (examId) => {
+  const deleteExamById = async () => {
     try {
-      const response = await fetch(`http://localhost:5057/api/exam/${examId}`, {
+      const response = await fetch(`https://localhost:7052/api/Exam/${selectedExam}`, {
         method: "DELETE",
       });
 
       if (!response.ok) throw new Error("Xóa thất bại");
 
       message.success("Xóa đề thi thành công!");
-      setExams((prevExams) => prevExams.filter((exam) => exam.examId !== examId)); // Cập nhật danh sách sau khi xóa
+      setExams((prevExams) => prevExams.filter((exam) => exam.examId !== selectedExam));
+      setDeleteModalVisible(false);
     } catch (error) {
       message.error("Lỗi khi xóa đề thi!");
     }
   };
 
-  const showDeleteConfirm = (examId) => {
-    confirm({
-      title: "Bạn có chắc chắn muốn xóa đề thi này?",
-      icon: <ExclamationCircleOutlined />,
-      content: "Thao tác này không thể hoàn tác.",
-      okText: "Xóa",
-      okType: "danger",
-      cancelText: "Hủy",
-      onOk() {
-        deleteExamById(examId);
-      },
-    });
+  const showDeleteModal = (examId) => {
+    setSelectedExam(examId);
+    setDeleteModalVisible(true);
   };
 
   const showEditModal = (examId, currentName) => {
@@ -66,16 +57,16 @@ const ExamManagement = () => {
   };
 
   const updateExamName = async () => {
-    if (!newExamName.trim()) {
+    if (!newName.trim()) {
       message.warning("Tên đề thi không được để trống!");
       return;
     }
 
     try {
-      const response = await fetch(`http://localhost:5057/api/exam/${selectedExam}`, {
+      const response = await fetch(`https://localhost:7052/api/Exam/${selectedExam}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ examname: newExamName }),
+        body: JSON.stringify(newName),
       });
 
       if (!response.ok) throw new Error("Cập nhật thất bại");
@@ -83,7 +74,7 @@ const ExamManagement = () => {
       message.success("Cập nhật tên đề thi thành công!");
       setExams((prevExams) =>
         prevExams.map((exam) =>
-          exam.examId === selectedExam ? { ...exam, examname: newExamName } : exam
+          exam.examId === selectedExam ? { ...exam, examname: newName } : exam
         )
       );
       setEditModalVisible(false);
@@ -110,39 +101,36 @@ const ExamManagement = () => {
           {exams.length > 0 ? (
             exams.map((exam) => (
               <Card
-                key={exam.examId}
-                title={exam.examname}
-                extra={
-                  <Dropdown
-                    overlay={
-                      <Menu>
-                        <Menu.Item key="1" icon={<EditOutlined />}>
-                          Tổ chức thi
-                        </Menu.Item>
-                        <Menu.Item key="2" icon={<EditOutlined />} onClick={() => showEditModal(exam.examId, exam.examname)}>
-                          Chỉnh sửa
-                        </Menu.Item>
-                        <Menu.Item
-                          key="3"
-                          icon={<DeleteOutlined />}
-                          danger
-                          onClick={() => showDeleteConfirm(exam.examId)}
-                        >
-                          Xóa
-                        </Menu.Item>
-                      </Menu>
-                    }
-                    trigger={["click"]}
-                  >
-                    <SettingOutlined style={{ cursor: "pointer" }} />
-                  </Dropdown>
-                }
-                style={{ width: 250, cursor: "pointer" }}
-                hoverable
-                onClick={() => navigate(`/exam/content?id=${exam.examId}`)}
-              >
-                <p>Ngày tạo: {exam.createdate}</p>
-              </Card>
+  key={exam.examId}
+  title={exam.examname}
+  style={{ width: 250, cursor: "pointer" }}
+  hoverable
+  onClick={() => navigate(`/exam/content?id=${exam.examId}`)}
+>
+  <p>Ngày tạo: {exam.createdate}</p>
+  <div style={{ display: "flex", justifyContent: "space-between" }}>
+    <Button 
+      icon={<EditOutlined />} 
+      onClick={(e) => {
+        e.stopPropagation(); // Ngăn chặn sự kiện click từ Card
+        showEditModal(exam.examId, exam.examname);
+      }}
+    >
+      Chỉnh sửa
+    </Button>
+    <Button 
+      icon={<DeleteOutlined />} 
+      danger 
+      onClick={(e) => {
+        e.stopPropagation(); // Ngăn chặn sự kiện click từ Card
+        showDeleteModal(exam.examId);
+      }}
+    >
+      Xóa
+    </Button>
+  </div>
+</Card>
+
             ))
           ) : (
             <p>Không có đề thi nào.</p>
@@ -150,16 +138,6 @@ const ExamManagement = () => {
         </div>
       )}
 
-      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 20 }}>
-        <Button type="primary" style={{ marginRight: 10 }}>
-          Tạo đề từ ngân hàng câu hỏi chung
-        </Button>
-        <Button type="primary" style={{ backgroundColor: "green", borderColor: "green" }}>
-          Tạo đề thi
-        </Button>
-      </div>
-
-      {/* Modal chỉnh sửa tên đề thi */}
       <Modal
         title="Chỉnh sửa tên đề thi"
         open={editModalVisible}
@@ -169,10 +147,22 @@ const ExamManagement = () => {
         cancelText="Hủy"
       >
         <Input
-          value={newExamName}
+          value={newName}
           onChange={(e) => setNewExamName(e.target.value)}
           placeholder="Nhập tên mới"
         />
+      </Modal>
+
+      <Modal
+        title="Xác nhận xóa"
+        open={deleteModalVisible}
+        onOk={deleteExamById}
+        onCancel={() => setDeleteModalVisible(false)}
+        okText="Xóa"
+        cancelText="Hủy"
+        okType="danger"
+      >
+        <p>Bạn có chắc chắn muốn xóa đề thi này không? Thao tác này không thể hoàn tác.</p>
       </Modal>
     </div>
   );
