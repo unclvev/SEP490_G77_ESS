@@ -10,21 +10,18 @@ namespace SEP490_G77_ESS.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class BankController : Controller
+    public class BankController : ControllerBase
     {
-        private readonly EssDbContext _context;
+        private readonly EssDbV11Context _context;
 
-        public BankController(EssDbContext context)
+        public BankController(EssDbV11Context context)
         {
             _context = context;
         }
 
         // ✅ Hiển thị View cho Ngân Hàng Câu Hỏi
         [HttpGet("/QuestionBank")]
-        public IActionResult Index()
-        {
-            return View();
-        }
+      
 
         // ✅ Lấy danh sách ngân hàng câu hỏi
         [HttpGet]
@@ -148,7 +145,8 @@ namespace SEP490_G77_ESS.Controllers
                     b.BankId,
                     b.Bankname,
                     b.Totalquestion,
-                    CreateDate = b.CreateDate.ToString("dd/MM/yyyy HH:mm")
+                    CreateDate = b.CreateDate.HasValue ? b.CreateDate.Value.ToString("dd/MM/yyyy HH:mm") : "N/A"
+
                 })
                 .ToListAsync();
 
