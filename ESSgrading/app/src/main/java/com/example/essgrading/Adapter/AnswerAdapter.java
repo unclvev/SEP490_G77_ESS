@@ -30,15 +30,16 @@ public class AnswerAdapter extends RecyclerView.Adapter<AnswerAdapter.AnswerView
         holder.txtQuestionNumber.setText(String.valueOf(position)); // Hiển thị số thứ tự câu hỏi
 
         for (int i = 0; i < 4; i++) { // Duyệt qua A, B, C, D
-            if (answerData.get(position)[i] != -1) {
-                holder.answerChoices[i].setBackgroundColor(Color.BLACK);
+            if (answerData.get(position)[i] == 1) {
+                holder.answerChoices[i].setBackgroundResource(R.drawable.circle_background_correctanswer);
                 holder.answerChoices[i].setTextColor(Color.WHITE);
             } else {
-                holder.answerChoices[i].setBackgroundColor(Color.LTGRAY);
+                holder.answerChoices[i].setBackgroundResource(R.drawable.circle_background_answer);
                 holder.answerChoices[i].setTextColor(Color.BLACK);
             }
         }
     }
+
 
     @Override
     public int getItemCount() {
