@@ -21,7 +21,7 @@ namespace SEP490_G77_ESS.Controllers
 
         // ✅ Hiển thị View cho Ngân Hàng Câu Hỏi
         [HttpGet("/QuestionBank")]
-      
+
 
         // ✅ Lấy danh sách ngân hàng câu hỏi
         [HttpGet]
@@ -126,10 +126,9 @@ namespace SEP490_G77_ESS.Controllers
 
             return Ok(new { message = "Xóa ngân hàng câu hỏi thành công" });
         }
-    
 
-    // ✅ Tìm kiếm ngân hàng câu hỏi theo tên
-[HttpGet("search")]
+
+        [HttpGet("search")]
         public async Task<ActionResult<IEnumerable<object>>> SearchBanks([FromQuery] string query)
         {
             if (string.IsNullOrEmpty(query))
@@ -145,8 +144,7 @@ namespace SEP490_G77_ESS.Controllers
                     b.BankId,
                     b.Bankname,
                     b.Totalquestion,
-                    CreateDate = b.CreateDate.HasValue ? b.CreateDate.Value.ToString("dd/MM/yyyy HH:mm") : "N/A"
-
+                    b.CreateDate // Giữ nguyên kiểu DateTime? thay vì chuyển thành string
                 })
                 .ToListAsync();
 

@@ -49,11 +49,19 @@ const QuestionBank = () => {
   };
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleString("vi-VN", { 
-        day: '2-digit', month: '2-digit', year: 'numeric', 
-        hour: '2-digit', minute: '2-digit' 
+    if (!dateString) {
+      return "N/A";
+    }
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+      return "N/A";
+    }
+    return date.toLocaleString("vi-VN", { 
+      day: '2-digit', month: '2-digit', year: 'numeric', 
+      hour: '2-digit', minute: '2-digit' 
     });
   };
+  
 
   return (
     <div className="p-4 bg-gray-100 min-h-screen">
@@ -95,7 +103,9 @@ const QuestionBank = () => {
               onClick={() => handleCardClick(bank.bankId)}
             >
               <h2 className="font-bold text-lg text-center">{bank.bankname}</h2>
-              <p className="text-center text-gray-600">Ngày tạo: {bank.createDate ? formatDate(bank.createDate) : "N/A"}</p>
+              <p className="text-center text-gray-600">
+                Ngày tạo: {formatDate(bank.createDate)}
+              </p>
               <p className="text-center">{bank.totalquestion || 0} câu hỏi</p>
 
               <div className="flex justify-center mt-4 gap-2">
