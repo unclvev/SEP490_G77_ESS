@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -7,7 +6,7 @@
     android:gravity="center_vertical"
     android:background="@color/light_gray">
 
-    <!-- Cột số câu -->
+    <!-- Số câu hỏi -->
     <TextView
         android:id="@+id/txtQuestionNumber"
         android:layout_width="30dp"
@@ -15,54 +14,68 @@
         android:text="0"
         android:textSize="16sp"
         android:gravity="center"
-        android:background="@android:color/white"
-        android:layout_marginEnd="4dp"/>
-
-    <!-- Đáp án A -->
-    <TextView
-        android:id="@+id/txtAnswerA"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
-        android:text="A"
-        android:textSize="14sp"
-        android:gravity="center"
-        android:background="@android:color/darker_gray"
+        android:background="@android:color/transparent"
         android:textColor="@android:color/black"
-        android:layout_margin="4dp"/>
+        android:layout_marginEnd="16dp"/>
 
-    <!-- Đáp án B -->
-    <TextView
-        android:id="@+id/txtAnswerB"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
-        android:text="B"
-        android:textSize="14sp"
+    <!-- Nhóm chứa đáp án -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
         android:gravity="center"
-        android:background="@android:color/darker_gray"
-        android:textColor="@android:color/black"
-        android:layout_margin="4dp"/>
+        android:orientation="horizontal">
 
-    <!-- Đáp án C -->
-    <TextView
-        android:id="@+id/txtAnswerC"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
-        android:text="C"
-        android:textSize="14sp"
-        android:gravity="center"
-        android:background="@android:color/darker_gray"
-        android:textColor="@android:color/black"
-        android:layout_margin="4dp"/>
+        <!-- Đáp án A -->
+        <TextView
+            android:id="@+id/txtAnswerA"
+            android:layout_width="45dp"
+            android:layout_height="45dp"
+            android:text="A"
+            android:textSize="14sp"
+            android:gravity="center"
+            android:background="@drawable/circle_background_answer"
+            android:textColor="@android:color/black"
+            android:layout_marginHorizontal="8dp"
+            android:padding="5dp"/>
 
-    <!-- Đáp án D -->
-    <TextView
-        android:id="@+id/txtAnswerD"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
-        android:text="D"
-        android:textSize="14sp"
-        android:gravity="center"
-        android:background="@android:color/darker_gray"
-        android:textColor="@android:color/black"
-        android:layout_margin="4dp"/>
+        <!-- Đáp án B -->
+        <TextView
+            android:id="@+id/txtAnswerB"
+            android:layout_width="45dp"
+            android:layout_height="45dp"
+            android:text="B"
+            android:textSize="14sp"
+            android:gravity="center"
+            android:background="@drawable/circle_background_answer"
+            android:textColor="@android:color/black"
+            android:layout_marginHorizontal="8dp"
+            android:padding="5dp"/>
+
+        <!-- Đáp án C -->
+        <TextView
+            android:id="@+id/txtAnswerC"
+            android:layout_width="45dp"
+            android:layout_height="45dp"
+            android:text="C"
+            android:textSize="14sp"
+            android:gravity="center"
+            android:background="@drawable/circle_background_answer"
+            android:textColor="@android:color/black"
+            android:layout_marginHorizontal="8dp"
+            android:padding="5dp"/>
+
+        <!-- Đáp án D -->
+        <TextView
+            android:id="@+id/txtAnswerD"
+            android:layout_width="45dp"
+            android:layout_height="45dp"
+            android:text="D"
+            android:textSize="14sp"
+            android:gravity="center"
+            android:background="@drawable/circle_background_answer"
+            android:textColor="@android:color/black"
+            android:layout_marginHorizontal="8dp"
+            android:padding="5dp"/>
+    </LinearLayout>
 </LinearLayout>

@@ -2,6 +2,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-feature android:name="android.hardware.camera" android:required="true"/>
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false"/>
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -12,6 +16,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.ESSGrading"
         tools:targetApi="31" >
+
         <activity
             android:name=".Activity.Authentication.LoginActivity"
             android:exported="true">
@@ -30,6 +35,12 @@
         <activity android:name=".Activity.Test.SelectExCodeActivity"
             android:exported="true"/>
         <activity android:name=".Activity.Test.TestOptionActivity"
+            android:exported="true"/>
+        <activity android:name=".Activity.Test.GradingActivity"
+            android:exported="true"/>
+        <activity android:name=".Activity.Test.ListAnswerActivity"
+            android:exported="true"/>
+        <activity android:name=".Activity.Class.ClassDetailActivity"
             android:exported="true"/>
     </application>
 
