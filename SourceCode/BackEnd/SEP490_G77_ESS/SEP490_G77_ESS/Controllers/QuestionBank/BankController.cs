@@ -245,5 +245,100 @@ namespace SEP490_G77_ESS.Controllers
 
             return Ok(subjects);
         }
+
+        // ✅ Lấy danh sách Section theo BankId
+        [HttpGet("{bankId}/sections")]
+        public async Task<ActionResult<IEnumerable<object>>> GetSectionsByBankId(long bankId)
+        {
+            var sections = await _context.Sections
+                .Where(s => s.BankId == bankId)
+                .Select(s => new
+                {
+                    s.Secid,
+                    s.Secname,
+                    Children = _context.SectionHierarchies
+                        .Where(sh => sh.AncestorId == s.Secid)
+                        .Select(sh => new
+                        {
+                            ChildId = sh.DescendantId,
+                            ChildName = _context.Sections
+                                .Where(cs => cs.Secid == sh.DescendantId)
+                                .Select(cs => cs.Secname)
+                                .FirstOrDefault()
+                        })
+                        .ToList()
+                })
+                .ToListAsync();
+
+            return Ok(sections);
+        }
+        [HttpPost("{parentId}/add-section")]
+        public async Task<ActionResult<object>> AddSubSection(long parentId, [FromBody] Section section)
+        {
+            if (string.IsNullOrWhiteSpace(section.Secname))
+                return BadRequest(new { message = "Tên section không được để trống" });
+
+            var parentSection = await _context.Sections.FindAsync(parentId);
+            if (parentSection == null)
+                return NotFound(new { message = "Section cha không tồn tại" });
+
+            // ✅ Đảm bảo section mới được gán vào đúng cha của nó
+            var newSection = new Section
+            {
+                Secname = section.Secname,
+                BankId = parentSection.BankId
+            };
+
+            _context.Sections.Add(newSection);
+            await _context.SaveChangesAsync();
+
+            // ✅ Chỉ cập nhật hierarchy nếu parentId khác null (để tránh thêm section chính)
+            var sectionHierarchy = new SectionHierarchy
+            {
+                AncestorId = parentId,
+                DescendantId = newSection.Secid,
+                Depth = 1
+            };
+            _context.SectionHierarchies.Add(sectionHierarchy);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Thêm section con thành công", newSection });
+        }
+
+
+
+        // ✅ Cập nhật tên Section
+        [HttpPut("section/{sectionId}")]
+        public async Task<IActionResult> UpdateSection(long sectionId, [FromBody] Section updatedSection)
+        {
+            var section = await _context.Sections.FindAsync(sectionId);
+            if (section == null)
+                return NotFound(new { message = "Không tìm thấy section" });
+
+            section.Secname = updatedSection.Secname ?? section.Secname;
+
+            _context.Entry(section).State = EntityState.Modified;
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Cập nhật section thành công" });
+        }
+
+        // ✅ Xóa Section (Sửa route để không bị trùng)
+        [HttpDelete("section/{sectionId}")]
+        public async Task<IActionResult> DeleteSection(long sectionId)
+        {
+            var section = await _context.Sections.FindAsync(sectionId);
+            if (section == null)
+                return NotFound(new { message = "Không tìm thấy section" });
+
+            var sectionRelations = _context.SectionHierarchies
+                .Where(sh => sh.AncestorId == sectionId || sh.DescendantId == sectionId);
+            _context.SectionHierarchies.RemoveRange(sectionRelations);
+
+            _context.Sections.Remove(section);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Xóa section thành công" });
+        }
     }
 }

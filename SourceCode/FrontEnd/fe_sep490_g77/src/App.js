@@ -21,7 +21,8 @@ function App() {
 
         {/* Các trang khác bọc trong MainLayout */}
         <Route path="/question-bank" element={<MainLayout><QuestionBank /></MainLayout>} />
-        <Route path="/question-bank-detail/:id" element={<MainLayout><QuestionBankDetail /></MainLayout>} />
+        <Route path="/question-bank-detail/:bankId" element={<MainLayout><QuestionBankDetail /></MainLayout>} />
+
         <Route path="/create-question-bank" element={<MainLayout><CreateQuestionBank /></MainLayout>} />
         <Route path="/decentralization" element={<MainLayout><Decentralization /></MainLayout>} />
         <Route path="/question-list" element={<MainLayout><QuestionList /></MainLayout>} />
