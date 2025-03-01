@@ -19,39 +19,41 @@ namespace SEP490_G77_ESS.Controllers
             _context = context;
         }
 
-        // ✅ Hiển thị View cho Ngân Hàng Câu Hỏi
-        [HttpGet("/QuestionBank")]
-
-
         // ✅ Lấy danh sách ngân hàng câu hỏi
         [HttpGet]
         public async Task<ActionResult<IEnumerable<object>>> GetBanks()
         {
             var banks = await _context.Banks
+                .Include(b => b.Grade)
+                .Include(b => b.Subject)
                 .Select(b => new
                 {
                     b.BankId,
                     b.Bankname,
                     b.Totalquestion,
-                    b.CreateDate
+                    b.CreateDate,
+                    Grade = b.Grade.GradeLevel,
+                    Subject = b.Subject.SubjectName
                 })
                 .ToListAsync();
 
             return Ok(banks);
         }
 
-        // ✅ Lấy chi tiết một ngân hàng câu hỏi theo ID
+        // ✅ Lấy chi tiết ngân hàng câu hỏi theo ID
         [HttpGet("{id}")]
         public async Task<ActionResult<object>> GetBank(long id)
         {
             var bank = await _context.Banks
+                .Include(b => b.Sections)
                 .Where(b => b.BankId == id)
                 .Select(b => new
                 {
                     b.BankId,
                     b.Bankname,
                     b.Totalquestion,
-                    b.CreateDate
+                    b.CreateDate,
+                    Sections = b.Sections.Select(s => new { s.Secid, s.Secname })
                 })
                 .FirstOrDefaultAsync();
 
@@ -63,7 +65,7 @@ namespace SEP490_G77_ESS.Controllers
             return Ok(bank);
         }
 
-        // ✅ Thêm một ngân hàng câu hỏi mới
+        // ✅ Thêm mới ngân hàng câu hỏi
         [HttpPost]
         public async Task<ActionResult<Bank>> CreateBank([FromBody] Bank bank)
         {
@@ -127,7 +129,7 @@ namespace SEP490_G77_ESS.Controllers
             return Ok(new { message = "Xóa ngân hàng câu hỏi thành công" });
         }
 
-
+        // ✅ Tìm kiếm ngân hàng câu hỏi theo tên
         [HttpGet("search")]
         public async Task<ActionResult<IEnumerable<object>>> SearchBanks([FromQuery] string query)
         {
@@ -144,11 +146,104 @@ namespace SEP490_G77_ESS.Controllers
                     b.BankId,
                     b.Bankname,
                     b.Totalquestion,
-                    b.CreateDate // Giữ nguyên kiểu DateTime? thay vì chuyển thành string
+                    b.CreateDate
                 })
                 .ToListAsync();
 
             return Ok(banks);
         }
+
+        // ✅ Tạo ngân hàng câu hỏi tự động nếu chưa có
+        [HttpPost("generate")]
+        public async Task<ActionResult<object>> GenerateQuestionBank([FromBody] Bank bank)
+        {
+            var existingBank = await _context.Banks
+                .Include(b => b.Sections)
+                .FirstOrDefaultAsync(b => b.GradeId == bank.GradeId && b.SubjectId == bank.SubjectId);
+
+            if (existingBank != null)
+            {
+                return Ok(new
+                {
+                    BankId = existingBank.BankId,
+                    BankName = existingBank.Bankname,
+                    Totalquestion = existingBank.Totalquestion,
+                    CreateDate = existingBank.CreateDate,
+                    Sections = existingBank.Sections.Select(s => new { s.Secid, s.Secname })
+                });
+            }
+
+            // ✅ Lấy số Grade (Bỏ chữ "Grade")
+            var grade = await _context.Grades.FindAsync(bank.GradeId);
+            var subject = await _context.Subjects.FindAsync(bank.SubjectId);
+
+            if (grade == null || subject == null)
+            {
+                return BadRequest(new { message = "Không tìm thấy Khối học hoặc Môn học." });
+            }
+
+            string gradeNumber = grade.GradeLevel.Replace("Grade ", "");
+            string newBankName = $"{subject.SubjectName} Bank {gradeNumber}";
+
+            var newBank = new Bank
+            {
+                Bankname = newBankName,
+                Bankstatus = 1,
+                Totalquestion = 0,
+                GradeId = bank.GradeId,
+                SubjectId = bank.SubjectId,
+                CreateDate = DateTime.Now
+            };
+
+            _context.Banks.Add(newBank);
+            await _context.SaveChangesAsync();
+
+            // ✅ Lấy danh sách chủ đề mặc định
+            var defaultSections = await _context.DefaultSectionHierarchies
+                .Select(s => new Section
+                {
+                    Secname = s.DfSectionName,
+                    BankId = newBank.BankId
+                })
+                .ToListAsync();
+
+            if (defaultSections.Count > 0)
+            {
+                _context.Sections.AddRange(defaultSections);
+                await _context.SaveChangesAsync();
+            }
+
+            return Ok(new
+            {
+                BankId = newBank.BankId,
+                BankName = newBank.Bankname,
+                Totalquestion = 0,
+                CreateDate = newBank.CreateDate,
+                Sections = defaultSections.Select(s => new { s.Secid, s.Secname })
+            });
+        }
+
+
+        // ✅ Lấy danh sách các Khối học
+        [HttpGet("grades")]
+        public async Task<ActionResult<IEnumerable<object>>> GetGrades()
+        {
+            var grades = await _context.Grades
+                .Select(g => new { g.GradeId, g.GradeLevel })
+                .ToListAsync();
+
+            return Ok(grades);
+        }
+
+        // ✅ Lấy danh sách các Môn học
+        [HttpGet("subjects")]
+        public async Task<ActionResult<IEnumerable<object>>> GetSubjects()
+        {
+            var subjects = await _context.Subjects
+                .Select(s => new { s.SubjectId, s.SubjectName })
+                .ToListAsync();
+
+            return Ok(subjects);
+        }
     }
-    }
+}
