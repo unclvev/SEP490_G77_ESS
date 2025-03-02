@@ -272,7 +272,25 @@ namespace SEP490_G77_ESS.Controllers
 
             return Ok(sections);
         }
-        [HttpPost("{parentId}/add-section")]
+
+        [HttpPost("{bankId}/add-section")]
+        public async Task<ActionResult<object>> AddSection(long bankId, [FromBody] Section section)
+        {
+            if (string.IsNullOrWhiteSpace(section.Secname))
+                return BadRequest(new { message = "Tên section không được để trống" });
+
+            var newSection = new Section
+            {
+                Secname = section.Secname,
+                BankId = bankId
+            };
+
+            _context.Sections.Add(newSection);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Thêm section thành công", newSection });
+        }
+        [HttpPost("{parentId}/add-subsection")]
         public async Task<ActionResult<object>> AddSubSection(long parentId, [FromBody] Section section)
         {
             if (string.IsNullOrWhiteSpace(section.Secname))
@@ -282,7 +300,7 @@ namespace SEP490_G77_ESS.Controllers
             if (parentSection == null)
                 return NotFound(new { message = "Section cha không tồn tại" });
 
-            // ✅ Đảm bảo section mới được gán vào đúng cha của nó
+            // ✅ Tạo Section con với BankId từ Section cha
             var newSection = new Section
             {
                 Secname = section.Secname,
@@ -292,18 +310,34 @@ namespace SEP490_G77_ESS.Controllers
             _context.Sections.Add(newSection);
             await _context.SaveChangesAsync();
 
-            // ✅ Chỉ cập nhật hierarchy nếu parentId khác null (để tránh thêm section chính)
+            // ✅ Thêm quan hệ cha - con
             var sectionHierarchy = new SectionHierarchy
             {
                 AncestorId = parentId,
                 DescendantId = newSection.Secid,
                 Depth = 1
             };
+
             _context.SectionHierarchies.Add(sectionHierarchy);
             await _context.SaveChangesAsync();
 
-            return Ok(new { message = "Thêm section con thành công", newSection });
+            return Ok(new
+            {
+                message = "Thêm section con thành công",
+                newSection = new
+                {
+                    newSection.Secid,
+                    newSection.Secname,
+                    newSection.BankId
+                }
+            });
         }
+
+
+
+
+
+
 
 
 
