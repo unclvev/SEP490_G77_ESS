@@ -1,11 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { Collapse, Dropdown, Menu, Input, Modal, message } from "antd";
-import { MoreOutlined, EditOutlined, DeleteOutlined, PlusOutlined, ExclamationCircleOutlined } from "@ant-design/icons";
+import { Collapse, Dropdown, Input, Modal, Button, message } from "antd";
+import { MoreOutlined, EditOutlined, DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import axios from "axios";
 
 const { Panel } = Collapse;
-const { confirm } = Modal;
 
 const QuestionBankDetail = () => {
   const { bankId } = useParams();
@@ -31,14 +30,37 @@ const QuestionBankDetail = () => {
     }
   };
 
-  /** ✅ Thêm Section con */
-  const handleAddSection = async () => {
+  /** ✅ Thêm Section chính */
+  const handleAddMainSection = async () => {
     if (!sectionName.trim()) {
       message.warning("Tên section không được để trống!");
       return;
     }
     try {
-      const response = await axios.post(`https://localhost:7052/api/Bank/${currentSection.secid}/add-section`, {
+      const response = await axios.post(`https://localhost:7052/api/Bank/${bankId}/add-section`, {
+        secname: sectionName
+      });
+
+      if (response.data && response.data.newSection) {
+        setSections((prev) => [...prev, response.data.newSection]);
+      }
+
+      message.success("Thêm section chính thành công!");
+      setIsModalVisible(false);
+      setSectionName("");
+    } catch (error) {
+      message.error("Lỗi khi thêm section chính!");
+    }
+  };
+
+  /** ✅ Thêm Section con */
+  const handleAddSubSection = async () => {
+    if (!sectionName.trim()) {
+      message.warning("Tên section không được để trống!");
+      return;
+    }
+    try {
+      const response = await axios.post(`https://localhost:7052/api/Bank/${currentSection.secid}/add-subsection`, {
         secname: sectionName
       });
 
@@ -54,6 +76,7 @@ const QuestionBankDetail = () => {
           )
         );
       }
+
       message.success("Thêm section con thành công!");
       setIsModalVisible(false);
       setSectionName("");
@@ -87,15 +110,12 @@ const QuestionBankDetail = () => {
     }
   };
 
-  /** ✅ Xóa Section (Chặn sự kiện mở rộng) */
+  /** ✅ Xóa Section ngay lập tức (KHÔNG hiển thị thông báo xác nhận) */
   const handleDeleteSection = async (sectionId) => {
     try {
       await axios.delete(`https://localhost:7052/api/Bank/section/${sectionId}`);
 
-      setSections((prevSections) =>
-        prevSections.filter((sec) => sec.secid !== sectionId)
-      );
-
+      setSections((prevSections) => prevSections.filter((sec) => sec.secid !== sectionId));
       message.success("Xóa section thành công!");
     } catch (error) {
       message.error("Lỗi khi xóa section!");
@@ -103,12 +123,10 @@ const QuestionBankDetail = () => {
   };
 
   /** ✅ Hiển thị modal */
-  const showModal = (type, section, e) => {
-    if (e && e.stopPropagation) e.stopPropagation(); // ✅ Chặn sự kiện mở rộng Panel khi bấm nút
-
+  const showModal = (type, section = null) => {
     setModalType(type);
     setCurrentSection(section);
-    setSectionName(type === "edit" ? section.secname : "");
+    setSectionName(type === "edit" ? section?.secname : "");
     setIsModalVisible(true);
   };
 
@@ -116,8 +134,12 @@ const QuestionBankDetail = () => {
     <div className="p-4 bg-gray-100 min-h-screen">
       <h1 className="text-2xl font-bold mb-6 text-center">CHI TIẾT NGÂN HÀNG CÂU HỎI</h1>
 
+      {/* ✅ Nút Thêm Section Chính */}
+      <Button type="primary" icon={<PlusOutlined />} onClick={() => showModal("add-main")} className="mb-4">
+        Thêm Section
+      </Button>
+
       <div className="bg-white p-4 shadow-md rounded">
-        <h2 className="text-xl font-semibold mb-4">Cấu trúc ngân hàng câu hỏi</h2>
         <Collapse accordion>
           {sections.map((section) => (
             <Panel
@@ -126,22 +148,31 @@ const QuestionBankDetail = () => {
                 <div className="flex justify-between items-center">
                   <span>{section.secname}</span>
                   <Dropdown
-                    overlay={
-                      <Menu>
-                        <Menu.Item key="1" icon={<PlusOutlined />} onClick={(e) => showModal("add", section, e)}>
-                          Thêm cấu trúc con
-                        </Menu.Item>
-                        <Menu.Item key="2" icon={<EditOutlined />} onClick={(e) => showModal("edit", section, e)}>
-                          Sửa
-                        </Menu.Item>
-                        <Menu.Item key="3" icon={<DeleteOutlined />} danger onClick={(e) => handleDeleteSection(section.secid, e)}>
-                          Xóa
-                        </Menu.Item>
-                      </Menu>
-                    }
-                    trigger={["click"]}
+                    menu={{
+                      items: [
+                        {
+                          key: "1",
+                          label: "Thêm cấu trúc con",
+                          icon: <PlusOutlined />,
+                          onClick: () => showModal("add-sub", section),
+                        },
+                        {
+                          key: "2",
+                          label: "Sửa",
+                          icon: <EditOutlined />,
+                          onClick: () => showModal("edit", section),
+                        },
+                        {
+                          key: "3",
+                          label: "Xóa",
+                          icon: <DeleteOutlined />,
+                          danger: true,
+                          onClick: () => handleDeleteSection(section.secid), // ✅ Gọi hàm xóa trực tiếp
+                        },
+                      ],
+                    }}
                   >
-                    <MoreOutlined className="text-xl cursor-pointer" onClick={(e) => e.stopPropagation()} />
+                    <MoreOutlined className="text-xl cursor-pointer" />
                   </Dropdown>
                 </div>
               }
@@ -162,11 +193,11 @@ const QuestionBankDetail = () => {
         </Collapse>
       </div>
 
-      {/* Modal Thêm / Sửa Section */}
+      {/* Modal */}
       <Modal
-        title={modalType === "add" ? "Thêm Section" : "Sửa Section"}
+        title={modalType === "add-main" ? "Thêm Section" : modalType === "add-sub" ? "Thêm Section con" : "Sửa Section"}
         open={isModalVisible}
-        onOk={modalType === "add" ? handleAddSection : handleEditSection}
+        onOk={modalType === "add-main" ? handleAddMainSection : modalType === "add-sub" ? handleAddSubSection : handleEditSection}
         onCancel={() => setIsModalVisible(false)}
       >
         <Input value={sectionName} onChange={(e) => setSectionName(e.target.value)} placeholder="Nhập tên section" />
