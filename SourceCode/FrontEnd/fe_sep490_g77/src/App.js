@@ -11,7 +11,8 @@ import ExamManagement from "./page/Exam/ExamManager";
 import ExamDetail from "./page/Exam/ExamContent";
 import ExamCreation from "./page/Exam/ExamMatrix";
 import ExamPreview from "./page/Exam/ExamPreview";
-
+import GenQRCode from "./page/GenQRCode/CreateQRCode.js"
+import PreviewGenQR from "./page/GenQRCode/PreviewGenQr"
 function App() {
   return (
     <Router>
@@ -29,6 +30,8 @@ function App() {
         <Route path="/exam/content" element={<MainLayout><ExamDetail></ExamDetail></MainLayout>}/>
         <Route path="/exam/matrix" element={<MainLayout><ExamCreation></ExamCreation></MainLayout>}/>
         <Route path="/exam/preview" element={<MainLayout><ExamPreview></ExamPreview></MainLayout>}/>
+        <Route path="/genqr" element={<MainLayout><GenQRCode></GenQRCode></MainLayout>}/>
+        <Route path="/preview-gen-qr" element={<MainLayout><PreviewGenQR></PreviewGenQR></MainLayout>}/>
 
       </Routes>
     </Router>

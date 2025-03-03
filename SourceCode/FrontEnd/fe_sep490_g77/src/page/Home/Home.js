@@ -29,7 +29,7 @@ const features = [
     title: "Gen QR code cho bài thi tự luận",
     description: "Tạo mã QR để quản lý & quét bài thi.",
     img: "https://img.icons8.com/color/96/qr-code.png",
-    path: "/qr",
+    path: "/genqr",
   },
 ];
 
