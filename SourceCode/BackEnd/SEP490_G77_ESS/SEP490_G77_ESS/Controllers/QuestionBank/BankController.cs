@@ -246,32 +246,50 @@ namespace SEP490_G77_ESS.Controllers
             return Ok(subjects);
         }
 
-        // ✅ Lấy danh sách Section theo BankId
+        // ✅ API: Lấy danh sách Sections dưới dạng cây
+        // ✅ API: Lấy danh sách Sections dưới dạng cây
+        // ✅ API: Lấy danh sách Sections theo BankId (dạng cây đệ quy)
         [HttpGet("{bankId}/sections")]
         public async Task<ActionResult<IEnumerable<object>>> GetSectionsByBankId(long bankId)
         {
             var sections = await _context.Sections
                 .Where(s => s.BankId == bankId)
-                .Select(s => new
-                {
-                    s.Secid,
-                    s.Secname,
-                    Children = _context.SectionHierarchies
-                        .Where(sh => sh.AncestorId == s.Secid)
-                        .Select(sh => new
-                        {
-                            ChildId = sh.DescendantId,
-                            ChildName = _context.Sections
-                                .Where(cs => cs.Secid == sh.DescendantId)
-                                .Select(cs => cs.Secname)
-                                .FirstOrDefault()
-                        })
-                        .ToList()
-                })
-                .ToListAsync();
+                .ToListAsync();  // ✅ Lấy toàn bộ sections của Bank
 
-            return Ok(sections);
+            var sectionHierarchies = await _context.SectionHierarchies
+                .ToListAsync();  // ✅ Lấy toàn bộ quan hệ cha - con
+
+            var sectionTree = sections
+                .Where(s => !sectionHierarchies.Any(sh => sh.DescendantId == s.Secid))  // ✅ Chỉ lấy các section gốc
+                .Select(s => BuildSectionTree(s, sections, sectionHierarchies))
+                .ToList();
+
+            return Ok(sectionTree);
         }
+
+        // ✅ Hàm đệ quy xây dựng cây section
+        private object BuildSectionTree(Section section, List<Section> sections, List<SectionHierarchy> sectionHierarchies)
+        {
+            return new
+            {
+                secid = section.Secid,
+                secname = section.Secname,
+                children = sectionHierarchies
+                    .Where(sh => sh.AncestorId == section.Secid)
+                    .Select(sh => sections.FirstOrDefault(s => s.Secid == sh.DescendantId))
+                    .Where(s => s != null)
+                    .Select(s => BuildSectionTree(s, sections, sectionHierarchies))  // ✅ Đệ quy lấy tiếp children
+                    .ToList()
+            };
+        }
+
+
+
+
+
+
+
+
 
         [HttpPost("{bankId}/add-section")]
         public async Task<ActionResult<object>> AddSection(long bankId, [FromBody] Section section)
@@ -290,6 +308,7 @@ namespace SEP490_G77_ESS.Controllers
 
             return Ok(new { message = "Thêm section thành công", newSection });
         }
+        // ✅ API: Thêm Section con cho bất kỳ Section
         [HttpPost("{parentId}/add-subsection")]
         public async Task<ActionResult<object>> AddSubSection(long parentId, [FromBody] Section section)
         {
@@ -332,6 +351,7 @@ namespace SEP490_G77_ESS.Controllers
                 }
             });
         }
+
 
 
 

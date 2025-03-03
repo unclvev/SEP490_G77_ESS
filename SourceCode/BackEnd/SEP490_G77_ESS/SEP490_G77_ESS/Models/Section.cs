@@ -9,7 +9,7 @@ public partial class Section
     public long Secid { get; set; }
 
     public string? Secname { get; set; }
-
+    
     public long? BankId { get; set; }
 
     [JsonIgnore]
