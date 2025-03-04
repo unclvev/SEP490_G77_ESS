@@ -2,46 +2,48 @@ import React, { useEffect, useState } from "react";
 import { Card, Button, Input, Spin, message, Modal } from "antd";
 import { SettingOutlined, EditOutlined, DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
+import { delExam, getExams } from "../../services/api";
 
 const ExamManagement = () => {
   const navigate = useNavigate();
   const [exams, setExams] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
-  const [selectedExam, setSelectedExam] = useState(null);
+  const [examid, setExamid] = useState(null);
   const [newName, setNewExamName] = useState("");
 
   useEffect(() => {
-    fetchExams();
+    const fetchData = async () => {
+      try {
+        const response = await getExams();
+        setLoading(false);
+        setExams(response.data);
+      }catch (error){
+        console.log('Error fetching exams:'. error);
+      }
+    };
+
+    fetchData();
   }, []);
 
-  const fetchExams = async () => {
-    setLoading(true);
+  
+
+  const deleteExamById = async (examid) => {
     try {
-      const response = await fetch("https://localhost:7052/api/exam");
-      const data = await response.json();
-      setExams(data);
+      const response = await delExam(examid);
+
+      if (!response.ok) {
+        // xử lí ko thành công
+      }else{
+        message.success("Xóa đề thi thành công!");
+        setExams((prevExams) => prevExams.filter((exam) => exam.examId !== selectedExam));
+        setDeleteModalVisible(false);
+      }
+
+      
     } catch (error) {
-      message.error("Lỗi khi tải danh sách đề thi!");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const deleteExamById = async () => {
-    try {
-      const response = await fetch(`https://localhost:7052/api/Exam/${selectedExam}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) throw new Error("Xóa thất bại");
-
-      message.success("Xóa đề thi thành công!");
-      setExams((prevExams) => prevExams.filter((exam) => exam.examId !== selectedExam));
-      setDeleteModalVisible(false);
-    } catch (error) {
-      message.error("Lỗi khi xóa đề thi!");
+      console.log('Can not delete the exam:', error);
     }
   };
 
@@ -63,23 +65,24 @@ const ExamManagement = () => {
     }
 
     try {
-      const response = await fetch(`https://localhost:7052/api/Exam/${selectedExam}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newName),
-      });
+      const response = await updateExam(selectedExam, newName);
 
-      if (!response.ok) throw new Error("Cập nhật thất bại");
+      if (!response.ok) {
+        // xử lí thất bại
+      }else{
+        // xử lí thành công
+        message.success("Cập nhật tên đề thi thành công!");
+        setExams((prevExams) =>
+          prevExams.map((exam) =>
+            exam.examId === selectedExam ? { ...exam, examname: newName } : exam
+          )
+        );
+        setEditModalVisible(false);
+      }
 
-      message.success("Cập nhật tên đề thi thành công!");
-      setExams((prevExams) =>
-        prevExams.map((exam) =>
-          exam.examId === selectedExam ? { ...exam, examname: newName } : exam
-        )
-      );
-      setEditModalVisible(false);
+      
     } catch (error) {
-      message.error("Lỗi khi cập nhật tên đề thi!");
+      console.log('Can not update the exam:', error);
     }
   };
 

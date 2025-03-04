@@ -5,6 +5,8 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using SEP490_G77_ESS.DTO.ExamDTO;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace SEP490_G77_ESS.Controllers.ExamManager
 {
@@ -13,14 +15,18 @@ namespace SEP490_G77_ESS.Controllers.ExamManager
     public class ExamController : ControllerBase
     {
         [HttpPost]
+        [Authorize]
         public async Task<IActionResult> CreateExam([FromBody] ExamDTO newExam)
         {
             return Ok(new { message = $"Đã tạo bài kiểm tra '{newExam.Examname}' thành công với ID giả lập {newExam.ExamId}." });
         }
 
         [HttpGet]
+        [Authorize]
         public async Task<ActionResult<IEnumerable<Exam>>> GetExamByUser()
         {
+            var email = User.FindFirst(ClaimTypes.Email).Value;
+
             // Tạo danh sách dữ liệu giả
             var fakeExams = new List<ExamDTO>
             {
