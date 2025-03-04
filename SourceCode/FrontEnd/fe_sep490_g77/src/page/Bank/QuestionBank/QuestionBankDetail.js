@@ -27,6 +27,7 @@ const QuestionBankDetail = () => {
   const fetchBankInfo = async () => {
     try {
       const response = await axios.get(`https://localhost:7052/api/Bank/${bankId}`);
+      console.log("Bank Info:", response.data); // 🛠 Debug dữ liệu
       setBankInfo(response.data);
     } catch (error) {
       message.error("Lỗi khi tải thông tin ngân hàng câu hỏi!");
@@ -110,58 +111,65 @@ const QuestionBankDetail = () => {
   };
 
   /** ✅ Hiển thị danh sách Sections */
-  const renderSections = (sections) => {
-    return sections.map((section) => (
-      <Panel
-        key={section.secid}
-        header={
-          <div className="flex justify-between items-center w-full">
+ /** ✅ Hiển thị danh sách Sections */
+const renderSections = (sections) => {
+  return sections.map((section) => (
+    <Panel
+      key={section.secid}
+      header={
+        <div className="flex justify-between items-center w-full">
+          <div className="flex items-center">
             <span className="font-semibold">{section.secname}</span>
             <span
-              className="text-blue-600 cursor-pointer"
-              onClick={() => handleGoToQuestionList(section.secid)}
+              className="text-blue-600 text-sm ml-2 cursor-pointer hover:underline"
+              onClick={(e) => {
+                e.stopPropagation(); // Ngăn chặn sự kiện click mở/đóng panel
+                handleGoToQuestionList(section.secid);
+              }}
             >
               ({section.questionCount} câu hỏi)
             </span>
-            <Dropdown
-              menu={{
-                items: [
-                  {
-                    key: "1",
-                    label: "Thêm Section con",
-                    icon: <PlusOutlined />,
-                    onClick: () => showModal("add-sub", section),
-                  },
-                  {
-                    key: "2",
-                    label: "Sửa",
-                    icon: <EditOutlined />,
-                    onClick: () => showModal("edit", section),
-                  },
-                  {
-                    key: "3",
-                    label: "Xóa",
-                    icon: <DeleteOutlined />,
-                    danger: true,
-                    onClick: () => handleDeleteSection(section.secid),
-                  },
-                ],
-              }}
-              trigger={["click"]}
-            >
-              <MoreOutlined className="text-xl cursor-pointer" />
-            </Dropdown>
           </div>
-        }
-      >
-        {section.children?.length > 0 ? (
-          <Collapse className="ml-4">{renderSections(section.children)}</Collapse>
-        ) : (
-          <p className="ml-4 text-gray-500">Không có section con</p>
-        )}
-      </Panel>
-    ));
-  };
+          <Dropdown
+            menu={{
+              items: [
+                {
+                  key: "1",
+                  label: "Thêm Section con",
+                  icon: <PlusOutlined />,
+                  onClick: () => showModal("add-sub", section),
+                },
+                {
+                  key: "2",
+                  label: "Sửa",
+                  icon: <EditOutlined />,
+                  onClick: () => showModal("edit", section),
+                },
+                {
+                  key: "3",
+                  label: "Xóa",
+                  icon: <DeleteOutlined />,
+                  danger: true,
+                  onClick: () => handleDeleteSection(section.secid),
+                },
+              ],
+            }}
+            trigger={["click"]}
+          >
+            <MoreOutlined className="text-xl cursor-pointer" />
+          </Dropdown>
+        </div>
+      }
+    >
+      {section.children?.length > 0 ? (
+        <Collapse className="ml-4">{renderSections(section.children)}</Collapse>
+      ) : (
+        <p className="ml-4 text-gray-500">Không có section con</p>
+      )}
+    </Panel>
+  ));
+};
+
 
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
@@ -171,6 +179,12 @@ const QuestionBankDetail = () => {
             <h1 className="text-2xl font-bold mb-2">Tên Bank: {bankInfo.bankname}</h1>
             <p className="text-gray-600">Khối: {bankInfo.grade}</p>
             <p className="text-gray-600">Môn: {bankInfo.subject}</p>
+            <p className="text-gray-600 font-semibold">
+  Tổng số câu hỏi:{" "}
+  <span className="text-blue-600">
+    {bankInfo.totalquestion !== undefined ? bankInfo.totalquestion : "Đang tải..."}
+  </span>
+</p>
           </>
         ) : (
           <Skeleton active />
