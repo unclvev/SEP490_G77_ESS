@@ -333,29 +333,37 @@ namespace SEP490_G77_ESS.Controllers
             var sectionHierarchies = await _context.SectionHierarchies
                 .ToListAsync();  // ✅ Lấy toàn bộ quan hệ cha - con
 
+            var questionCounts = await _context.Questions
+    .Where(q => q.Secid != null && sections.Select(s => s.Secid).Contains(q.Secid.Value))
+    .GroupBy(q => q.Secid)
+    .Select(g => new { Key = g.Key ?? 0, Count = g.Count() }) // ✅ Đảm bảo Key không null
+    .ToDictionaryAsync(g => g.Key, g => g.Count);  // ✅ Chuyển thành Dictionary<long, int>
+
             var sectionTree = sections
                 .Where(s => !sectionHierarchies.Any(sh => sh.DescendantId == s.Secid))  // ✅ Chỉ lấy các section gốc
-                .Select(s => BuildSectionTree(s, sections, sectionHierarchies))
+                .Select(s => BuildSectionTree(s, sections, sectionHierarchies, questionCounts))
                 .ToList();
 
             return Ok(sectionTree);
         }
 
-        // ✅ Hàm đệ quy xây dựng cây section
-        private object BuildSectionTree(Section section, List<Section> sections, List<SectionHierarchy> sectionHierarchies)
+        // ✅ Hàm đệ quy xây dựng cây section (CÓ SỐ LƯỢNG CÂU HỎI)
+        private object BuildSectionTree(Section section, List<Section> sections, List<SectionHierarchy> sectionHierarchies, Dictionary<long, int> questionCounts)
         {
             return new
             {
                 secid = section.Secid,
                 secname = section.Secname,
+                questionCount = questionCounts.ContainsKey(section.Secid) ? questionCounts[section.Secid] : 0, // ✅ Thêm số lượng câu hỏi
                 children = sectionHierarchies
                     .Where(sh => sh.AncestorId == section.Secid)
                     .Select(sh => sections.FirstOrDefault(s => s.Secid == sh.DescendantId))
                     .Where(s => s != null)
-                    .Select(s => BuildSectionTree(s, sections, sectionHierarchies))  // ✅ Đệ quy lấy tiếp children
+                    .Select(s => BuildSectionTree(s, sections, sectionHierarchies, questionCounts))  // ✅ Đệ quy lấy tiếp children
                     .ToList()
             };
         }
+
 
 
 

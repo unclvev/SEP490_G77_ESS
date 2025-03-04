@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { Collapse, Dropdown, Input, Modal, Button, message, Skeleton } from "antd";
 import { MoreOutlined, EditOutlined, DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import axios from "axios";
@@ -8,6 +8,7 @@ const { Panel } = Collapse;
 
 const QuestionBankDetail = () => {
   const { bankId } = useParams();
+  const navigate = useNavigate();
   const [sections, setSections] = useState([]);
   const [bankInfo, setBankInfo] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -36,10 +37,6 @@ const QuestionBankDetail = () => {
   const fetchSections = async () => {
     try {
       const response = await axios.get(`https://localhost:7052/api/Bank/${bankId}/sections`);
-      if (!response.data || !Array.isArray(response.data)) {
-        message.error("Dữ liệu API không hợp lệ!");
-        return;
-      }
       setSections(response.data);
     } catch (error) {
       message.error("Lỗi khi tải dữ liệu section!");
@@ -66,14 +63,11 @@ const QuestionBankDetail = () => {
           ? `https://localhost:7052/api/Bank/${bankId}/add-section`
           : `https://localhost:7052/api/Bank/${currentSection.secid}/add-subsection`;
 
-      const response = await axios.post(url, { secname: sectionName });
-
-      if (response.data && response.data.newSection) {
-        fetchSections();
-        message.success("Thêm section thành công!");
-        setIsModalVisible(false);
-        setSectionName("");
-      }
+      await axios.post(url, { secname: sectionName });
+      fetchSections();
+      message.success("Thêm section thành công!");
+      setIsModalVisible(false);
+      setSectionName("");
     } catch (error) {
       message.error("Lỗi khi thêm section!");
     }
@@ -110,17 +104,25 @@ const QuestionBankDetail = () => {
     }
   };
 
-  /** ✅ Xử lý hiển thị danh sách Sections với nhiều cấp */
-  const renderSections = (sections) => {
-    if (!Array.isArray(sections)) return null;
+  /** ✅ Điều hướng đến trang danh sách câu hỏi của section */
+  const handleGoToQuestionList = (sectionId) => {
+    navigate(`/question-list/${sectionId}`);
+  };
 
+  /** ✅ Hiển thị danh sách Sections */
+  const renderSections = (sections) => {
     return sections.map((section) => (
       <Panel
-        key={String(section.secid)}
-        className="w-full bg-gray-50 rounded-md mb-2 shadow-sm"
+        key={section.secid}
         header={
           <div className="flex justify-between items-center w-full">
             <span className="font-semibold">{section.secname}</span>
+            <span
+              className="text-blue-600 cursor-pointer"
+              onClick={() => handleGoToQuestionList(section.secid)}
+            >
+              ({section.questionCount} câu hỏi)
+            </span>
             <Dropdown
               menu={{
                 items: [
@@ -152,7 +154,7 @@ const QuestionBankDetail = () => {
           </div>
         }
       >
-        {section.children && section.children.length > 0 ? (
+        {section.children?.length > 0 ? (
           <Collapse className="ml-4">{renderSections(section.children)}</Collapse>
         ) : (
           <p className="ml-4 text-gray-500">Không có section con</p>
@@ -181,11 +183,12 @@ const QuestionBankDetail = () => {
         </Button>
       </div>
 
-      {/* ✅ Kéo dài container để chiếm toàn bộ chiều rộng & cao */}
-      <div className="bg-white p-6 shadow-lg rounded-lg w-full max-w-5xl mx-auto min-h-[70vh]">
-        <Collapse className="w-full">{sections.length > 0 ? renderSections(sections) : <p>Không có dữ liệu</p>}</Collapse>
+      {/* ✅ Hiển thị danh sách section */}
+      <div className="bg-white p-6 shadow-lg rounded-lg w-full max-w-5xl mx-auto">
+        <Collapse>{sections.length > 0 ? renderSections(sections) : <p>Không có dữ liệu</p>}</Collapse>
       </div>
 
+      {/* ✅ Modal thêm/sửa section */}
       <Modal
         title={modalType === "add-main" ? "Thêm Section" : modalType === "add-sub" ? "Thêm Section con" : "Sửa Section"}
         open={isModalVisible}

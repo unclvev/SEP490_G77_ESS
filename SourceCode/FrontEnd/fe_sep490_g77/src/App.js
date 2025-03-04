@@ -25,7 +25,8 @@ function App() {
 
         <Route path="/create-question-bank" element={<MainLayout><CreateQuestionBank /></MainLayout>} />
         <Route path="/decentralization" element={<MainLayout><Decentralization /></MainLayout>} />
-        <Route path="/question-list" element={<MainLayout><QuestionList /></MainLayout>} />
+        <Route path="/question-list/:sectionId" element={<MainLayout><QuestionList /></MainLayout>} />
+
         <Route path="/exam" element={<MainLayout><ExamManagement></ExamManagement></MainLayout>}/>
         <Route path="/exam/content" element={<MainLayout><ExamDetail></ExamDetail></MainLayout>}/>
         <Route path="/exam/matrix" element={<MainLayout><ExamCreation></ExamCreation></MainLayout>}/>
