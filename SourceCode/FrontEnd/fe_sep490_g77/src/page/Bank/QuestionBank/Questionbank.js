@@ -1,30 +1,38 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Input, Button, Card, Pagination } from 'antd';
+import { Input, Button, Card, Pagination, Modal, message } from 'antd';
 import { SearchOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import axios from 'axios';
 import 'tailwindcss/tailwind.css';
 
 const QuestionBank = () => {
   const navigate = useNavigate();
-  const [banks, setBanks] = useState([]); 
+  const [banks, setBanks] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalBanks, setTotalBanks] = useState(0); // ✅ Tổng số ngân hàng
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [editingBank, setEditingBank] = useState(null);
+  const [deletingBank, setDeletingBank] = useState(null);
+  const [newBankName, setNewBankName] = useState("");
   const itemsPerPage = 5;
 
   useEffect(() => {
     fetchBanks();
-  }, []);
+  }, [currentPage]); // ✅ Load lại dữ liệu khi trang thay đổi
 
   const fetchBanks = async (query = "") => {
     setLoading(true);
     try {
       const url = query 
         ? `https://localhost:7052/api/Bank/search?query=${query}`  
-        : `https://localhost:7052/api/Bank`;  
+        : `https://localhost:7052/api/Bank`;
+
       const response = await axios.get(url);
-      setBanks(response.data);
+      setBanks(response.data.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)); // ✅ Lấy đúng dữ liệu trang hiện tại
+      setTotalBanks(response.data.length); // ✅ Cập nhật tổng số ngân hàng câu hỏi
     } catch (error) {
       console.error('❌ Lỗi khi tải dữ liệu ngân hàng câu hỏi:', error);
     } finally {
@@ -33,8 +41,8 @@ const QuestionBank = () => {
   };
 
   const handleSearch = () => {
+    setCurrentPage(1); // ✅ Reset về trang đầu sau khi tìm kiếm
     fetchBanks(searchQuery);
-    setCurrentPage(1); // Reset về trang đầu sau khi tìm kiếm
   };
 
   const handleCreateBank = () => {
@@ -58,10 +66,52 @@ const QuestionBank = () => {
     });
   };
 
-  // Tính toán dữ liệu cho trang hiện tại
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentBanks = banks.slice(indexOfFirstItem, indexOfLastItem);
+  // ✅ Hiển thị modal cập nhật khi ấn vào nút "Sửa"
+  const handleEditBank = (bank, e) => {
+    e.stopPropagation();
+    setEditingBank(bank);
+    setNewBankName(bank.bankname);
+    setIsEditModalOpen(true);
+  };
+
+  // ✅ Cập nhật tên ngân hàng
+  const handleUpdateBankName = async () => {
+    if (!newBankName.trim()) {
+      message.warning("Tên ngân hàng không được để trống!");
+      return;
+    }
+    try {
+      await axios.put(`https://localhost:7052/api/Bank/${editingBank.bankId}/name`, { 
+        bankId: editingBank.bankId, 
+        bankname: newBankName 
+      });
+
+      message.success("Cập nhật tên ngân hàng thành công!");
+      setIsEditModalOpen(false);
+      fetchBanks();
+    } catch (error) {
+      message.error("Lỗi khi cập nhật ngân hàng!");
+    }
+  };
+
+  // ✅ Hiển thị modal xác nhận xóa
+  const handleDeleteBank = (bank, e) => {
+    e.stopPropagation();
+    setDeletingBank(bank);
+    setIsDeleteModalOpen(true);
+  };
+
+  // ✅ Xóa ngân hàng câu hỏi
+  const confirmDeleteBank = async () => {
+    try {
+      await axios.delete(`https://localhost:7052/api/Bank/${deletingBank.bankId}`);
+      message.success("Xóa ngân hàng câu hỏi thành công!");
+      setIsDeleteModalOpen(false);
+      fetchBanks();
+    } catch (error) {
+      message.error("Lỗi khi xóa ngân hàng câu hỏi!");
+    }
+  };
 
   return (
     <div className="p-4 bg-gray-100 min-h-screen">
@@ -87,11 +137,11 @@ const QuestionBank = () => {
 
       {loading ? (
         <p className="text-center text-gray-600">Đang tải dữ liệu...</p>
-      ) : currentBanks.length === 0 ? (
+      ) : banks.length === 0 ? (
         <p className="text-center text-gray-600">Không tìm thấy ngân hàng câu hỏi.</p>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
-          {currentBanks.map((bank) => (
+          {banks.map((bank) => (
             <Card 
               key={bank.bankId} 
               className="text-center shadow-lg hover:shadow-xl cursor-pointer p-4 rounded-lg border border-gray-200" 
@@ -102,10 +152,10 @@ const QuestionBank = () => {
               <p className="text-center">{bank.totalquestion || 0} câu hỏi</p>
 
               <div className="flex justify-center mt-4 gap-2">
-                <Button type="primary" icon={<EditOutlined />} size="small" shape="round" className="bg-green-500 hover:bg-green-600 text-white" onClick={(e) => e.stopPropagation()}>
+                <Button type="primary" icon={<EditOutlined />} size="small" shape="round" className="bg-green-500 hover:bg-green-600 text-white" onClick={(e) => handleEditBank(bank, e)}>
                   Sửa
                 </Button>
-                <Button type="primary" danger icon={<DeleteOutlined />} size="small" shape="round" className="bg-red-500 hover:bg-red-600 text-white" onClick={(e) => e.stopPropagation()}>
+                <Button type="primary" danger icon={<DeleteOutlined />} size="small" shape="round" className="bg-red-500 hover:bg-red-600 text-white" onClick={(e) => handleDeleteBank(bank, e)}>
                   Xóa
                 </Button>
               </div>
@@ -114,9 +164,26 @@ const QuestionBank = () => {
         </div>
       )}
 
+      {/* ✅ Phân trang */}
       <div className="flex justify-center mt-6">
-        <Pagination current={currentPage} total={banks.length} pageSize={itemsPerPage} onChange={handlePageChange} showSizeChanger={false} />
+        <Pagination 
+          current={currentPage} 
+          total={totalBanks} 
+          pageSize={itemsPerPage} 
+          onChange={handlePageChange} 
+          showSizeChanger={false} 
+        />
       </div>
+
+      {/* ✅ Modal chỉnh sửa tên ngân hàng */}
+      <Modal title="Chỉnh sửa tên ngân hàng" open={isEditModalOpen} onOk={handleUpdateBankName} onCancel={() => setIsEditModalOpen(false)}>
+        <Input value={newBankName} onChange={(e) => setNewBankName(e.target.value)} placeholder="Nhập tên ngân hàng mới" />
+      </Modal>
+
+      {/* ✅ Modal xác nhận xóa */}
+      <Modal title="Xác nhận xóa" open={isDeleteModalOpen} onOk={confirmDeleteBank} onCancel={() => setIsDeleteModalOpen(false)} okText="Xóa" cancelText="Hủy">
+        <p>Bạn có chắc chắn muốn xóa ngân hàng này không?</p>
+      </Modal>
     </div>
   );
 };

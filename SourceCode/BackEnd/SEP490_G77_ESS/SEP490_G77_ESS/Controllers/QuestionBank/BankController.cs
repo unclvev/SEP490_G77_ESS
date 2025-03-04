@@ -31,15 +31,18 @@ namespace SEP490_G77_ESS.Controllers
                 {
                     b.BankId,
                     b.Bankname,
-                    b.Totalquestion,
+                    Totalquestion = _context.Questions
+                        .Where(q => q.Secid != null && b.Sections.Select(s => s.Secid).Contains(q.Secid.Value))
+                        .Count(), // ✅ Tính lại tổng số câu hỏi thực tế
                     b.CreateDate,
-                    Grade = b.Grade.GradeLevel,
-                    Subject = b.Subject.SubjectName
+                    Grade = b.Grade != null ? b.Grade.GradeLevel : "Không xác định",
+                    Subject = b.Subject != null ? b.Subject.SubjectName : "Không xác định"
                 })
                 .ToListAsync();
 
             return Ok(banks);
         }
+
 
         // ✅ Lấy chi tiết ngân hàng câu hỏi theo ID
         [HttpGet("{id}")]
@@ -52,11 +55,18 @@ namespace SEP490_G77_ESS.Controllers
                 {
                     b.BankId,
                     b.Bankname,
-                    b.Totalquestion,
+                    Totalquestion = _context.Questions
+                        .Where(q => q.Secid != null && b.Sections.Select(s => s.Secid).Contains(q.Secid.Value))
+                        .Count(), // ✅ Không lấy giá trị từ DB mà tính toán lại
                     b.CreateDate,
                     Grade = b.Grade != null ? b.Grade.GradeLevel : "Không xác định",
                     Subject = b.Subject != null ? b.Subject.SubjectName : "Không xác định",
-                    Sections = b.Sections.Select(s => new { s.Secid, s.Secname })
+                    Sections = b.Sections.Select(s => new
+                    {
+                        s.Secid,
+                        s.Secname,
+                        QuestionCount = _context.Questions.Count(q => q.Secid == s.Secid) // ✅ Đếm số câu hỏi trong từng section
+                    }).ToList()
                 })
                 .FirstOrDefaultAsync();
 
@@ -67,6 +77,8 @@ namespace SEP490_G77_ESS.Controllers
 
             return Ok(bank);
         }
+
+
 
         // ✅ Thêm mới ngân hàng câu hỏi
         [HttpPost]
@@ -84,13 +96,13 @@ namespace SEP490_G77_ESS.Controllers
             return CreatedAtAction(nameof(GetBank), new { id = bank.BankId }, bank);
         }
 
-        // ✅ Cập nhật ngân hàng câu hỏi
-        [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateBank(long id, [FromBody] Bank bank)
+        // ✅ Cập nhật chỉ Bankname
+        [HttpPut("{id}/name")]
+        public async Task<IActionResult> UpdateBankName(long id, [FromBody] Bank bank)
         {
-            if (id != bank.BankId)
+            if (string.IsNullOrEmpty(bank.Bankname))
             {
-                return BadRequest(new { message = "ID không khớp" });
+                return BadRequest(new { message = "Tên ngân hàng không được để trống" });
             }
 
             var existingBank = await _context.Banks.FindAsync(id);
@@ -99,38 +111,65 @@ namespace SEP490_G77_ESS.Controllers
                 return NotFound(new { message = "Không tìm thấy ngân hàng câu hỏi" });
             }
 
-            existingBank.Bankname = bank.Bankname ?? existingBank.Bankname;
-            existingBank.Totalquestion = bank.Totalquestion ?? existingBank.Totalquestion;
-
-            _context.Entry(existingBank).State = EntityState.Modified;
+            existingBank.Bankname = bank.Bankname;
 
             try
             {
                 await _context.SaveChangesAsync();
+                return Ok(new
+                {
+                    message = "Cập nhật tên ngân hàng thành công!",
+                    bankId = existingBank.BankId,
+                    bankname = existingBank.Bankname
+                });
             }
             catch (DbUpdateConcurrencyException)
             {
-                return StatusCode(500, new { message = "Lỗi cập nhật dữ liệu" });
+                return StatusCode(500, new { message = "Lỗi cập nhật dữ liệu!" });
             }
-
-            return NoContent();
         }
+
+
 
         // ✅ Xóa ngân hàng câu hỏi
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteBank(long id)
         {
-            var bank = await _context.Banks.FindAsync(id);
+            var bank = await _context.Banks
+                .Include(b => b.Sections)
+                .ThenInclude(s => s.Questions)
+                .FirstOrDefaultAsync(b => b.BankId == id);
+
             if (bank == null)
             {
                 return NotFound(new { message = "Không tìm thấy ngân hàng câu hỏi" });
             }
 
+            // ✅ Xóa toàn bộ câu hỏi thuộc các Sections của Bank
+            var sections = bank.Sections.ToList();
+            foreach (var section in sections)
+            {
+                var questions = _context.Questions.Where(q => q.Secid == section.Secid);
+                _context.Questions.RemoveRange(questions);
+            }
+
+            // ✅ Xóa toàn bộ Sections thuộc Bank
+            _context.Sections.RemoveRange(sections);
+
+            // ✅ Xóa quan hệ SectionHierarchy liên quan đến Bank
+            var sectionIds = sections.Select(s => s.Secid).ToList();
+            var sectionHierarchies = _context.SectionHierarchies
+                .Where(sh => sectionIds.Contains(sh.AncestorId) || sectionIds.Contains(sh.DescendantId));
+            _context.SectionHierarchies.RemoveRange(sectionHierarchies);
+
+            // ✅ Xóa ngân hàng câu hỏi
             _context.Banks.Remove(bank);
+
             await _context.SaveChangesAsync();
 
-            return Ok(new { message = "Xóa ngân hàng câu hỏi thành công" });
+            return Ok(new { message = "Xóa ngân hàng câu hỏi và toàn bộ dữ liệu liên quan thành công" });
         }
+
 
         // ✅ Tìm kiếm ngân hàng câu hỏi theo tên
         [HttpGet("search")]
