@@ -150,6 +150,10 @@ public partial class EssDbV11Context : DbContext
             entity.Property(e => e.SubjectId).HasColumnName("subject_id");
             entity.Property(e => e.Totalquestion).HasColumnName("totalquestion");
 
+            // 🔹 **Thêm dòng này để map CurriculumId**
+            entity.Property(e => e.CurriculumId).HasColumnName("curriculum_id");
+
+
             entity.HasOne(d => d.Acc).WithMany(p => p.Banks)
                 .HasForeignKey(d => d.Accid)
                 .HasConstraintName("FK__Bank__accid__6477ECF3");
@@ -161,7 +165,14 @@ public partial class EssDbV11Context : DbContext
             entity.HasOne(d => d.Subject).WithMany(p => p.Banks)
                 .HasForeignKey(d => d.SubjectId)
                 .HasConstraintName("FK__Bank__subject_id__5FB337D6");
+
+            // 🔹 **Thêm quan hệ giữa Bank và Curriculum**
+            entity.HasOne(d => d.Curriculum)
+                .WithMany()
+                .HasForeignKey(d => d.CurriculumId)
+                .HasConstraintName("FK__Bank__curriculum_id");
         });
+
 
         modelBuilder.Entity<BankAccess>(entity =>
         {
@@ -257,6 +268,7 @@ public partial class EssDbV11Context : DbContext
                 .HasMaxLength(255)
                 .IsUnicode(false)
                 .HasColumnName("df_section_name");
+            entity.Property(e => e.CurriculumId).HasColumnName("curriculum_id");
         });
 
         modelBuilder.Entity<Exam>(entity =>

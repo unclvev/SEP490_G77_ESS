@@ -5,5 +5,6 @@
         public long BankId { get; set; }
         public string BankName { get; set; }
         public List<SectionDto> Sections { get; set; }
+        public long? CurriculumId { get; set; }
     }
 }

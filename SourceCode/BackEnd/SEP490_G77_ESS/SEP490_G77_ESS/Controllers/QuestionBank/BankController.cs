@@ -200,23 +200,20 @@ namespace SEP490_G77_ESS.Controllers
         [HttpPost("generate")]
         public async Task<ActionResult<BankDto>> GenerateQuestionBank([FromBody] Bank bank)
         {
-            // 🔍 Kiểm tra Khối học và Môn học có tồn tại không
+            // 🔍 Kiểm tra thông tin bắt buộc
             var grade = await _context.Grades.FindAsync(bank.GradeId);
             var subject = await _context.Subjects.FindAsync(bank.SubjectId);
+            var curriculum = bank.CurriculumId != null ? await _context.Curricula.FindAsync(bank.CurriculumId) : null;
 
-            if (grade == null || subject == null)
+            if (grade == null || subject == null || (bank.CurriculumId != null && curriculum == null))
             {
-                return BadRequest(new { message = "Không tìm thấy Khối học hoặc Môn học." });
+                return BadRequest(new { message = "Không tìm thấy Khối học, Môn học hoặc Chương trình!" });
             }
 
-            // 🔍 Tìm ngân hàng câu hỏi trước đó có cùng GradeId và SubjectId
-            var previousBank = await _context.Banks
-                .Where(b => b.GradeId == bank.GradeId && b.SubjectId == bank.SubjectId)
-                .OrderByDescending(b => b.CreateDate)
-                .FirstOrDefaultAsync();
-
-            // 🎯 Tạo ngân hàng câu hỏi mới (dù có hay không ngân hàng trước đó)
-            string newBankName = $"Ngân hàng câu hỏi {subject.SubjectName} {grade.GradeLevel}";
+            // 🔹 Tạo ngân hàng câu hỏi mới
+            string newBankName = curriculum != null
+                ? $"Ngân hàng {subject.SubjectName} {grade.GradeLevel} - {curriculum.CurriculumName}"
+                : $"Ngân hàng {subject.SubjectName} {grade.GradeLevel}";
 
             var newBank = new Bank
             {
@@ -225,6 +222,7 @@ namespace SEP490_G77_ESS.Controllers
                 Totalquestion = 0,
                 GradeId = bank.GradeId,
                 SubjectId = bank.SubjectId,
+                CurriculumId = bank.CurriculumId,
                 CreateDate = DateTime.Now
             };
 
@@ -234,97 +232,46 @@ namespace SEP490_G77_ESS.Controllers
             Console.WriteLine($"✅ Tạo ngân hàng câu hỏi mới: {newBank.BankId} - {newBank.Bankname}");
 
             List<SectionDto> createdSections = new List<SectionDto>();
-            Dictionary<long, long> sectionIdMapping = new Dictionary<long, long>();
 
-            if (previousBank != null)
+            // ✅ Chỉ lấy dữ liệu từ Default_Section_Hierarchy
+            var defaultSections = await _context.DefaultSectionHierarchies
+                .Where(d => d.CurriculumId == bank.CurriculumId)
+                .ToListAsync();
+
+            Console.WriteLine($"📌 Lấy {defaultSections.Count} sections từ Default_Section_Hierarchy");
+
+            foreach (var defaultSection in defaultSections)
             {
-                // ✅ Sao chép toàn bộ Sections từ ngân hàng trước đó (bao gồm con của con)
-                var previousSections = await _context.Sections
-                    .Where(s => s.BankId == previousBank.BankId)
-                    .ToListAsync();
-
-                Console.WriteLine($"📌 Copy {previousSections.Count} sections từ Bank {previousBank.BankId}");
-
-                foreach (var oldSection in previousSections)
+                var newSection = new Section
                 {
-                    var newSection = new Section
-                    {
-                        Secname = oldSection.Secname,
-                        BankId = newBank.BankId
-                    };
+                    Secname = defaultSection.DfSectionName,
+                    BankId = newBank.BankId
+                };
 
-                    _context.Sections.Add(newSection);
-                    await _context.SaveChangesAsync();
-
-                    sectionIdMapping[oldSection.Secid] = newSection.Secid;
-                    createdSections.Add(new SectionDto { Secid = newSection.Secid, Secname = newSection.Secname });
-
-                    Console.WriteLine($"➕ Copy Section: {newSection.Secid} - {newSection.Secname}");
-                }
-
-                // ✅ Sao chép lại quan hệ **SectionHierarchy** để giữ nguyên cấu trúc cây của ngân hàng cũ
-                var previousHierarchyList = await _context.SectionHierarchies
-                    .Where(sh => previousSections.Select(s => s.Secid).Contains(sh.AncestorId))
-                    .ToListAsync();
-
-                foreach (var oldHierarchy in previousHierarchyList)
-                {
-                    if (sectionIdMapping.TryGetValue(oldHierarchy.AncestorId, out long newAncestorId) &&
-                        sectionIdMapping.TryGetValue(oldHierarchy.DescendantId, out long newDescendantId))
-                    {
-                        var newHierarchy = new SectionHierarchy
-                        {
-                            AncestorId = newAncestorId,
-                            DescendantId = newDescendantId,
-                            Depth = oldHierarchy.Depth
-                        };
-
-                        _context.SectionHierarchies.Add(newHierarchy);
-                        Console.WriteLine($"🔗 Copy SectionHierarchy: {newHierarchy.AncestorId} -> {newHierarchy.DescendantId}");
-                    }
-                }
-
+                _context.Sections.Add(newSection);
                 await _context.SaveChangesAsync();
-            }
-            else
-            {
-                // Nếu không có ngân hàng trước đó, lấy từ Default_Section_Hierarchy
-                var defaultSections = await (from d in _context.DefaultSectionHierarchies
-                                             join c in _context.Curricula
-                                             on d.DfSectionId equals c.DfSectionId
-                                             where c.GradeId == bank.GradeId && c.SubjectId == bank.SubjectId
-                                             select d).ToListAsync();
 
-                Console.WriteLine($"📌 Không có ngân hàng trước đó. Lấy {defaultSections.Count} sections từ Default_Section_Hierarchy");
-
-                foreach (var defaultSection in defaultSections)
+                createdSections.Add(new SectionDto
                 {
-                    var newSection = new Section
-                    {
-                        Secname = defaultSection.DfSectionName,
-                        BankId = newBank.BankId
-                    };
+                    Secid = newSection.Secid,
+                    Secname = newSection.Secname
+                });
 
-                    _context.Sections.Add(newSection);
-                    await _context.SaveChangesAsync();
-
-                    createdSections.Add(new SectionDto
-                    {
-                        Secid = newSection.Secid,
-                        Secname = newSection.Secname
-                    });
-
-                    Console.WriteLine($"➕ Thêm Section: {newSection.Secid} - {newSection.Secname}");
-                }
+                Console.WriteLine($"➕ Thêm Section: {newSection.Secid} - {newSection.Secname}");
             }
 
             return Ok(new BankDto
             {
                 BankId = newBank.BankId,
                 BankName = newBank.Bankname,
+                CurriculumId = newBank.CurriculumId,
                 Sections = createdSections
             });
         }
+
+
+
+
 
 
 
@@ -415,6 +362,16 @@ namespace SEP490_G77_ESS.Controllers
             };
         }
 
+
+        [HttpGet("curriculums")]
+        public async Task<ActionResult<IEnumerable<object>>> GetCurriculums()
+        {
+            var curriculums = await _context.Curricula
+                .Select(c => new { c.CurriculumId, c.CurriculumName })
+                .ToListAsync();
+
+            return Ok(curriculums);
+        }
 
 
 

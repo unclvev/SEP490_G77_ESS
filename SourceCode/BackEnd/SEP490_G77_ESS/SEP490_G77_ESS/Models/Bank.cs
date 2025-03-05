@@ -13,6 +13,7 @@ public partial class Bank
     public byte? Bankstatus { get; set; }
 
     public long? Totalquestion { get; set; }
+
     [JsonIgnore]
     public long? Accid { get; set; }
 
@@ -20,15 +21,24 @@ public partial class Bank
 
     public long? SubjectId { get; set; }
 
+    public long? CurriculumId { get; set; } // ✅ Thêm CurriculumId
+
     public DateTime? CreateDate { get; set; }
+
     [JsonIgnore]
     public virtual Account? Acc { get; set; }
+
     [JsonIgnore]
     public virtual ICollection<BankAccess> BankAccesses { get; set; } = new List<BankAccess>();
+
     [JsonIgnore]
     public virtual Grade? Grade { get; set; }
 
     public virtual ICollection<Section> Sections { get; set; } = new List<Section>();
+
     [JsonIgnore]
     public virtual Subject? Subject { get; set; }
+
+    [JsonIgnore]
+    public virtual Curriculum? Curriculum { get; set; } // ✅ Thêm quan hệ với bảng Curriculum
 }
