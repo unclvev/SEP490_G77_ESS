@@ -10,4 +10,8 @@ public partial class DefaultSectionHierarchy
     public string? DfSectionName { get; set; }
 
     public string? DfInformation { get; set; }
+
+    public long? CurriculumId { get; set; } // ✅ Thêm CurriculumId
+
+    public virtual Curriculum? Curriculum { get; set; } // ✅ Thêm quan hệ với bảng Curriculum
 }
