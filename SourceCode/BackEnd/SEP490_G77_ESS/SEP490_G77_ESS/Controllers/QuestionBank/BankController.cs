@@ -387,21 +387,34 @@ namespace SEP490_G77_ESS.Controllers
         }
 
         // ✅ Hàm đệ quy xây dựng cây section (CÓ SỐ LƯỢNG CÂU HỎI)
+        // ✅ Hàm đệ quy xây dựng cây section (CÓ CỘNG DỒN SỐ LƯỢNG CÂU HỎI)
         private object BuildSectionTree(Section section, List<Section> sections, List<SectionHierarchy> sectionHierarchies, Dictionary<long, int> questionCounts)
         {
+            // ✅ Lấy danh sách các section con của section hiện tại
+            var childSections = sectionHierarchies
+                .Where(sh => sh.AncestorId == section.Secid)
+                .Select(sh => sections.FirstOrDefault(s => s.Secid == sh.DescendantId))
+                .Where(s => s != null)
+                .ToList();
+
+            // ✅ Tính tổng số câu hỏi: Câu hỏi của section hiện tại + tất cả các section con
+            int totalQuestions = questionCounts.ContainsKey(section.Secid) ? questionCounts[section.Secid] : 0;
+
+            // ✅ Đệ quy tính tổng số câu hỏi từ các section con
+            var children = childSections.Select(s => BuildSectionTree(s, sections, sectionHierarchies, questionCounts)).ToList();
+
+            // ✅ Cộng số câu hỏi của các con vào cha
+            totalQuestions += children.Sum(c => (int)c.GetType().GetProperty("questionCount").GetValue(c, null));
+
             return new
             {
                 secid = section.Secid,
                 secname = section.Secname,
-                questionCount = questionCounts.ContainsKey(section.Secid) ? questionCounts[section.Secid] : 0, // ✅ Thêm số lượng câu hỏi
-                children = sectionHierarchies
-                    .Where(sh => sh.AncestorId == section.Secid)
-                    .Select(sh => sections.FirstOrDefault(s => s.Secid == sh.DescendantId))
-                    .Where(s => s != null)
-                    .Select(s => BuildSectionTree(s, sections, sectionHierarchies, questionCounts))  // ✅ Đệ quy lấy tiếp children
-                    .ToList()
+                questionCount = totalQuestions, // ✅ Hiển thị tổng số câu hỏi từ cha và con
+                children = children
             };
         }
+
 
 
 
