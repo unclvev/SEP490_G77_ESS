@@ -87,35 +87,46 @@ const QuestionList = () => {
 
   const handleSave = async () => {
     if (!newQuestion.quescontent.trim() || !newQuestion.typeId || !newQuestion.modeid) {
-      message.warning("Vui lòng nhập đầy đủ thông tin câu hỏi!");
+      message.warning("⚠️ Vui lòng nhập đầy đủ thông tin câu hỏi!");
       return;
     }
-
+  
     try {
       const requestData = {
         quescontent: newQuestion.quescontent,
         typeId: newQuestion.typeId,
         modeid: newQuestion.modeid,
         secid: newQuestion.secid,
-        solution: newQuestion.typeId === 1 ? "" : newQuestion.solution, 
+        solution: newQuestion.typeId === 1 ? "" : newQuestion.solution,
         answers: newQuestion.typeId === 1 ? newQuestion.answers.filter(ans => ans.trim() !== "") : [],
         correctAnswers: newQuestion.correctAnswers,
       };
-
+  
       let response;
       if (currentQuestion) {
         response = await axios.put(`https://localhost:7052/api/Question/questions/${currentQuestion.quesid}`, requestData);
       } else {
         response = await axios.post(`https://localhost:7052/api/Question/questions`, requestData);
       }
-
-      message.success(response.data.message);
-      setIsEditing(false);
-      fetchQuestions(); // 🔹 Làm mới danh sách sau khi thêm/sửa
+  
+      message.success("✅ Lưu câu hỏi thành công!", 2); // 🟢 Thông báo lưu thành công
+      setIsEditing(false); // 🔹 Đóng form sau khi lưu
+      setNewQuestion({  // 🔹 Đặt lại form về mặc định
+        quescontent: "",
+        typeId: null,
+        modeid: null,
+        secid: sectionId,
+        solution: "",
+        answers: ["", "", "", ""],
+        correctAnswers: [],
+      });
+  
+      fetchQuestions(); // 🔹 Làm mới danh sách câu hỏi sau khi lưu
     } catch (error) {
-      message.error(error.response?.data?.message || "Lỗi khi lưu câu hỏi!");
+      message.error(error.response?.data?.message || "❌ Lỗi khi lưu câu hỏi!");
     }
   };
+  
 
   const handleDelete = async (quesid) => {
     try {

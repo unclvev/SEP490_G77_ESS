@@ -65,6 +65,9 @@ const QuestionBankDetail = () => {
           : `https://localhost:7052/api/Bank/${currentSection.secid}/add-subsection`;
 
       await axios.post(url, { secname: sectionName });
+      message.success("✅ Thêm section thành công!", 2); // 🟢 Thông báo UI thành công
+      setIsModalVisible(false);
+      setSectionName("");
       fetchSections();
       message.success("Thêm section thành công!");
       setIsModalVisible(false);

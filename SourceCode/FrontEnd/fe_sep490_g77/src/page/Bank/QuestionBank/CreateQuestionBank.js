@@ -13,6 +13,7 @@ const CreateQuestionBank = () => {
   const [grade, setGrade] = useState(null);
   const [subject, setSubject] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState({ grade: false, subject: false });
 
   useEffect(() => {
     const fetchGrades = async () => {
@@ -40,7 +41,8 @@ const CreateQuestionBank = () => {
 
   const handleCreateBank = async () => {
     if (!grade || !subject) {
-      message.error("Vui lòng chọn đầy đủ Khối học và Môn học.");
+      setError({ grade: !grade, subject: !subject }); // ✅ Đánh dấu lỗi
+      message.error("⚠️ Vui lòng chọn đầy đủ Khối học và Môn học!");
       return;
     }
 
@@ -52,11 +54,11 @@ const CreateQuestionBank = () => {
       });
 
       if (response.status === 200) {
-        message.success(`Ngân hàng câu hỏi "${response.data.bankName}" đã được tạo thành công!`);
+        message.success(`✅ Ngân hàng câu hỏi "${response.data.bankName}" đã được tạo thành công!`);
         navigate(`/question-bank-detail/${response.data.bankId}`);
       }
     } catch (error) {
-      message.error("Không thể tạo ngân hàng câu hỏi.");
+      message.error("❌ Không thể tạo ngân hàng câu hỏi.");
     } finally {
       setLoading(false);
     }
@@ -71,8 +73,8 @@ const CreateQuestionBank = () => {
       <div className="flex flex-col md:flex-row gap-3 items-center mb-6">
         <Select 
           placeholder="Chọn Khối học" 
-          className="w-52"
-          onChange={setGrade} 
+          className={`w-52 ${error.grade ? "border-red-500" : ""}`} // ✅ Bôi đỏ nếu lỗi
+          onChange={(value) => { setGrade(value); setError({ ...error, grade: false }); }} // ✅ Reset lỗi khi chọn
           value={grade}
           loading={grades.length === 0}
         >
@@ -85,8 +87,8 @@ const CreateQuestionBank = () => {
 
         <Select 
           placeholder="Chọn Môn học" 
-          className="w-52"
-          onChange={setSubject} 
+          className={`w-52 ${error.subject ? "border-red-500" : ""}`} // ✅ Bôi đỏ nếu lỗi
+          onChange={(value) => { setSubject(value); setError({ ...error, subject: false }); }} // ✅ Reset lỗi khi chọn
           value={subject}
           loading={subjects.length === 0}
         >
