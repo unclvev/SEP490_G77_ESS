@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using SEP490_G77_ESS.Models;
+using SEP490_G77_ESS.Services;
 using SEP490_G77_ESS.Utils;
 using System.Text;
 
@@ -44,6 +45,8 @@ builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("Emai
 builder.Services.AddScoped<JWT>();
 builder.Services.AddScoped<PasswordHandler>();
 builder.Services.AddScoped<Email>();
+builder.Services.AddScoped<EmailService>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

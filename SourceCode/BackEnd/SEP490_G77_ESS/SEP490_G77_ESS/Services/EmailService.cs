@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 
 namespace SEP490_G77_ESS.Services
 {
-
     public class EmailService
     {
         private readonly IConfiguration _configuration;
@@ -29,7 +28,8 @@ namespace SEP490_G77_ESS.Services
             email.Body = new TextPart("html")
             {
                 Text = $"<p>Nhấn vào liên kết bên dưới để xác thực tài khoản của bạn:</p><br>" +
-                       $"<a href='{verificationLink}' target='_blank'>Xác nhận tài khoản</a>"
+                       $"<a href='{verificationLink}' target='_blank'>Xác nhận tài khoản</a>" +
+                       $"<p>Liên kết này sẽ hết hạn sau 1 giờ.</p>"
             };
 
             using var smtp = new SmtpClient();
@@ -39,5 +39,4 @@ namespace SEP490_G77_ESS.Services
             await smtp.DisconnectAsync(true);
         }
     }
-
 }

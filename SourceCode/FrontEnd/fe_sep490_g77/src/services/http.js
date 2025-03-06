@@ -11,6 +11,7 @@ Http.interceptors.request.use(
     async (config) => {
         const token = store.getState().token;
         if (token) {
+            console.log(token);
             config.headers.Authorization = `Bearer ${token}`;
         }
         return config;
