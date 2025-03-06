@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Card, Button, Input, Spin, message, Modal } from "antd";
 import { SettingOutlined, EditOutlined, DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
-import { delExam, getExams } from "../../services/api";
+import { delExam, getExams, updateExam } from "../../services/api";
 
 const ExamManagement = () => {
   const navigate = useNavigate();
@@ -37,7 +37,7 @@ const ExamManagement = () => {
         // xử lí ko thành công
       }else{
         message.success("Xóa đề thi thành công!");
-        setExams((prevExams) => prevExams.filter((exam) => exam.examId !== selectedExam));
+        setExams((prevExams) => prevExams.filter((exam) => exam.examId !== examid));
         setDeleteModalVisible(false);
       }
 
@@ -48,12 +48,12 @@ const ExamManagement = () => {
   };
 
   const showDeleteModal = (examId) => {
-    setSelectedExam(examId);
+    setExamid(examId);
     setDeleteModalVisible(true);
   };
 
   const showEditModal = (examId, currentName) => {
-    setSelectedExam(examId);
+    setExamid(examId);
     setNewExamName(currentName);
     setEditModalVisible(true);
   };
@@ -65,7 +65,7 @@ const ExamManagement = () => {
     }
 
     try {
-      const response = await updateExam(selectedExam, newName);
+      const response = await updateExam(examid, newName);
 
       if (!response.ok) {
         // xử lí thất bại
@@ -74,7 +74,7 @@ const ExamManagement = () => {
         message.success("Cập nhật tên đề thi thành công!");
         setExams((prevExams) =>
           prevExams.map((exam) =>
-            exam.examId === selectedExam ? { ...exam, examname: newName } : exam
+            exam.examId === examid ? { ...exam, examname: newName } : exam
           )
         );
         setEditModalVisible(false);

@@ -1,6 +1,6 @@
 // reducers.js
 import { combineReducers } from 'redux';
-import { SET_TOKEN } from '../redux-setup/action.jsx';
+import { SET_TOKEN} from './action.js'
 
 const tokenReducer = (state = null, action) => {
     switch (action.type) {

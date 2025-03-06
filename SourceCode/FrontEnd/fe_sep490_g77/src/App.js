@@ -11,6 +11,8 @@ import ExamManagement from "./page/Exam/ExamManager";
 import ExamDetail from "./page/Exam/ExamContent";
 import ExamCreation from "./page/Exam/ExamMatrix";
 import ExamPreview from "./page/Exam/ExamPreview";
+import LoginPage from "./page/Common/LoginPage";
+import RegistrationPage from "./page/Common/RegisterPage";
 
 function App() {
   return (
@@ -18,6 +20,9 @@ function App() {
       <Routes>
         {/* Home dùng Sidebar riêng */}
         <Route path="/" element={<Home />} />
+
+        <Route path="/login" element={<LoginPage></LoginPage>}/>
+        <Route path="/signup" element={<RegistrationPage></RegistrationPage>}/>
 
         {/* Các trang khác bọc trong MainLayout */}
         <Route path="/question-bank" element={<MainLayout><QuestionBank /></MainLayout>} />
