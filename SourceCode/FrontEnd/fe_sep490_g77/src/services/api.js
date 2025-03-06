@@ -1,5 +1,9 @@
 import Http from "./http"
 
+//auth-api
+
+export const register = (data) => Http.post("/Register", data)
+
 //exam-api
 
 export const createExam = () => Http.get("/")
