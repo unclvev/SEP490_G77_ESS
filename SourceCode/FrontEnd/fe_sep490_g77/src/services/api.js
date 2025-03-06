@@ -4,13 +4,15 @@ import Http from "./http"
 
 export const register = (data) => Http.post("/Register", data)
 
+export const login = (data) => Http.post("/Login", data)
+
 //exam-api
 
 export const createExam = () => Http.get("/")
 
-export const getExams = () => Http.get("/")
+export const getExams = () => Http.get("/exam")
 
-export const getExam = () => Http.get("/exam")
+//export const getExam = () => Http.get("/exam")
 
 export const delExam = (examid) => Http.delete(`/Exam/${examid}`)
 

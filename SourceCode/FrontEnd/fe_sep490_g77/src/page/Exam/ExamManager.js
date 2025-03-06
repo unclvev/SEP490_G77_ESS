@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { Card, Button, Input, Spin, message, Modal } from "antd";
-import { SettingOutlined, EditOutlined, DeleteOutlined, PlusOutlined } from "@ant-design/icons";
+import { Card, Button, Input, Spin, Modal } from "antd";
+import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { delExam, getExams, updateExam } from "../../services/api";
+import { toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const ExamManagement = () => {
   const navigate = useNavigate();
@@ -19,31 +21,28 @@ const ExamManagement = () => {
         const response = await getExams();
         setLoading(false);
         setExams(response.data);
-      }catch (error){
-        console.log('Error fetching exams:'. error);
+      } catch (error) {
+        toast.error("Lỗi khi lấy danh sách đề thi!");
+        console.error("Error fetching exams:", error);
       }
     };
 
     fetchData();
   }, []);
 
-  
-
-  const deleteExamById = async (examid) => {
+  const deleteExamById = async () => {
     try {
       const response = await delExam(examid);
-
       if (!response.ok) {
-        // xử lí ko thành công
-      }else{
-        message.success("Xóa đề thi thành công!");
+        toast.error("Xóa đề thi thất bại!");
+      } else {
+        toast.success("Xóa đề thi thành công!");
         setExams((prevExams) => prevExams.filter((exam) => exam.examId !== examid));
         setDeleteModalVisible(false);
       }
-
-      
     } catch (error) {
-      console.log('Can not delete the exam:', error);
+      toast.error("Không thể xóa đề thi!");
+      console.error("Can not delete the exam:", error);
     }
   };
 
@@ -60,18 +59,16 @@ const ExamManagement = () => {
 
   const updateExamName = async () => {
     if (!newName.trim()) {
-      message.warning("Tên đề thi không được để trống!");
+      toast.warning("Tên đề thi không được để trống!");
       return;
     }
 
     try {
       const response = await updateExam(examid, newName);
-
       if (!response.ok) {
-        // xử lí thất bại
-      }else{
-        // xử lí thành công
-        message.success("Cập nhật tên đề thi thành công!");
+        toast.error("Cập nhật tên đề thi thất bại!");
+      } else {
+        toast.success("Cập nhật tên đề thi thành công!");
         setExams((prevExams) =>
           prevExams.map((exam) =>
             exam.examId === examid ? { ...exam, examname: newName } : exam
@@ -79,10 +76,9 @@ const ExamManagement = () => {
         );
         setEditModalVisible(false);
       }
-
-      
     } catch (error) {
-      console.log('Can not update the exam:', error);
+      toast.error("Không thể cập nhật tên đề thi!");
+      console.error("Can not update the exam:", error);
     }
   };
 
@@ -104,36 +100,35 @@ const ExamManagement = () => {
           {exams.length > 0 ? (
             exams.map((exam) => (
               <Card
-  key={exam.examId}
-  title={exam.examname}
-  style={{ width: 250, cursor: "pointer" }}
-  hoverable
-  onClick={() => navigate(`/exam/content?id=${exam.examId}`)}
->
-  <p>Ngày tạo: {exam.createdate}</p>
-  <div style={{ display: "flex", justifyContent: "space-between" }}>
-    <Button 
-      icon={<EditOutlined />} 
-      onClick={(e) => {
-        e.stopPropagation(); // Ngăn chặn sự kiện click từ Card
-        showEditModal(exam.examId, exam.examname);
-      }}
-    >
-      Chỉnh sửa
-    </Button>
-    <Button 
-      icon={<DeleteOutlined />} 
-      danger 
-      onClick={(e) => {
-        e.stopPropagation(); // Ngăn chặn sự kiện click từ Card
-        showDeleteModal(exam.examId);
-      }}
-    >
-      Xóa
-    </Button>
-  </div>
-</Card>
-
+                key={exam.examId}
+                title={exam.examname}
+                style={{ width: 250, cursor: "pointer" }}
+                hoverable
+                onClick={() => navigate(`/exam/content?id=${exam.examId}`)}
+              >
+                <p>Ngày tạo: {exam.createdate}</p>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <Button
+                    icon={<EditOutlined />}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      showEditModal(exam.examId, exam.examname);
+                    }}
+                  >
+                    Chỉnh sửa
+                  </Button>
+                  <Button
+                    icon={<DeleteOutlined />}
+                    danger
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      showDeleteModal(exam.examId);
+                    }}
+                  >
+                    Xóa
+                  </Button>
+                </div>
+              </Card>
             ))
           ) : (
             <p>Không có đề thi nào.</p>
