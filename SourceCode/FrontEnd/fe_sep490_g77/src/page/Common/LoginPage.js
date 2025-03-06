@@ -4,7 +4,8 @@ import { Link } from 'react-router-dom';
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
 import { message } from 'antd';
 import { login } from '../../services/api';
-import {useSelector, useDispatch} from 'react-redux'
+import {useSelector, useDispatch} from 'react-redux';
+import { setToken } from '../../redux-setup/action';
 
 
 const LoginPage = () => {
@@ -13,6 +14,8 @@ const LoginPage = () => {
         username: '',
         password: ''
     });
+    const dispatch = useDispatch();
+
 
     const [errorMessage, setErrorMessage] = useState('');
 
