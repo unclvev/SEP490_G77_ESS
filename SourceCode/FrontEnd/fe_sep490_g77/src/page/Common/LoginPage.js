@@ -1,38 +1,48 @@
 import { GoogleOutlined } from '@ant-design/icons';
-// import axios from 'axios';
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
+import { message } from 'antd';
+import { login } from '../../services/api';
+import {useSelector, useDispatch} from 'react-redux';
+import { setToken } from '../../redux-setup/action';
+
 
 const LoginPage = () => {
-    const [username, setUsername] = useState('');
-    const [password, setPassword] = useState('');
+    const token = useSelector(state => state.token);
+    const [credentials, setCredentials] = useState({
+        username: '',
+        password: ''
+    });
+    const dispatch = useDispatch();
+
+
     const [errorMessage, setErrorMessage] = useState('');
 
-    // // Hàm xử lý đăng nhập thông thường
-    // const handleLogin = async () => {
-    //     try {
-    //         const response = await axios.post('http://localhost:5095/api/Login', {
-    //             username,
-    //             password
-    //         });
-    //         localStorage.setItem('jwt', response.data.jwt);
-    //         window.location.href = '/';
-    //     } catch (error) {
-    //         setErrorMessage('Invalid username or password');
-    //     }
-    // };
+    // Xử lý đăng nhập thông thường
+    const handleLogin = async () => {
+        try {
+            const response = await login(credentials);
 
-    // // Xử lý đăng nhập bằng Google
+            //save to redux
+            dispatch(setToken(response.data));
+            localStorage.setItem('jwt', response.data.jwt);
+            message.success('Login successful!');
+            window.location.href = '/';
+        } catch (error) {
+            message.error('Invalid username or password');
+        }
+    };
+
+    // Xử lý đăng nhập bằng Google
     // const handleGoogleLogin = async (response) => {
     //     try {
-    //         const res = await axios.post('http://localhost:5095/api/GoogleLogin', {
-    //             token: response.credential,
-    //         });
+    //         const res = await googleLogin({ token: response.credential });
     //         localStorage.setItem('jwt', res.data.jwt);
+    //         message.success('Google login successful!');
     //         window.location.href = '/';
     //     } catch (error) {
-    //         setErrorMessage('Google login failed');
+    //         message.error('Google login failed');
     //     }
     // };
 
@@ -48,28 +58,28 @@ const LoginPage = () => {
                     <div className="w-full max-w-md p-8 mr-32">
                         <h1 className="text-5xl font-bold text-center text-black mb-6">Hello</h1>
                         <span className="text-black text-sm text-center block mb-6">
-                           Bạn chưa có tài khoản ? <a className='text-blue-600' href='/register'>Tạo tài khoản</a>
+                           Bạn chưa có tài khoản? <a className="text-blue-600" href="/register">Tạo tài khoản</a>
                         </span>
 
                         <input
                             type="text"
                             placeholder="Email hoặc tên"
                             className="w-full px-3 py-2 border border-gray-300 rounded-full mb-4"
-                            value={username}
-                            onChange={(e) => setUsername(e.target.value)}
+                            value={credentials.username}
+                            onChange={(e) => setCredentials({ ...credentials, username: e.target.value })}
                         />
                         <input
                             type="password"
                             placeholder="Mật khẩu"
                             className="w-full px-3 py-2 border border-gray-300 rounded-full mb-4"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
+                            value={credentials.password}
+                            onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
                         />
                         {errorMessage && (
                             <div className="text-red-500 text-sm mb-4">{errorMessage}</div>
                         )}
                         <button
-                            // onClick={handleLogin}
+                            onClick={handleLogin}
                             className="w-full bg-blue-600 text-white py-2 rounded-full hover:bg-blue-700 mb-4"
                         >
                             Đăng nhập
@@ -83,24 +93,13 @@ const LoginPage = () => {
 
                         {/* Google Login Button */}
                         <GoogleLogin
-                            // onSuccess={handleGoogleLogin}
-                            onError={() => setErrorMessage('Google login failed')}
-                            render={(renderProps) => (
-                                <button
-                                    onClick={renderProps.onClick}
-                                    className="w-full bg-red-500 text-gray-700 py-2 rounded-full hover:bg-red-600 mb-2 flex items-center justify-center border border-gray-300"
-                                >
-                                    <GoogleOutlined className="mr-2" size={20} />
-                                    Continue with Google
-                                </button>
-                            )}
+                            //onSuccess={handleGoogleLogin}
+                            onError={() => message.error('Google login failed')}
                         />
 
                         <div className="flex justify-center items-center mt-4">
-                            {/* <input type="checkbox" id="stay-signed-in" className="mr-2" />
-                            <label htmlFor="stay-signed-in" className="text-xl text-black">Bạn quên mật khẩu ?</label> */}
                             <span className="text-black text-sm text-center block mb-6">
-                                Bạn chưa có quên mật khẩu ? <a className='text-blue-600' href='/forgot-password'>Quên mật khẩu</a>
+                                Bạn quên mật khẩu? <a className="text-blue-600" href="/forgot-password">Quên mật khẩu</a>
                             </span>
                         </div>
                     </div>

@@ -43,7 +43,7 @@ namespace SEP490_G77_ESS.Controllers.Common
                 jwt = jwt
             });
 
-            return Ok();
+            
         }
         //private RefreshToken GenerateRefreshToken()
         //{
