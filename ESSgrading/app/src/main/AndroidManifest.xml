@@ -38,6 +38,8 @@
             android:exported="true"/>
         <activity android:name=".Activity.Test.GradingActivity"
             android:exported="true"/>
+        <activity android:name=".Activity.Test.ScoreReportActivity"
+            android:exported="true"/>
         <activity android:name=".Activity.Test.ListAnswerActivity"
             android:exported="true"/>
         <activity android:name=".Activity.Class.ClassDetailActivity"

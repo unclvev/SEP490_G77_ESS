@@ -20,7 +20,7 @@ public class TestOptionActivity extends BaseActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_testoption);
         setupDrawer();
-        setHeaderTitle("Bài kiểm tra");
+        setHeaderTitle("Trắc nghiệm");
 
         // Nhận dữ liệu từ SelectExCodeActivity
         Intent intent = getIntent();
@@ -53,5 +53,13 @@ public class TestOptionActivity extends BaseActivity {
             gradingIntent.putExtra("selectedExCode", selectedExCode);
             startActivity(gradingIntent);
         });
+
+        Button btnScoreReport = findViewById(R.id.btnScoreReport);
+        btnScoreReport.setOnClickListener(v -> {
+            Intent reportIntent = new Intent(TestOptionActivity.this, ScoreReportActivity.class);
+            reportIntent.putExtra("selectedExCode", selectedExCode);
+            startActivity(reportIntent);
+        });
+
     }
 }

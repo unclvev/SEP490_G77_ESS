@@ -70,6 +70,22 @@
                 android:padding="10dp"
                 android:layout_margin="10dp"
                 android:focusable="false"/>
+
+            <Button
+                android:id="@+id/btnScoreReport"
+                android:layout_width="250dp"
+                android:layout_height="wrap_content"
+                android:text="Báo cáo điểm"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:drawableLeft="@drawable/ic_chart"
+                android:drawablePadding="8dp"
+                android:backgroundTint="@color/deepblue"
+                android:textColor="@android:color/white"
+                android:gravity="center"
+                android:padding="10dp"
+                android:layout_margin="10dp"
+                android:focusable="false"/>
         </LinearLayout>
 
         <!-- Include Footer -->

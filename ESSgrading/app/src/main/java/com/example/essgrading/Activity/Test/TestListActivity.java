@@ -26,7 +26,7 @@ public class TestListActivity extends BaseActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_testlist);
         setupDrawer();
-        setHeaderTitle("Bài kiểm tra");
+        setHeaderTitle("Trắc nghiệm");
 
         recyclerViewTests = findViewById(R.id.recyclerViewTests);
         fabAddTest = findViewById(R.id.fabAddTest);

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@color/white"
+    android:padding="12dp"
+    android:layout_margin="8dp">
+
+    <TextView
+        android:id="@+id/txtStudentName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Hoàng Thu Phương"
+        android:textColor="@color/black"
+        android:textSize="16sp"
+        android:textStyle="bold"/>
+
+    <TextView
+        android:id="@+id/txtStudentId"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="HE172276"
+        android:textColor="@color/black"
+        android:textSize="14sp"/>
+
+    <TextView
+        android:id="@+id/txtStudentScore"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="8.25"
+        android:textColor="@color/black"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:gravity="end"/>
+</LinearLayout>
