@@ -27,7 +27,7 @@ public class GradingActivity extends BaseActivity implements SurfaceHolder.Callb
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_grading);
         setupDrawer();
-        setHeaderTitle("Bài kiểm tra");
+        setHeaderTitle("Chấm điểm");
 
         // Nhận dữ liệu từ TestOptionActivity
         Intent intent = getIntent();

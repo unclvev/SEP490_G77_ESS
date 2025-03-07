@@ -54,8 +54,8 @@ public class BaseActivity extends AppCompatActivity {
             int id = item.getItemId();
 
             if (id == R.id.menu_exam_storage) {
-                Intent intent = new Intent(BaseActivity.this, TestListActivity.class);
-                startActivity(intent);
+//                Intent intent = new Intent(BaseActivity.this, TestListActivity.class);
+//                startActivity(intent);
             } else if (id == R.id.menu_classes) {
                 Intent intent = new Intent(BaseActivity.this, ClassListActivity.class);
                 startActivity(intent);

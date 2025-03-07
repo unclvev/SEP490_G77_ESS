@@ -3,6 +3,8 @@ package com.example.essgrading.Activity;
 import android.content.Intent;
 import android.os.Bundle;
 import android.widget.Button;
+
+import com.example.essgrading.Activity.Test.TestListActivity;
 import com.example.essgrading.R;
 
 public class MainActivity extends BaseActivity {
@@ -20,5 +22,10 @@ public class MainActivity extends BaseActivity {
 
         btnMultipleChoice = findViewById(R.id.btnMultipleChoice);
         btnEssay = findViewById(R.id.btnEssay);
+
+        btnMultipleChoice.setOnClickListener(v ->{
+            Intent intent = new Intent(MainActivity.this, TestListActivity.class);
+            startActivity(intent);
+        });
     }
 }

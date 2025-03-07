@@ -23,7 +23,7 @@ public class ListAnswerActivity extends BaseActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_listanswer);
         setupDrawer();
-        setHeaderTitle("Bài kiểm tra");
+        setHeaderTitle("Đáp án đúng");
 
         // Nhận mã đề từ Intent
         Intent intent = getIntent();

@@ -24,7 +24,7 @@ public class SelectExCodeActivity extends BaseActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_selectexcode);
         setupDrawer();
-        setHeaderTitle("Bài kiểm tra");
+        setHeaderTitle("Trắc nghiệm");
 
         // Nhận dữ liệu từ TestListActivity
         Intent intent = getIntent();
