@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Collapse, Dropdown, Input, Modal, Button, message, Skeleton } from "antd";
-import { MoreOutlined, EditOutlined, DeleteOutlined, PlusOutlined } from "@ant-design/icons";
+import { Collapse, Dropdown, Input, Modal, Button, message, Skeleton, Upload } from "antd";
+import { MoreOutlined, EditOutlined, DeleteOutlined, PlusOutlined, UploadOutlined, DownloadOutlined } from "@ant-design/icons";
 import axios from "axios";
 
 const { Panel } = Collapse;
@@ -27,7 +27,6 @@ const QuestionBankDetail = () => {
   const fetchBankInfo = async () => {
     try {
       const response = await axios.get(`https://localhost:7052/api/Bank/${bankId}`);
-      console.log("Bank Info:", response.data); // 🛠 Debug dữ liệu
       setBankInfo(response.data);
     } catch (error) {
       message.error("Lỗi khi tải thông tin ngân hàng câu hỏi!");
@@ -65,13 +64,10 @@ const QuestionBankDetail = () => {
           : `https://localhost:7052/api/Bank/${currentSection.secid}/add-subsection`;
 
       await axios.post(url, { secname: sectionName });
-      message.success("✅ Thêm section thành công!", 2); // 🟢 Thông báo UI thành công
+      message.success("✅ Thêm section thành công!");
       setIsModalVisible(false);
       setSectionName("");
       fetchSections();
-      message.success("Thêm section thành công!");
-      setIsModalVisible(false);
-      setSectionName("");
     } catch (error) {
       message.error("Lỗi khi thêm section!");
     }
@@ -113,66 +109,91 @@ const QuestionBankDetail = () => {
     navigate(`/question-list/${sectionId}`);
   };
 
-  /** ✅ Hiển thị danh sách Sections */
- /** ✅ Hiển thị danh sách Sections */
-const renderSections = (sections) => {
-  return sections.map((section) => (
-    <Panel
-      key={section.secid}
-      header={
-        <div className="flex justify-between items-center w-full">
-          <div className="flex items-center">
-            <span className="font-semibold">{section.secname}</span>
-            <span
-              className="text-blue-600 text-sm ml-2 cursor-pointer hover:underline"
-              onClick={(e) => {
-                e.stopPropagation(); // Ngăn chặn sự kiện click mở/đóng panel
-                handleGoToQuestionList(section.secid);
-              }}
-            >
-              ({section.questionCount} câu hỏi)
-            </span>
-          </div>
-          <Dropdown
-            menu={{
-              items: [
-                {
-                  key: "1",
-                  label: "Thêm Section con",
-                  icon: <PlusOutlined />,
-                  onClick: () => showModal("add-sub", section),
-                },
-                {
-                  key: "2",
-                  label: "Sửa",
-                  icon: <EditOutlined />,
-                  onClick: () => showModal("edit", section),
-                },
-                {
-                  key: "3",
-                  label: "Xóa",
-                  icon: <DeleteOutlined />,
-                  danger: true,
-                  onClick: () => handleDeleteSection(section.secid),
-                },
-              ],
-            }}
-            trigger={["click"]}
-          >
-            <MoreOutlined className="text-xl cursor-pointer" />
-          </Dropdown>
-        </div>
-      }
-    >
-      {section.children?.length > 0 ? (
-        <Collapse className="ml-4">{renderSections(section.children)}</Collapse>
-      ) : (
-        <p className="ml-4 text-gray-500">Không có section con</p>
-      )}
-    </Panel>
-  ));
+  /** ✅ Export Excel */
+  const handleExportExcel = () => {
+    window.location.href = `https://localhost:7052/api/Bank/${bankId}/export-excel`;
+  };
+
+  /** ✅ Import Excel */
+ /** ✅ Import Excel & Cập nhật UI */
+const handleImportExcel = async ({ file }) => {
+  const formData = new FormData();
+  formData.append("file", file);
+  
+  try {
+    await axios.post(`https://localhost:7052/api/Bank/${bankId}/import-excel`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+
+    message.success("Import Excel thành công!");
+
+    fetchSections();  // 🔄 Cập nhật danh sách Sections ngay sau khi import
+    fetchQuestions(); // 🔄 Cập nhật danh sách câu hỏi để hiển thị trong Question List
+
+  } catch (error) {
+    message.error("Lỗi khi import Excel!");
+  }
 };
 
+
+  /** ✅ Hiển thị danh sách Sections */
+  const renderSections = (sections) => {
+    return sections.map((section) => (
+      <Panel
+        key={section.secid}
+        header={
+          <div className="flex justify-between items-center w-full">
+            <div className="flex items-center">
+              <span className="font-semibold">{section.secname}</span>
+              <span
+                className="text-blue-600 text-sm ml-2 cursor-pointer hover:underline"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleGoToQuestionList(section.secid);
+                }}
+              >
+                ({section.questionCount} câu hỏi)
+              </span>
+            </div>
+            <Dropdown
+              menu={{
+                items: [
+                  {
+                    key: "1",
+                    label: "Thêm Section con",
+                    icon: <PlusOutlined />,
+                    onClick: () => showModal("add-sub", section),
+                  },
+                  {
+                    key: "2",
+                    label: "Sửa",
+                    icon: <EditOutlined />,
+                    onClick: () => showModal("edit", section),
+                  },
+                  {
+                    key: "3",
+                    label: "Xóa",
+                    icon: <DeleteOutlined />,
+                    danger: true,
+                    onClick: () => handleDeleteSection(section.secid),
+                  },
+                ],
+              }}
+              trigger={["click"]}
+            >
+              <MoreOutlined className="text-xl cursor-pointer" />
+            </Dropdown>
+          </div>
+        }
+      >
+        {section.children?.length > 0 ? (
+          <Collapse className="ml-4">{renderSections(section.children)}</Collapse>
+        ) : (
+          <p className="ml-4 text-gray-500">Không có section con</p>
+        )}
+      </Panel>
+    ));
+  };
 
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
@@ -183,37 +204,32 @@ const renderSections = (sections) => {
             <p className="text-gray-600">Khối: {bankInfo.grade}</p>
             <p className="text-gray-600">Môn: {bankInfo.subject}</p>
             <p className="text-gray-600 font-semibold">
-  Tổng số câu hỏi:{" "}
-  <span className="text-blue-600">
-    {bankInfo.totalquestion !== undefined ? bankInfo.totalquestion : "Đang tải..."}
-  </span>
-</p>
+              Tổng số câu hỏi:{" "}
+              <span className="text-blue-600">
+                {bankInfo.totalquestion !== undefined ? bankInfo.totalquestion : "Đang tải..."}
+              </span>
+            </p>
           </>
         ) : (
           <Skeleton active />
         )}
       </div>
 
-      <div className="flex justify-start mb-4 w-3/4 mx-auto">
+      <div className="flex justify-between mb-4 w-3/4 mx-auto">
         <Button type="primary" icon={<PlusOutlined />} onClick={() => showModal("add-main")}>
           Thêm Section
         </Button>
+        <Button type="default" icon={<DownloadOutlined />} onClick={handleExportExcel}>
+          Export Excel
+        </Button>
+        <Upload customRequest={handleImportExcel} showUploadList={false}>
+          <Button type="primary" icon={<UploadOutlined />}>Import Excel</Button>
+        </Upload>
       </div>
 
-      {/* ✅ Hiển thị danh sách section */}
       <div className="bg-white p-6 shadow-lg rounded-lg w-full max-w-5xl mx-auto">
         <Collapse>{sections.length > 0 ? renderSections(sections) : <p>Không có dữ liệu</p>}</Collapse>
       </div>
-
-      {/* ✅ Modal thêm/sửa section */}
-      <Modal
-        title={modalType === "add-main" ? "Thêm Section" : modalType === "add-sub" ? "Thêm Section con" : "Sửa Section"}
-        open={isModalVisible}
-        onOk={modalType === "add-main" ? handleAddSection : modalType === "add-sub" ? handleAddSection : handleEditSection}
-        onCancel={() => setIsModalVisible(false)}
-      >
-        <Input value={sectionName} onChange={(e) => setSectionName(e.target.value)} placeholder="Nhập tên section" />
-      </Modal>
     </div>
   );
 };
