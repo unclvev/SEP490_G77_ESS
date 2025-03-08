@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { Button, List, Card, Select, Input, Checkbox, message, Popconfirm } from "antd";
-import { DeleteOutlined } from "@ant-design/icons";
+import { Button, List, Card, Select, Input, Checkbox, message, Popconfirm, Upload } from "antd";
+import { DeleteOutlined, DownloadOutlined, UploadOutlined } from "@ant-design/icons";
 import axios from "axios";
+
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -137,6 +138,30 @@ const QuestionList = () => {
       message.error("Lỗi khi xóa câu hỏi!");
     }
   };
+  const handleExportExcel = () => {
+    window.location.href = `https://localhost:7052/api/Bank/${sectionId}/export-excel`;
+  };
+
+  const handleImportExcel = async ({ file }) => {
+    const formData = new FormData();
+    formData.append("file", file);
+  
+    try {
+      const response = await axios.post(`https://localhost:7052/api/Bank/${sectionId}/import-excel`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+  
+      if (response.status === 200) {
+        message.success("✅ Import Excel thành công!");
+        await fetchQuestions(); // 🟢 **Tải lại danh sách ngay lập tức**
+      } else {
+        message.error("❌ Import không thành công, vui lòng thử lại!");
+      }
+    } catch (error) {
+      message.error(error.response?.data?.message || "❌ Lỗi khi import Excel!");
+    }
+  };
+  
 
   return (
     <div className="p-6 bg-gray-100 min-h-screen grid grid-cols-2 gap-6">
@@ -147,6 +172,15 @@ const QuestionList = () => {
           Thêm Câu Hỏi
         </Button>
 
+        {/* 🟢 Nút Export và Import */}
+        <div className="flex justify-between mb-4">
+          <Button type="default" icon={<DownloadOutlined />} onClick={handleExportExcel}>
+            Export Excel
+          </Button>
+          <Upload customRequest={handleImportExcel} showUploadList={false}>
+            <Button type="primary" icon={<UploadOutlined />}>Import Excel</Button>
+          </Upload>
+        </div>
         <List
           itemLayout="vertical"
           dataSource={questions}
