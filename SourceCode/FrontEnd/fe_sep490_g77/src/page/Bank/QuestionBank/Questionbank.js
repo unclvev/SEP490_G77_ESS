@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Input, Button, Card, Pagination, Modal, message } from 'antd';
 import { SearchOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import axios from 'axios';
+import { useSearchParams } from "react-router-dom";
+
 import 'tailwindcss/tailwind.css';
 
 const QuestionBank = () => {
@@ -19,6 +21,10 @@ const QuestionBank = () => {
   const [newBankName, setNewBankName] = useState("");
   const itemsPerPage = 8;
 
+  const [searchParams] = useSearchParams();
+const accid = searchParams.get("accid") || localStorage.getItem("accid");
+
+
   useEffect(() => {
     fetchBanks();
   }, [currentPage]);
@@ -27,8 +33,8 @@ const QuestionBank = () => {
     setLoading(true);
     try {
       const url = query
-        ? `https://localhost:7052/api/Bank/search?query=${query}`
-        : `https://localhost:7052/api/Bank`;
+        ? `https://localhost:7052/api/Bank/account/${accid}?query=${query}`
+        : `https://localhost:7052/api/Bank/account/${accid}`;
 
       const response = await axios.get(url);
       setBanks(response.data.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage));
