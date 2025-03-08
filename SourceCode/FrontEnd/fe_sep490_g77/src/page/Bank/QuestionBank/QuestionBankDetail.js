@@ -26,14 +26,15 @@ const QuestionBankDetail = () => {
   /** ✅ Lấy thông tin ngân hàng câu hỏi */
   const fetchBankInfo = async () => {
     try {
-      const response = await axios.get(`https://localhost:7052/api/Bank/${bankId}`);
-      console.log("Bank Info:", response.data); // 🛠 Debug dữ liệu
-      setBankInfo(response.data);
+        console.log("🚀 Gọi API:", `https://localhost:7052/api/Bank/${bankId}`);
+        const response = await axios.get(`https://localhost:7052/api/Bank/${bankId}`);
+        console.log("✅ API Response:", response.data);
+        setBankInfo(response.data);
     } catch (error) {
-      message.error("Lỗi khi tải thông tin ngân hàng câu hỏi!");
+        console.error("❌ Lỗi khi gọi API:", error);
+        message.error("Không thể tải dữ liệu!");
     }
-  };
-
+};
   /** ✅ Lấy danh sách Sections từ API */
   const fetchSections = async () => {
     try {

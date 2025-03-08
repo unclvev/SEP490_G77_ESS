@@ -6,7 +6,7 @@ import { ToastContainer } from "react-toastify";
 
 import Home from "./page/Home/Home";
 import MainLayout from "./Layout/MainLayout";
-import QuestionBank from "./page/Bank/QuestionBank/Questionbank";
+import QuestionBank from "./page/Bank/QuestionBank/QuestionBank";
 import QuestionBankDetail from "./page/Bank/QuestionBank/QuestionBankDetail";
 import CreateQuestionBank from "./page/Bank/QuestionBank/CreateQuestionBank";
 import Decentralization from "./page/Bank/QuestionBank/Decentralization";
@@ -31,10 +31,11 @@ function App() {
 
           {/* Các trang khác bọc trong MainLayout */}
           <Route path="/question-bank" element={<MainLayout><QuestionBank /></MainLayout>} />
-          <Route path="/question-bank-detail/:id" element={<MainLayout><QuestionBankDetail /></MainLayout>} />
+          <Route path="/question-bank-detail/:bankId" element={<MainLayout><QuestionBankDetail /></MainLayout>} />
           <Route path="/create-question-bank" element={<MainLayout><CreateQuestionBank /></MainLayout>} />
           <Route path="/decentralization" element={<MainLayout><Decentralization /></MainLayout>} />
-          <Route path="/question-list" element={<MainLayout><QuestionList /></MainLayout>} />
+          <Route path="/question-list/:sectionId" element={<MainLayout><QuestionList /></MainLayout>} />
+
           <Route path="/exam" element={<MainLayout><ExamManagement /></MainLayout>} />
           <Route path="/exam/content" element={<MainLayout><ExamDetail /></MainLayout>} />
           <Route path="/exam/matrix" element={<MainLayout><ExamCreation /></MainLayout>} />

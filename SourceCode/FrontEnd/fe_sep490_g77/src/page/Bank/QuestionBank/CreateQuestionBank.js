@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { Select, Button, message, Spin } from "antd";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 const { Option } = Select;
 
 const CreateQuestionBank = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams(); // ✅ Lấy params từ URL
+  const accid = searchParams.get("accid") || localStorage.getItem("accid"); // ✅ Ưu tiên lấy từ URL trước
+
   const [grades, setGrades] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [curriculums, setCurriculums] = useState([]);
@@ -16,6 +19,11 @@ const CreateQuestionBank = () => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    if (!accid) {
+      message.error("❌ Không tìm thấy thông tin tài khoản!");
+      return;
+    }
+
     const fetchGrades = async () => {
       try {
         const response = await axios.get("https://localhost:7052/api/Bank/grades");
@@ -46,11 +54,16 @@ const CreateQuestionBank = () => {
     fetchGrades();
     fetchSubjects();
     fetchCurriculums();
-  }, []);
+  }, [accid]);
 
   const handleCreateBank = async () => {
     if (!grade || !subject || !curriculum) {
       message.error("⚠️ Vui lòng chọn đầy đủ Khối học, Môn học và Chương trình!");
+      return;
+    }
+
+    if (!accid) {
+      message.error("❌ Không tìm thấy thông tin tài khoản!");
       return;
     }
 
@@ -62,7 +75,8 @@ const CreateQuestionBank = () => {
         curriculumId: curriculum === "custom" ? null : curriculum,
       };
 
-      const response = await axios.post("https://localhost:7052/api/Bank/generate", requestData);
+      // ✅ Gửi accid vào API
+      const response = await axios.post(`https://localhost:7052/api/Bank/generate/${accid}`, requestData);
 
       if (response.status === 200) {
         message.success(`✅ Ngân hàng câu hỏi "${response.data.bankName}" đã được tạo thành công!`);
@@ -122,7 +136,7 @@ const CreateQuestionBank = () => {
         >
           {/* ✅ Thêm lựa chọn "Custom" */}
           <Option key="custom" value="custom">
-             Custom 
+            Custom
           </Option>
 
           {curriculums.map((c) => (

@@ -22,10 +22,11 @@ namespace SEP490_G77_ESS.Controllers
         }
 
         // ✅ Lấy danh sách ngân hàng câu hỏi
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<object>>> GetBanks()
+        [HttpGet("account/{accid}")]
+        public async Task<ActionResult<IEnumerable<object>>> GetBanksByAccount(long accid)
         {
             var banks = await _context.Banks
+                .Where(b => b.Accid == accid) // Chỉ lấy bank thuộc account này
                 .Include(b => b.Grade)
                 .Include(b => b.Subject)
                 .Select(b => new
@@ -34,7 +35,7 @@ namespace SEP490_G77_ESS.Controllers
                     b.Bankname,
                     Totalquestion = _context.Questions
                         .Where(q => q.Secid != null && b.Sections.Select(s => s.Secid).Contains(q.Secid.Value))
-                        .Count(), // ✅ Tính lại tổng số câu hỏi thực tế
+                        .Count(),
                     b.CreateDate,
                     Grade = b.Grade != null ? b.Grade.GradeLevel : "Không xác định",
                     Subject = b.Subject != null ? b.Subject.SubjectName : "Không xác định"
@@ -43,6 +44,8 @@ namespace SEP490_G77_ESS.Controllers
 
             return Ok(banks);
         }
+
+
 
 
         // ✅ Lấy chi tiết ngân hàng câu hỏi theo ID
@@ -174,7 +177,7 @@ namespace SEP490_G77_ESS.Controllers
 
         // ✅ Tìm kiếm ngân hàng câu hỏi theo tên
         [HttpGet("search")]
-        public async Task<ActionResult<IEnumerable<object>>> SearchBanks([FromQuery] string query)
+        public async Task<ActionResult<IEnumerable<object>>> SearchBanks([FromQuery] string query, [FromQuery] long accid)
         {
             if (string.IsNullOrEmpty(query))
             {
@@ -182,7 +185,7 @@ namespace SEP490_G77_ESS.Controllers
             }
 
             var banks = await _context.Banks
-                .Where(b => b.Bankname.Contains(query))
+                .Where(b => b.Bankname.Contains(query) && b.Accid == accid) // 🔥 Chỉ lấy bank thuộc accid
                 .OrderByDescending(b => b.CreateDate)
                 .Select(b => new
                 {
@@ -196,10 +199,11 @@ namespace SEP490_G77_ESS.Controllers
             return Ok(banks);
         }
 
+
         // ✅ Tạo ngân hàng câu hỏi tự động nếu chưa có
         // ✅ Tạo ngân hàng câu hỏi tự động luôn tạo mới
-        [HttpPost("generate")]
-        public async Task<ActionResult<BankDto>> GenerateQuestionBank([FromBody] Bank bank)
+        [HttpPost("generate/{accid}")]
+        public async Task<ActionResult<BankDto>> GenerateQuestionBank(long accid, [FromBody] Bank bank)
         {
             // 🔍 Kiểm tra thông tin bắt buộc
             var grade = await _context.Grades.FindAsync(bank.GradeId);
@@ -224,13 +228,14 @@ namespace SEP490_G77_ESS.Controllers
                 GradeId = bank.GradeId,
                 SubjectId = bank.SubjectId,
                 CurriculumId = bank.CurriculumId,
-                CreateDate = DateTime.Now
+                CreateDate = DateTime.Now,
+                Accid = accid // ✅ Thêm accid vào đây
             };
 
             _context.Banks.Add(newBank);
             await _context.SaveChangesAsync(); // Lưu để lấy ID của ngân hàng mới
 
-            Console.WriteLine($"✅ Tạo ngân hàng câu hỏi mới: {newBank.BankId} - {newBank.Bankname}");
+            Console.WriteLine($"✅ Tạo ngân hàng câu hỏi mới: {newBank.BankId} - {newBank.Bankname} (accid: {accid})");
 
             List<SectionDto> createdSections = new List<SectionDto>();
 
@@ -269,6 +274,7 @@ namespace SEP490_G77_ESS.Controllers
                 Sections = createdSections
             });
         }
+
 
 
 
