@@ -1,10 +1,10 @@
-﻿using AuthenticationService.DTO;
-using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using SEP490_G77_ESS.DTO.UserDTO;
 using SEP490_G77_ESS.Models;
 using SEP490_G77_ESS.Services;
 using SEP490_G77_ESS.Utils;
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -17,14 +17,12 @@ namespace SEP490_G77_ESS.Controllers.Common
         private readonly EssDbV11Context _context;
         private readonly PasswordHandler _passwordHandler;
         private readonly EmailService _emailService;
-        private readonly JWT _jwt;
 
-        public RegisterController(EssDbV11Context context, PasswordHandler passwordHandler, EmailService emailService, JWT jwt)
+        public RegisterController(EssDbV11Context context, PasswordHandler passwordHandler, EmailService emailService)
         {
             _context = context;
             _passwordHandler = passwordHandler;
             _emailService = emailService;
-            _jwt = jwt;
         }
 
         [HttpPost]
@@ -46,16 +44,17 @@ namespace SEP490_G77_ESS.Controllers.Common
                 Username = registerDto.Username,
                 Email = registerDto.Email,
                 Userpass = _passwordHandler.HashPassword(registerDto.Password),
-                Datejoin = DateTime.UtcNow,
-                //IsActive = false
+                Datejoin = registerDto.Datejoin,
+                IsActive = 0,
+                ResetTokenExpires = DateTime.Now,
+                VerificationToken = Guid.NewGuid().ToString() 
             };
 
             _context.Accounts.Add(account);
             await _context.SaveChangesAsync();
 
-            // Tạo JWT xác thực email
-            var verificationToken = _jwt.CreateEmailVerificationToken(account.Email);
-            var verifyUrl = $"{Request.Scheme}://{Request.Host}/api/Register/VerifyEmail?token={verificationToken}";
+            // Tạo URL xác thực dựa vào token
+            var verifyUrl = $"{Request.Scheme}://{Request.Host}/api/Register/VerifyEmail?token={account.VerificationToken}";
 
             // Gửi email xác thực
             await _emailService.SendVerificationEmailAsync(registerDto.Email, verifyUrl);
@@ -66,20 +65,22 @@ namespace SEP490_G77_ESS.Controllers.Common
         [HttpGet("VerifyEmail")]
         public async Task<IActionResult> VerifyEmail([FromQuery] string token)
         {
-            var email = JWT.GetUserId(token);
-            if (email == null)
-            {
-                return BadRequest(new { message = "Token không hợp lệ hoặc đã hết hạn." });
-            }
-
-            var user = _context.Accounts.FirstOrDefault(u => u.Email == email);
+            var user = _context.Accounts.FirstOrDefault(u => u.VerificationToken == token);
             if (user == null)
             {
-                return NotFound(new { message = "Người dùng không tồn tại." });
+                return NotFound(new { message = "Người dùng không tồn tại hoặc token không hợp lệ." });
             }
 
-            //user.IsActive = true;
-            user.Roleid = 1;
+            // Kiểm tra thời gian xác thực: nếu quá 5 phút kể từ thời điểm đăng ký
+            if (user.ResetTokenExpires.HasValue && (DateTime.Now - user.ResetTokenExpires.Value).TotalMinutes > 5)
+            {
+                _context.Accounts.Remove(user);
+                await _context.SaveChangesAsync();
+                return BadRequest(new { message = "Thời gian xác thực đã quá 5 phút, vui lòng đăng ký lại." });
+            }
+
+            // Nếu trong khoảng thời gian cho phép, kích hoạt tài khoản
+            user.IsActive = 1;
             _context.Accounts.Update(user);
             await _context.SaveChangesAsync();
 

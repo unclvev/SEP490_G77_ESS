@@ -12,4 +12,6 @@ public partial class BankLogger
     public DateTime? Logtime { get; set; }
 
     public long? BankId { get; set; }
+
+    public virtual Bank? Bank { get; set; }
 }
