@@ -84,7 +84,7 @@ namespace SEP490_G77_ESS.Controllers.Common
             _context.Accounts.Update(user);
             await _context.SaveChangesAsync();
 
-            return Ok(new { message = "Xác thực email thành công! Bạn có thể đăng nhập ngay bây giờ." });
+            return Redirect("http://localhost:3000/login");
         }
     }
 }

@@ -7,8 +7,11 @@ import { ToastContainer } from "react-toastify";
 import Home from "./page/Home/Home";
 import MainLayout from "./Layout/MainLayout";
 import QuestionBank from "./page/Bank/QuestionBank/QuestionBank";
+import Profile from "./page/Common/ProfilePage";
 import QuestionBankDetail from "./page/Bank/QuestionBank/QuestionBankDetail";
 import CreateQuestionBank from "./page/Bank/QuestionBank/CreateQuestionBank";
+import ForgotPassword from "./page/Common/ForgotPasswordPage";
+import ResetPassword from "./page/Common/ResetPasswordPage";
 import Decentralization from "./page/Bank/QuestionBank/Decentralization";
 import QuestionList from "./page/Bank/QuestionBank/QuestionList";
 import ExamManagement from "./page/Exam/ExamManager";
@@ -25,10 +28,11 @@ function App() {
         <Routes>
           {/* Home dùng Sidebar riêng */}
           <Route path="/" element={<Home />} />
-
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/signup" element={<RegistrationPage />} />
-
+          <Route path="/register" element={<RegistrationPage />} />
+          <Route path="/profile" element={<Profile /> } />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           {/* Các trang khác bọc trong MainLayout */}
           <Route path="/question-bank" element={<MainLayout><QuestionBank /></MainLayout>} />
           <Route path="/question-bank-detail/:bankId" element={<MainLayout><QuestionBankDetail /></MainLayout>} />

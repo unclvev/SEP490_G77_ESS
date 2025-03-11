@@ -2,8 +2,14 @@
 {
     public class ProfileDTO
     {
-        public long AccId { get; set; }
         public string? Username { get; set; }
+        public string? Accname { get; set; }
+        public DateTime? Datejoin { get; set; }
+        public string? Gender { get; set; }
         public string? Email { get; set; }
+        public string? Phone { get; set; }
+        public string? Address { get; set; }
+        public string? Subject { get; set; }
+        public string? Skill { get; set; }
     }
 }
