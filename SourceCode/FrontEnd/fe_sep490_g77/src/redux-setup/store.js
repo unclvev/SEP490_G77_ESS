@@ -7,7 +7,6 @@ const persistConfig = {
     key: "redux-store",
     storage: storage,
     keyPrefix: "key"
-    +  window.__REDUX_DEVTOOLS_EXTENSION__ && window.__REDUX_DEVTOOLS_EXTENSION__()
 }
 
 const store = createStore(persistReducer(persistConfig, rootReducer));
