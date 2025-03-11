@@ -76,11 +76,7 @@ namespace SEP490_G77_ESS.Controllers.Common
                 return NotFound("Tài khoản không tồn tại.");
             }
 
-            // Ví dụ: cập nhật tên đầy đủ (Accname) theo thông tin nhận được từ client.
-            // Nếu mô hình Account mở rộng thêm các thuộc tính khác (Phone, Gender,...) thì cập nhật tương ứng.
             account.Accname = updateProfileDto.FullName;
-            // Bạn có thể lưu thêm thông tin khác vào một bảng Profile riêng nếu cần.
-            // Ví dụ: account.Phone = updateProfileDto.Phone; ...
 
             await _context.SaveChangesAsync();
             return Ok(new { message = "Cập nhật thông tin cá nhân thành công." });

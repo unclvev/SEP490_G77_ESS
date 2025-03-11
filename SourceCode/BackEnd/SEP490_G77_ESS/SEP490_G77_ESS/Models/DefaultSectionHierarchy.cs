@@ -11,7 +11,7 @@ public partial class DefaultSectionHierarchy
 
     public string? DfInformation { get; set; }
 
-    public long? CurriculumId { get; set; } // ✅ Thêm CurriculumId
+    public long? CurriculumId { get; set; }
 
-    public virtual Curriculum? Curriculum { get; set; } // ✅ Thêm quan hệ với bảng Curriculum
+    public virtual Curriculum? Curriculum { get; set; }
 }

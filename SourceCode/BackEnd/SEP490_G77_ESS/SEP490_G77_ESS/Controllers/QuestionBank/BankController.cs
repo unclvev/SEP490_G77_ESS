@@ -27,7 +27,7 @@ namespace SEP490_G77_ESS.Controllers
         {
             var banks = await _context.Banks
                 .Where(b => b.Accid == accid) // Chỉ lấy bank thuộc account này
-                .Include(b => b.Grade)
+                .Include(b => b.GradeId)
                 .Include(b => b.Subject)
                 .Select(b => new
                 {
@@ -719,31 +719,6 @@ namespace SEP490_G77_ESS.Controllers
                 return StatusCode(500, new { message = "❌ Lỗi hệ thống khi xử lý file Excel.", error = ex.Message });
             }
         }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
