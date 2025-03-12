@@ -397,30 +397,39 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
                 return NotFound(new { message = "Không tìm thấy câu hỏi!" });
             }
 
+            // 🔹 Cập nhật thông tin chung
             question.Quescontent = questionDto.Quescontent;
             question.Secid = questionDto.Secid;
             question.TypeId = questionDto.TypeId;
             question.Modeid = questionDto.Modeid;
-            question.Solution = (questionDto.TypeId == 2 || questionDto.TypeId == 3) ? questionDto.Solution : null;
 
-            question.AnswerContent = questionDto.TypeId == 1 ? string.Join(",", questionDto.Answers) : null;
-
-            _context.Questions.Update(question);
-
-            if (questionDto.TypeId == 1)
+            if (questionDto.TypeId == 1) // ✅ Nếu chuyển sang Multiple Choice
             {
+                question.Solution = null; // ❌ Xóa giải thích cũ của dạng tự luận
+                question.AnswerContent = string.Join(",", questionDto.Answers); // ✅ Cập nhật danh sách đáp án
+
+                // ❌ Xóa toàn bộ CorrectAnswers cũ nếu có
                 var existingCorrectAnswers = _context.CorrectAnswers.Where(a => a.Quesid == id);
                 _context.CorrectAnswers.RemoveRange(existingCorrectAnswers);
 
+                // ✅ Thêm CorrectAnswers mới từ danh sách
                 foreach (var correctAns in questionDto.CorrectAnswers)
                 {
                     _context.CorrectAnswers.Add(new CorrectAnswer { Content = correctAns, Quesid = id });
                 }
             }
+            else // Nếu chuyển sang Tự luận (Type 2, 3)
+            {
+                question.Solution = questionDto.Solution;
+                question.AnswerContent = null; // ❌ Xóa AnswerContent vì dạng này không cần
+            }
 
+            _context.Questions.Update(question);
             await _context.SaveChangesAsync();
-            return Ok(new { message = "Câu hỏi đã được cập nhật!" });
+
+            return Ok(new { message = "✅ Câu hỏi đã được cập nhật!" });
         }
+
 
 
         // ✅ Xóa câu hỏi
