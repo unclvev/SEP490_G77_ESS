@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { Button, List, Card, Select, Input, Checkbox, message, Popconfirm, Upload } from "antd";
 import { DeleteOutlined, DownloadOutlined, UploadOutlined } from "@ant-design/icons";
 import axios from "axios";
+import { toast } from "react-toastify";
 
 
 const { TextArea } = Input;
@@ -37,7 +38,7 @@ const QuestionList = () => {
       const response = await axios.get(`https://localhost:7052/api/Question/questions?sectionId=${sectionId}`);
       setQuestions(response.data);
     } catch (error) {
-      message.error("Lỗi khi tải danh sách câu hỏi!");
+      toast.error("Lỗi khi tải danh sách câu hỏi!");
     }
   };
 
@@ -46,7 +47,7 @@ const QuestionList = () => {
       const response = await axios.get(`https://localhost:7052/api/Question/types`);
       setQuestionTypes(response.data);
     } catch (error) {
-      message.error("Lỗi khi tải danh sách loại câu hỏi!");
+      toast.error("Lỗi khi tải danh sách loại câu hỏi!");
     }
   };
 
@@ -55,7 +56,7 @@ const QuestionList = () => {
       const response = await axios.get(`https://localhost:7052/api/Question/levels`);
       setLevels(response.data);
     } catch (error) {
-      message.error("Lỗi khi tải danh sách độ khó!");
+      toast.error("Lỗi khi tải danh sách độ khó!");
     }
   };
 
@@ -88,7 +89,7 @@ const QuestionList = () => {
 
   const handleSave = async () => {
     if (!newQuestion.quescontent.trim() || !newQuestion.typeId || !newQuestion.modeid) {
-      message.warning("⚠️ Vui lòng nhập đầy đủ thông tin câu hỏi!");
+      toast.warning("⚠️ Vui lòng nhập đầy đủ thông tin câu hỏi!");
       return;
     }
   
@@ -110,7 +111,7 @@ const QuestionList = () => {
         response = await axios.post(`https://localhost:7052/api/Question/questions`, requestData);
       }
   
-      message.success("✅ Lưu câu hỏi thành công!", 2); // 🟢 Thông báo lưu thành công
+      toast.success("✅ Lưu câu hỏi thành công!", 2); // 🟢 Thông báo lưu thành công
       setIsEditing(false); // 🔹 Đóng form sau khi lưu
       setNewQuestion({  // 🔹 Đặt lại form về mặc định
         quescontent: "",
@@ -124,7 +125,7 @@ const QuestionList = () => {
   
       fetchQuestions(); // 🔹 Làm mới danh sách câu hỏi sau khi lưu
     } catch (error) {
-      message.error(error.response?.data?.message || "❌ Lỗi khi lưu câu hỏi!");
+      toast.error(error.response?.data?.message || "❌ Lỗi khi lưu câu hỏi!");
     }
   };
   
@@ -132,14 +133,14 @@ const QuestionList = () => {
   const handleDelete = async (quesid) => {
     try {
       await axios.delete(`https://localhost:7052/api/Question/questions/${quesid}`);
-      message.success("Xóa câu hỏi thành công!");
+      toast.success("Xóa câu hỏi thành công!");
       fetchQuestions(); // 🔹 Làm mới danh sách sau khi xóa
     } catch (error) {
-      message.error("Lỗi khi xóa câu hỏi!");
+      toast.error("Lỗi khi xóa câu hỏi!");
     }
   };
   const handleExportExcel = () => {
-    window.location.href = `https://localhost:7052/api/Bank/${sectionId}/export-excel`;
+    window.location.href = `https://localhost:7052/api/Question/${sectionId}/export-excel`;
   };
 
   const handleImportExcel = async ({ file }) => {
@@ -147,18 +148,18 @@ const QuestionList = () => {
     formData.append("file", file);
   
     try {
-      const response = await axios.post(`https://localhost:7052/api/Bank/${sectionId}/import-excel`, formData, {
+      const response = await axios.post(`https://localhost:7052/api/Question/${sectionId}/import-excel`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
   
       if (response.status === 200) {
-        message.success("✅ Import Excel thành công!");
+        toast.success("✅ Import Excel thành công!");
         await fetchQuestions(); // 🟢 **Tải lại danh sách ngay lập tức**
       } else {
-        message.error("❌ Import không thành công, vui lòng thử lại!");
+        toast.error("❌ Import không thành công, vui lòng thử lại!");
       }
     } catch (error) {
-      message.error(error.response?.data?.message || "❌ Lỗi khi import Excel!");
+      toast.error(error.response?.data?.message || "❌ Lỗi khi import Excel!");
     }
   };
   

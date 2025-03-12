@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Input, Button, Card, Pagination, Modal, message } from 'antd';
 import { SearchOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import axios from 'axios';
+import { toast } from "react-toastify";
 import { useSearchParams } from "react-router-dom";
 
 import 'tailwindcss/tailwind.css';
@@ -90,7 +91,7 @@ const accid = searchParams.get("accid") || localStorage.getItem("accid");
         bankname: newBankName
       });
   
-      message.success("✅ Cập nhật tên ngân hàng thành công!", 2); // 👈 Hiển thị trong 2 giây
+      toast.success("✅ Cập nhật tên ngân hàng thành công!", 2); // 👈 Hiển thị trong 2 giây
       setIsEditModalOpen(false);
   
       // ⏳ Đảm bảo thông báo hiển thị trước khi làm mới dữ liệu
@@ -98,7 +99,7 @@ const accid = searchParams.get("accid") || localStorage.getItem("accid");
         fetchBanks();
       }, 500);
     } catch (error) {
-      message.error("❌ Lỗi khi cập nhật ngân hàng!");
+      toast.error("❌ Lỗi khi cập nhật ngân hàng!");
     }
   };
 
@@ -112,7 +113,7 @@ const accid = searchParams.get("accid") || localStorage.getItem("accid");
     try {
       await axios.delete(`https://localhost:7052/api/Bank/${deletingBank.bankId}`);
       
-      message.success("✅ Xóa ngân hàng câu hỏi thành công!", 2); // 👈 Hiển thị trong 2 giây
+      toast.success("✅ Xóa ngân hàng câu hỏi thành công!", 2); // 👈 Hiển thị trong 2 giây
       setIsDeleteModalOpen(false);
   
       // ⏳ Đợi 0.5 giây trước khi làm mới danh sách
@@ -120,7 +121,7 @@ const accid = searchParams.get("accid") || localStorage.getItem("accid");
         fetchBanks();
       }, 500);
     } catch (error) {
-      message.error("❌ Lỗi khi xóa ngân hàng câu hỏi!");
+      toast.error("❌ Lỗi khi xóa ngân hàng câu hỏi!");
     }
   };
 

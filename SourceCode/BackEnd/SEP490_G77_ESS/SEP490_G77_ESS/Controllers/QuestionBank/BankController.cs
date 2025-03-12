@@ -26,15 +26,16 @@ namespace SEP490_G77_ESS.Controllers
         public async Task<ActionResult<IEnumerable<object>>> GetBanksByAccount(long accid)
         {
             var banks = await _context.Banks
-                .Where(b => b.Accid == accid) // Chỉ lấy bank thuộc account này
-                .Include(b => b.GradeId)
-                .Include(b => b.Subject)
+                .Where(b => b.Accid == accid) // Lọc theo Accid
+                .Include(b => b.Grade)  // Sử dụng navigation property thay vì GradeId
+                .Include(b => b.Subject) // Sử dụng navigation property thay vì SubjectId
+                .Include(b => b.Sections) // Bao gồm Sections nếu cần
                 .Select(b => new
                 {
                     b.BankId,
                     b.Bankname,
                     Totalquestion = _context.Questions
-                        .Where(q => q.Secid != null && b.Sections.Select(s => s.Secid).Contains(q.Secid.Value))
+                        .Where(q => q.Secid != null && b.Sections.Any(s => s.Secid == q.Secid))
                         .Count(),
                     b.CreateDate,
                     Grade = b.Grade != null ? b.Grade.GradeLevel : "Không xác định",
@@ -44,6 +45,7 @@ namespace SEP490_G77_ESS.Controllers
 
             return Ok(banks);
         }
+
 
 
 
@@ -205,7 +207,6 @@ namespace SEP490_G77_ESS.Controllers
         [HttpPost("generate/{accid}")]
         public async Task<ActionResult<BankDto>> GenerateQuestionBank(long accid, [FromBody] Bank bank)
         {
-            // 🔍 Kiểm tra thông tin bắt buộc
             var grade = await _context.Grades.FindAsync(bank.GradeId);
             var subject = await _context.Subjects.FindAsync(bank.SubjectId);
             var curriculum = bank.CurriculumId != null ? await _context.Curricula.FindAsync(bank.CurriculumId) : null;
@@ -215,7 +216,6 @@ namespace SEP490_G77_ESS.Controllers
                 return BadRequest(new { message = "Không tìm thấy Khối học, Môn học hoặc Chương trình!" });
             }
 
-            // 🔹 Tạo ngân hàng câu hỏi mới
             string newBankName = curriculum != null
                 ? $"Ngân hàng {subject.SubjectName} {grade.GradeLevel} - {curriculum.CurriculumName}"
                 : $"Ngân hàng {subject.SubjectName} {grade.GradeLevel}";
@@ -229,22 +229,17 @@ namespace SEP490_G77_ESS.Controllers
                 SubjectId = bank.SubjectId,
                 CurriculumId = bank.CurriculumId,
                 CreateDate = DateTime.Now,
-                Accid = accid // ✅ Thêm accid vào đây
+                Accid = accid
             };
 
             _context.Banks.Add(newBank);
-            await _context.SaveChangesAsync(); // Lưu để lấy ID của ngân hàng mới
+            await _context.SaveChangesAsync();
 
-            Console.WriteLine($"✅ Tạo ngân hàng câu hỏi mới: {newBank.BankId} - {newBank.Bankname} (accid: {accid})");
-
-            List<SectionDto> createdSections = new List<SectionDto>();
-
-            // ✅ Chỉ lấy dữ liệu từ Default_Section_Hierarchy
             var defaultSections = await _context.DefaultSectionHierarchies
                 .Where(d => d.CurriculumId == bank.CurriculumId)
                 .ToListAsync();
 
-            Console.WriteLine($"📌 Lấy {defaultSections.Count} sections từ Default_Section_Hierarchy");
+            List<SectionDto> createdSections = new List<SectionDto>();
 
             foreach (var defaultSection in defaultSections)
             {
@@ -262,18 +257,20 @@ namespace SEP490_G77_ESS.Controllers
                     Secid = newSection.Secid,
                     Secname = newSection.Secname
                 });
-
-                Console.WriteLine($"➕ Thêm Section: {newSection.Secid} - {newSection.Secname}");
             }
 
+            // ✅ Chỉ trả về dữ liệu cần thiết
             return Ok(new BankDto
             {
                 BankId = newBank.BankId,
                 BankName = newBank.Bankname,
                 CurriculumId = newBank.CurriculumId,
+                Grade = grade.GradeLevel,
+                Subject = subject.SubjectName,
                 Sections = createdSections
             });
         }
+
 
 
 
