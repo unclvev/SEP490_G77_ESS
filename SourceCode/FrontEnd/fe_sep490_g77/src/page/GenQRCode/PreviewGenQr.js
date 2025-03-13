@@ -6,66 +6,228 @@ const PreviewGenQR = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const printRef = useRef();
-  const imageRef = useRef(); // ✅ Tham chiếu đến ảnh để tính toán vị trí QR
+  const frontImageRef = useRef();
+  const backImageRef = useRef();
+  const { qrList, frontImage, backImage } = location.state || {};
+  const [isPrintReady, setIsPrintReady] = useState(false);
+  const [qrImages, setQrImages] = useState({});
+  const [qrPositions, setQrPositions] = useState([]);
 
-  // ✅ Nhận dữ liệu từ `state`
-  const { qrList, paperImage } = location.state || {};
+  useEffect(() => {
+    // Calculate QR positions once frontImageRef is available
+    if (frontImageRef.current) {
+      handleImageLoad();
+    }
+  }, [frontImageRef.current]);
 
-  const [qrPositions, setQrPositions] = useState({ leftQR: {}, rightQR: {} });
-
+  useEffect(() => {
+    // Auto-print when all QR images are ready
+    if (Object.keys(qrImages).length === qrList?.length && qrList.length > 0 && isPrintReady) {
+      console.log("✅ Tất cả ảnh QR đã sẵn sàng, tiến hành in...");
+      printNow();
+      setIsPrintReady(false); // Reset after printing
+    }
+  }, [qrImages, isPrintReady]);
+  
   if (!qrList || qrList.length === 0) {
     return <p className="text-center text-red-500">Không có dữ liệu để hiển thị!</p>;
   }
 
-  // ✅ Khi ảnh tải xong, tính toán vị trí QR Code theo tỉ lệ %
   const handleImageLoad = () => {
-    const img = imageRef.current;
-    if (img) {
-      const imgWidth = img.clientWidth;
-      const imgHeight = img.clientHeight;
+    const frontImg = frontImageRef.current;
+    if (frontImg) {
+      const imgWidth = frontImg.clientWidth;
+      const imgHeight = frontImg.clientHeight;
 
-      setQrPositions({
-        leftQR: { top: `${imgHeight * 0.12}px`, left: `${imgWidth * 0.05}px` },
-        rightQR: { top: `${imgHeight * 0.08}px`, right: `${imgWidth * 0.05}px` },
-      });
+      const newPositions = qrList.map(() => ({
+        leftQR: {
+          top: `${imgHeight * 0.22}px`,
+          left: `${imgWidth * 0.88}px`,
+          position: "absolute",
+        },
+        rightQR: {
+          top: `${imgHeight * 0.10}px`,
+          left: `${imgWidth * 0.88}px`,
+          position: "absolute",
+        },
+      }));
+
+      setQrPositions(newPositions);
     }
   };
 
-  // ✅ Hàm thực hiện in trang
-  const handlePrint = () => {
-    window.print();
+  const convertCanvasToImage = async () => {
+    // Reset qrImages before starting a new conversion
+    setQrImages({});
+    
+    const qrElements = document.querySelectorAll(".qr-code canvas");
+    let newImages = {};
+  
+    console.log(`📸 Đang chuyển ${qrElements.length} QR code thành ảnh...`);
+  
+    // Map all canvases to promises
+    const promises = Array.from(qrElements).map((canvas) => {
+      return new Promise((resolve) => {
+        // Get the QR ID from the data attribute
+        const qrId = canvas.getAttribute('data-qr-id');
+        if (!qrId) {
+          console.error("❌ Không tìm thấy data-qr-id cho canvas:", canvas);
+          resolve(null);
+          return;
+        }
+        
+        // Convert canvas to image
+        const dataUrl = canvas.toDataURL("image/png");
+        newImages[qrId] = dataUrl;
+        console.log(`✅ Đã chuyển QR #${qrId} thành ảnh`);
+        resolve(dataUrl);
+      });
+    });
+  
+    // Wait for all conversions to complete
+    await Promise.all(promises);
+    
+    // Update state with all new images at once
+    setQrImages(newImages);
+    console.log("🎉 Đã chuyển đổi tất cả QR thành ảnh:", Object.keys(newImages).length);
+    
+    return newImages;
   };
-
+  
+  const handlePrint = async () => {
+    if (!printRef.current) return;
+  
+    console.log("🔄 Bắt đầu chuyển đổi QR code thành ảnh...");
+    await convertCanvasToImage(); // Chuyển QR code thành ảnh trước khi in
+    setIsPrintReady(true); // Signal that we're ready to print
+  };
+  
+  const printNow = () => {
+    // Verify all QR codes have been converted to images
+    const allQrReady = qrList.every(qr => qrImages[qr.id]);
+    if (!allQrReady) {
+      console.error("❌ Một số QR chưa được tạo thành ảnh, thử lại...");
+      return alert("Một số mã QR chưa được tải xong, vui lòng thử lại!");
+    }
+  
+    console.log("✅ Tất cả ảnh QR đã sẵn sàng, tiến hành in...");
+    console.log("📊 QR Images:", qrImages);
+    console.log("📋 QR List:", qrList.map(qr => qr.id));
+  
+    const printWindow = window.open("", "_blank");
+    printWindow.document.open();
+  
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Print QR Codes</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
+            .page { position: relative; page-break-after: always; margin-bottom: 20px; }
+            .page:last-child { page-break-after: avoid; }
+            img.base-image { width: 100%; display: block; }
+            img.qr-img { width: 50px; height: 50px; position: absolute; }
+          </style>
+        </head>
+        <body>
+    `);
+  
+    // Generate each page separately with its own QR code
+    qrList.forEach((qr, index) => {
+      const qrImageUrl = qrImages[qr.id];
+      
+      printWindow.document.write(`
+        <div class="page">
+          <!-- Front page with QR codes -->
+          <div style="position: relative; margin-bottom: 20px;">
+            <img src="${frontImage}" class="base-image" alt="Front page" />
+            <img src="${qrImageUrl}" class="qr-img" style="top: 22%; left: 88%;" alt="QR Code Left ${qr.id}" />
+            <img src="${qrImageUrl}" class="qr-img" style="top: 10%; left: 88%;" alt="QR Code Right ${qr.id}" />
+          </div>
+          
+          <!-- Back page -->
+          <div style="position: relative;">
+            <img src="${backImage}" class="base-image" alt="Back page" />
+          </div>
+        </div>
+      `);
+    });
+  
+    printWindow.document.write(`
+        </body>
+      </html>
+    `);
+  
+    printWindow.document.close();
+    printWindow.focus();
+  
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 1000);
+  };
+  
   return (
-    <div ref={printRef} className="flex flex-col items-center min-h-screen bg-gray-200 p-6">
+    <div className="flex flex-col items-center min-h-screen bg-gray-200 p-6">
       <h1 className="text-2xl font-bold text-blue-600 print:hidden">Xem trước các bản in</h1>
 
-      <div className="flex flex-col gap-6">
-        {/* ✅ Hiển thị từng ảnh giấy thi với QR Code tương ứng */}
+      <div ref={printRef} className="w-full max-w-3xl bg-white p-6 shadow-lg">
         {qrList.map((qr, index) => (
-          <div key={qr.id} className="relative w-full max-w-3xl break-before-page">
-            <img
-              ref={imageRef}
-              src={paperImage}
-              alt={`Bản in ${index + 1}`}
-              className="w-full border rounded-md shadow"
-              onLoad={handleImageLoad} // ✅ Gọi khi ảnh tải xong
-            />
+          <div key={qr.id} className="mb-8 page-break">
+            <div className="relative mb-8">
+              {frontImage ? (
+                <img
+                  ref={index === 0 ? frontImageRef : null}
+                  src={frontImage}
+                  className="w-full border rounded-md shadow"
+                  onLoad={index === 0 ? handleImageLoad : null}
+                  alt="Front Side"
+                />
+              ) : (
+                <p className="text-red-500">Ảnh mặt trước không tìm thấy!</p>
+              )}
 
-            {/* ✅ QR Code 1 - Gốc trên bên trái (tự điều chỉnh vị trí) */}
-            <div className="absolute" style={qrPositions.leftQR}>
-              <QRCodeCanvas value={qr.qrContent} size={50} />
+              {/* Left QR Position */}
+              <div 
+                className="absolute qr-code" 
+                style={qrPositions[index]?.leftQR || { top: '22%', left: '88%', position: 'absolute' }}
+              >
+                <QRCodeCanvas 
+                  value={qr.qrContent || 'default'} 
+                  size={50} 
+                  data-qr-id={qr.id} 
+                />
+              </div>
+
+              {/* Right QR Position */}
+              <div 
+                className="absolute qr-code" 
+                style={qrPositions[index]?.rightQR || { top: '10%', left: '88%', position: 'absolute' }}
+              >
+                <QRCodeCanvas 
+                  value={qr.qrContent || 'default'} 
+                  size={50} 
+                  data-qr-id={qr.id}
+                />
+              </div>
             </div>
 
-            {/* ✅ QR Code 2 - Gốc trên bên phải (tự điều chỉnh vị trí) */}
-            <div className="absolute" style={qrPositions.rightQR}>
-              <QRCodeCanvas value={qr.qrContent} size={50} />
+            <div className="relative">
+              {backImage ? (
+                <img
+                  ref={index === 0 ? backImageRef : null}
+                  src={backImage}
+                  className="w-full border rounded-md shadow"
+                  alt="Back Side"
+                />
+              ) : (
+                <p className="text-red-500">Ảnh mặt sau không tìm thấy!</p>
+              )}
             </div>
           </div>
         ))}
       </div>
 
-      {/* ✅ Nút điều khiển (Ẩn khi in) */}
       <div className="flex gap-4 mt-6 print:hidden">
         <button onClick={handlePrint} className="px-6 py-2 bg-green-600 text-white rounded-lg shadow hover:bg-green-700">
           In

@@ -1,8 +1,12 @@
 import React from "react";
 
-const Header = () => {
+const Header = ({ collapsed }) => {
   return (
-    <div className="w-full bg-white shadow-md p-4 flex justify-between items-center px-10">
+    <div
+      className={`bg-white shadow-md p-4 flex justify-between items-center left-0 right-0 z-10 transition-all duration-300 ${
+        collapsed ? "ml-16 w-[calc(100%-4rem)]" : "ml-64 w-[calc(100%-16rem)]"
+      }`}
+    >
       {/* Logo và tên hệ thống bên trái */}
       <div className="flex items-center">
         <img 
