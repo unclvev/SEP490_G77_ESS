@@ -67,7 +67,6 @@ public partial class EssDbV11Context : DbContext
             optionsBuilder.UseSqlServer(configuration.GetConnectionString("MyCnn"));
         }
     }
-
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Account>(entity =>
@@ -188,6 +187,7 @@ public partial class EssDbV11Context : DbContext
             entity.Property(e => e.Canview)
                 .HasDefaultValue(false)
                 .HasColumnName("canview");
+            entity.Property(e => e.Role).HasMaxLength(100);
 
             entity.HasOne(d => d.Acc).WithMany(p => p.BankAccesses)
                 .HasForeignKey(d => d.Accid)

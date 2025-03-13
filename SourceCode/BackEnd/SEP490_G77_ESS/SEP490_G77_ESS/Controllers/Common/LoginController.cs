@@ -32,17 +32,13 @@ namespace SEP490_G77_ESS.Controllers.Common
             {
                 return Unauthorized(new { message = "Invalid username or password" });
             }
-            var jwt = _jwt.CreateJWTToken(userLogin, (long)userLogin.Roleid);
+            var jwt = _jwt.CreateJWTToken(userLogin, 1);
 
 
             //var refreshToken = GenerateRefreshToken();
             //SetRefreshToken(refreshToken);
 
-            return Ok(new
-            {
-                jwt = jwt
-            });
-
+            return Ok(jwt);
             
         }
         //private RefreshToken GenerateRefreshToken()
