@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { Button, List, Card, Select, Input, Checkbox, message, Popconfirm, Upload } from "antd";
 import { DeleteOutlined, DownloadOutlined, UploadOutlined } from "@ant-design/icons";
 import axios from "axios";
+import { toast } from "react-toastify";
 
 
 const { TextArea } = Input;
@@ -31,13 +32,22 @@ const QuestionList = () => {
     fetchQuestionTypes();
     fetchLevels();
   }, [sectionId]);
-
+  useEffect(() => {
+    // Khi typeId thay đổi thành 1 (trắc nghiệm), đảm bảo có 4 ô đáp án
+    if (newQuestion.typeId === 1) {
+      setNewQuestion(prev => ({
+        ...prev,
+        answers: [...(prev.answers.length ? prev.answers : []), "", "", "", ""].slice(0, 4),
+        correctAnswers: prev.correctAnswers || []
+      }));
+    }
+  }, [newQuestion.typeId]);
   const fetchQuestions = async () => {
     try {
       const response = await axios.get(`https://localhost:7052/api/Question/questions?sectionId=${sectionId}`);
       setQuestions(response.data);
     } catch (error) {
-      message.error("Lỗi khi tải danh sách câu hỏi!");
+      toast.error("Lỗi khi tải danh sách câu hỏi!");
     }
   };
 
@@ -46,7 +56,7 @@ const QuestionList = () => {
       const response = await axios.get(`https://localhost:7052/api/Question/types`);
       setQuestionTypes(response.data);
     } catch (error) {
-      message.error("Lỗi khi tải danh sách loại câu hỏi!");
+      toast.error("Lỗi khi tải danh sách loại câu hỏi!");
     }
   };
 
@@ -55,7 +65,7 @@ const QuestionList = () => {
       const response = await axios.get(`https://localhost:7052/api/Question/levels`);
       setLevels(response.data);
     } catch (error) {
-      message.error("Lỗi khi tải danh sách độ khó!");
+      toast.error("Lỗi khi tải danh sách độ khó!");
     }
   };
 
@@ -63,14 +73,20 @@ const QuestionList = () => {
     setIsEditing(true);
     if (question) {
       setCurrentQuestion(question);
+
+      // Nếu là trắc nghiệm (type 1) mà không có đủ 4 đáp án, tạo đủ 4 ô
+      let updatedAnswers = question.typeId === 1
+        ? [...(question.answers || []), "", "", "", ""].slice(0, 4) // Đảm bảo luôn có đúng 4 ô
+        : [];
+
       setNewQuestion({
-        quescontent: question.quescontent,
-        typeId: question.typeId,
-        modeid: question.modeid,  
+        quescontent: question.quescontent || "",
+        typeId: question.typeId || null,
+        modeid: question.modeid || null,  
         secid: sectionId,
         solution: question.solution || "",
-        answers: question.answers || ["", "", "", ""],
-        correctAnswers: question.correctAnswers || [],
+        answers: updatedAnswers, // Cập nhật danh sách đáp án
+        correctAnswers: question.correctAnswers || [], // Đáp án đúng (nếu có)
       });
     } else {
       setCurrentQuestion(null);
@@ -80,15 +96,20 @@ const QuestionList = () => {
         modeid: null,
         secid: sectionId,
         solution: "",
-        answers: ["", "", "", ""],
+        answers: ["", "", "", ""], // Mặc định 4 ô trống
         correctAnswers: [],
       });
     }
-  };
+};
+
+
+
+  
+  
 
   const handleSave = async () => {
     if (!newQuestion.quescontent.trim() || !newQuestion.typeId || !newQuestion.modeid) {
-      message.warning("⚠️ Vui lòng nhập đầy đủ thông tin câu hỏi!");
+      toast.warning("⚠️ Vui lòng nhập đầy đủ thông tin câu hỏi!");
       return;
     }
   
@@ -99,8 +120,8 @@ const QuestionList = () => {
         modeid: newQuestion.modeid,
         secid: newQuestion.secid,
         solution: newQuestion.typeId === 1 ? "" : newQuestion.solution,
-        answers: newQuestion.typeId === 1 ? newQuestion.answers.filter(ans => ans.trim() !== "") : [],
-        correctAnswers: newQuestion.correctAnswers,
+        answers: newQuestion.typeId === 1 ? newQuestion.answers : [], // Đảm bảo gửi đủ 4 đáp án
+        correctAnswers: newQuestion.typeId === 1 ? newQuestion.correctAnswers : [], // Đáp án đúng
       };
   
       let response;
@@ -110,36 +131,40 @@ const QuestionList = () => {
         response = await axios.post(`https://localhost:7052/api/Question/questions`, requestData);
       }
   
-      message.success("✅ Lưu câu hỏi thành công!", 2); // 🟢 Thông báo lưu thành công
-      setIsEditing(false); // 🔹 Đóng form sau khi lưu
-      setNewQuestion({  // 🔹 Đặt lại form về mặc định
+      toast.success("✅ Lưu câu hỏi thành công!", 2);
+      setIsEditing(false);
+      setNewQuestion({
         quescontent: "",
         typeId: null,
         modeid: null,
         secid: sectionId,
         solution: "",
-        answers: ["", "", "", ""],
+        answers: ["", "", "", ""], // Đặt lại 4 ô trống
         correctAnswers: [],
       });
   
-      fetchQuestions(); // 🔹 Làm mới danh sách câu hỏi sau khi lưu
+      fetchQuestions();
     } catch (error) {
-      message.error(error.response?.data?.message || "❌ Lỗi khi lưu câu hỏi!");
+      toast.error(error.response?.data?.message || "❌ Lỗi khi lưu câu hỏi!");
     }
-  };
+};
+
+
+  
+  
   
 
   const handleDelete = async (quesid) => {
     try {
       await axios.delete(`https://localhost:7052/api/Question/questions/${quesid}`);
-      message.success("Xóa câu hỏi thành công!");
+      toast.success("Xóa câu hỏi thành công!");
       fetchQuestions(); // 🔹 Làm mới danh sách sau khi xóa
     } catch (error) {
-      message.error("Lỗi khi xóa câu hỏi!");
+      toast.error("Lỗi khi xóa câu hỏi!");
     }
   };
   const handleExportExcel = () => {
-    window.location.href = `https://localhost:7052/api/Bank/${sectionId}/export-excel`;
+    window.location.href = `https://localhost:7052/api/Question/${sectionId}/export-excel`;
   };
 
   const handleImportExcel = async ({ file }) => {
@@ -147,18 +172,18 @@ const QuestionList = () => {
     formData.append("file", file);
   
     try {
-      const response = await axios.post(`https://localhost:7052/api/Bank/${sectionId}/import-excel`, formData, {
+      const response = await axios.post(`https://localhost:7052/api/Question/${sectionId}/import-excel`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
   
       if (response.status === 200) {
-        message.success("✅ Import Excel thành công!");
+        toast.success("✅ Import Excel thành công!");
         await fetchQuestions(); // 🟢 **Tải lại danh sách ngay lập tức**
       } else {
-        message.error("❌ Import không thành công, vui lòng thử lại!");
+        toast.error("❌ Import không thành công, vui lòng thử lại!");
       }
     } catch (error) {
-      message.error(error.response?.data?.message || "❌ Lỗi khi import Excel!");
+      toast.error(error.response?.data?.message || "❌ Lỗi khi import Excel!");
     }
   };
   
@@ -228,7 +253,7 @@ const QuestionList = () => {
         <label className="font-semibold">Loại câu hỏi</label>
         <Select
           className="w-full mb-4"
-          value={newQuestion.typeId || undefined}
+          value={newQuestion.typeId ?? undefined}
           onChange={(value) => setNewQuestion({ ...newQuestion, typeId: value })}
         >
           {questionTypes.map((type) => (
@@ -252,38 +277,49 @@ const QuestionList = () => {
         </Select>
 
         <label className="font-semibold">Nội dung câu hỏi</label>
-        <TextArea rows={4} className="mb-4" value={newQuestion.quescontent} onChange={(e) => setNewQuestion({ ...newQuestion, quescontent: e.target.value })}/>
+        <TextArea rows={4} className="mb-4" value={newQuestion.quescontent } onChange={(e) => setNewQuestion({ ...newQuestion, quescontent: e.target.value })}/>
 
         {newQuestion.typeId === 1 ? (
-          <div className="mb-4">
-            {newQuestion.answers.map((answer, index) => (
-              <div key={index} className="flex items-center mb-2">
-                <Input className="mr-2" placeholder={`Đáp án ${index + 1}`} value={answer} 
-                  onChange={(e) => {
-                    const updatedAnswers = [...newQuestion.answers];
-                    updatedAnswers[index] = e.target.value;
-                    setNewQuestion({ ...newQuestion, answers: updatedAnswers });
-                  }}
-                />
-                <Checkbox checked={newQuestion.correctAnswers.includes(answer)} 
-                  onChange={(e) => {
-                    const updatedCorrectAnswers = e.target.checked
-                      ? [...newQuestion.correctAnswers, answer]
-                      : newQuestion.correctAnswers.filter((ans) => ans !== answer);
-                    setNewQuestion({ ...newQuestion, correctAnswers: updatedCorrectAnswers });
-                  }}
-                >
-                  Đúng
-                </Checkbox>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <>
-            <label className="font-semibold">Giải thích (Solution)</label>
-            <TextArea rows={2} className="mb-4" value={newQuestion.solution} onChange={(e) => setNewQuestion({ ...newQuestion, solution: e.target.value })}/>
-          </>
-        )}
+  <div className="mb-4">
+    {newQuestion.answers.map((answer, index) => (
+      <div key={index} className="flex items-center mb-2">
+        <Input 
+          className="mr-2" 
+          placeholder={`Đáp án ${index + 1}`} 
+          value={answer} 
+          onChange={(e) => {
+            const updatedAnswers = [...newQuestion.answers];
+            updatedAnswers[index] = e.target.value;
+            setNewQuestion({ ...newQuestion, answers: updatedAnswers });
+          }}
+        />
+        <Checkbox 
+          checked={newQuestion.correctAnswers.includes(answer)} 
+          onChange={(e) => {
+            let updatedCorrectAnswers = [...newQuestion.correctAnswers];
+            if (e.target.checked) {
+              updatedCorrectAnswers.push(answer);
+            } else {
+              updatedCorrectAnswers = updatedCorrectAnswers.filter(ans => ans !== answer);
+            }
+            setNewQuestion({ ...newQuestion, correctAnswers: updatedCorrectAnswers });
+          }}
+        >
+          Đúng
+        </Checkbox>
+      </div>
+    ))}
+  </div>
+) : (
+  <>
+    <label className="font-semibold">Giải thích (Solution)</label>
+    <TextArea rows={2} className="mb-4" 
+      value={newQuestion.solution} 
+      onChange={(e) => setNewQuestion({ ...newQuestion, solution: e.target.value })}
+    />
+  </>
+)}
+
 
         <Button type="primary" className="w-full mb-2" onClick={handleSave}>Lưu Câu Hỏi</Button>
       </div>

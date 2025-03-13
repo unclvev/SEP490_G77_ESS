@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using ClosedXML.Excel;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SEP490_G77_ESS.DTO.BankdDTO;
 using SEP490_G77_ESS.Models;
@@ -116,7 +117,274 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
             return Ok(new { message = "Câu hỏi đã được thêm!", questionId = question.Quesid });
         }
 
+        [HttpGet("{sectionId}/export-excel")]
+        public async Task<IActionResult> ExportSectionQuestionsToExcel(long sectionId)
+        {
+            var section = await _context.Sections
+                .Include(s => s.Questions)
+                .FirstOrDefaultAsync(s => s.Secid == sectionId);
 
+            if (section == null)
+            {
+                return NotFound(new { message = "Không tìm thấy Section!" });
+            }
+
+            using var workbook = new XLWorkbook();
+
+            // 🟢 **Sheet 1: Dữ liệu câu hỏi**
+            var worksheet = workbook.Worksheets.Add("Section Questions");
+            worksheet.Cell(1, 1).Value = "Question Content";
+            worksheet.Cell(1, 2).Value = "Type ID";
+            worksheet.Cell(1, 3).Value = "Mode ID";
+            worksheet.Cell(1, 4).Value = "Solution";
+            worksheet.Cell(1, 5).Value = "Answers";
+            worksheet.Cell(1, 6).Value = "Correct Answers";
+
+            int row = 2;
+            var correctAnswers = await _context.CorrectAnswers.ToListAsync();
+
+            foreach (var question in section.Questions)
+            {
+                worksheet.Cell(row, 1).Value = question.Quescontent;
+                worksheet.Cell(row, 2).Value = question.TypeId;
+                worksheet.Cell(row, 3).Value = question.Modeid;
+                worksheet.Cell(row, 4).Value = question.Solution ?? "";
+                worksheet.Cell(row, 5).Value = question.AnswerContent ?? "";
+                worksheet.Cell(row, 6).Value = string.Join(",", correctAnswers
+                    .Where(a => a.Quesid == question.Quesid)
+                    .Select(a => a.Content));
+                row++;
+            }
+
+            // 🎯 **Sheet 2: Hướng dẫn Import**
+            var guideSheet = workbook.Worksheets.Add("Import Guide");
+            guideSheet.Cell(1, 1).Value = "HƯỚNG DẪN IMPORT EXCEL";
+            guideSheet.Cell(2, 1).Value = "1. Cột 'Question Content': Nhập nội dung câu hỏi.";
+            guideSheet.Cell(3, 1).Value = "2. Cột 'Type ID': Loại câu hỏi (1: Trắc nghiệm, 2: Tự luận).";
+            guideSheet.Cell(4, 1).Value = "3. Cột 'Mode ID': Mức độ khó của câu hỏi.";
+            guideSheet.Cell(5, 1).Value = "4. Cột 'Solution': Giải thích (Chỉ áp dụng cho tự luận).";
+            guideSheet.Cell(6, 1).Value = "5. Cột 'Answers': Các đáp án (Ngăn cách bằng dấu ',').";
+            guideSheet.Cell(7, 1).Value = "6. Cột 'Correct Answers': Đáp án đúng (Ngăn cách bằng dấu ',').";
+
+            // 🔒 **Làm cho sheet hướng dẫn chỉ đọc**
+            guideSheet.Protect().AllowElement(XLSheetProtectionElements.SelectLockedCells);
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            stream.Position = 0;
+
+            return File(stream.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                $"Section_{sectionId}_Questions.xlsx");
+        }
+
+
+
+        //[HttpPost("{sectionId}/import-excel")]
+        //public async Task<IActionResult> ImportQuestionsFromExcel(long sectionId, IFormFile file)
+        //{
+        //    if (file == null || file.Length == 0)
+        //        return BadRequest(new { message = "File không hợp lệ hoặc rỗng." });
+
+        //    try
+        //    {
+        //        using var stream = new MemoryStream();
+        //        await file.CopyToAsync(stream);
+        //        using var workbook = new XLWorkbook(stream);
+
+        //        var worksheet = workbook.Worksheets.FirstOrDefault();
+        //        if (worksheet == null)
+        //            return BadRequest(new { message = "File Excel không có sheet nào." });
+
+        //        var existingQuestions = await _context.Questions
+        //            .Where(q => q.Secid == sectionId)
+        //            .Include(q => q.CorrectAnswers)
+        //            .ToListAsync();
+
+        //        var questionMap = existingQuestions.ToDictionary(q => q.Quescontent.Trim().ToLower(), q => q);
+        //        var excelQuestions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        //        int row = 2;
+        //        while (!worksheet.Cell(row, 1).IsEmpty())
+        //        {
+        //            var quesContent = worksheet.Cell(row, 1).GetString().Trim();
+        //            if (string.IsNullOrEmpty(quesContent))
+        //            {
+        //                row++;
+        //                continue;
+        //            }
+
+        //            excelQuestions.Add(quesContent);
+
+        //            int.TryParse(worksheet.Cell(row, 2).GetString(), out int typeId);
+        //            int.TryParse(worksheet.Cell(row, 3).GetString(), out int modeId);
+        //            var solution = worksheet.Cell(row, 4).GetString().Trim();
+        //            var answers = worksheet.Cell(row, 5).GetString().Trim();
+        //            var correctAnswers = worksheet.Cell(row, 6).GetString().Trim();
+
+        //            if (questionMap.TryGetValue(quesContent.ToLower(), out var existingQuestion))
+        //            {
+        //                // ✅ Cập nhật nếu câu hỏi đã tồn tại
+        //                existingQuestion.TypeId = typeId;
+        //                existingQuestion.Modeid = modeId;
+        //                existingQuestion.Solution = solution;
+        //                existingQuestion.AnswerContent = answers;
+
+        //                // ✅ Cập nhật lại Correct Answers
+        //                _context.CorrectAnswers.RemoveRange(existingQuestion.CorrectAnswers);
+        //                var newCorrectAnswers = correctAnswers.Split(',')
+        //                    .Where(a => !string.IsNullOrWhiteSpace(a))
+        //                    .Select(a => new CorrectAnswer { Quesid = existingQuestion.Quesid, Content = a.Trim() });
+
+        //                await _context.CorrectAnswers.AddRangeAsync(newCorrectAnswers);
+        //            }
+        //            else
+        //            {
+        //                // ✅ Tạo câu hỏi mới nếu chưa có
+        //                var newQuestion = new Question
+        //                {
+        //                    Quescontent = quesContent,
+        //                    Secid = sectionId,
+        //                    TypeId = typeId,
+        //                    Modeid = modeId,
+        //                    Solution = solution,
+        //                    AnswerContent = answers
+        //                };
+        //                _context.Questions.Add(newQuestion);
+        //                await _context.SaveChangesAsync();
+
+        //                // ✅ Thêm Correct Answers nếu có
+        //                var newCorrectAnswers = correctAnswers.Split(',')
+        //                    .Where(a => !string.IsNullOrWhiteSpace(a))
+        //                    .Select(a => new CorrectAnswer { Quesid = newQuestion.Quesid, Content = a.Trim() });
+
+        //                await _context.CorrectAnswers.AddRangeAsync(newCorrectAnswers);
+        //            }
+
+        //            row++;
+        //        }
+
+        //        // ✅ **XÓA câu hỏi cũ không có trong file Excel nhưng thuộc Section này**
+        //        var questionsToDelete = existingQuestions
+        //            .Where(q => !excelQuestions.Contains(q.Quescontent))
+        //            .ToList();
+
+        //        if (questionsToDelete.Count > 0)
+        //        {
+        //            var correctAnswersToDelete = questionsToDelete.SelectMany(q => q.CorrectAnswers).ToList();
+        //            _context.CorrectAnswers.RemoveRange(correctAnswersToDelete);
+        //            _context.Questions.RemoveRange(questionsToDelete);
+        //        }
+
+        //        await _context.SaveChangesAsync();
+        //        return Ok(new { message = "Import dữ liệu thành công!" });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return StatusCode(500, new { message = "Lỗi hệ thống khi xử lý file Excel.", error = ex.Message });
+        //    }
+        //}
+        [HttpPost("{sectionId}/import-excel")]
+        public async Task<IActionResult> ImportQuestionsFromExcel(long sectionId, IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+                return BadRequest(new { message = "File không hợp lệ hoặc rỗng." });
+
+            try
+            {
+                using var stream = new MemoryStream();
+                await file.CopyToAsync(stream);
+                using var workbook = new XLWorkbook(stream);
+
+                // 🔍 **Tìm sheet có tên 'Section Questions'**
+                var worksheet = workbook.Worksheets.FirstOrDefault(w => w.Name == "Section Questions")
+                                ?? workbook.Worksheets.FirstOrDefault(); // Nếu không tìm thấy thì lấy sheet đầu tiên
+
+                if (worksheet == null)
+                    return BadRequest(new { message = "File Excel không có sheet hợp lệ." });
+
+                var existingQuestions = await _context.Questions
+                    .Where(q => q.Secid == sectionId)
+                    .Include(q => q.CorrectAnswers)
+                    .ToListAsync();
+
+                var questionMap = existingQuestions.ToDictionary(q => q.Quescontent.Trim().ToLower(), q => q);
+                var excelQuestions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                int row = 2;
+                while (!worksheet.Cell(row, 1).IsEmpty())
+                {
+                    var quesContent = worksheet.Cell(row, 1).GetString().Trim();
+                    if (string.IsNullOrEmpty(quesContent))
+                    {
+                        row++;
+                        continue;
+                    }
+
+                    excelQuestions.Add(quesContent);
+
+                    int.TryParse(worksheet.Cell(row, 2).GetString(), out int typeId);
+                    int.TryParse(worksheet.Cell(row, 3).GetString(), out int modeId);
+                    var solution = worksheet.Cell(row, 4).GetString().Trim();
+                    var answers = worksheet.Cell(row, 5).GetString().Trim();
+                    var correctAnswers = worksheet.Cell(row, 6).GetString().Trim();
+
+                    if (questionMap.TryGetValue(quesContent.ToLower(), out var existingQuestion))
+                    {
+                        // ✅ **Cập nhật nếu câu hỏi đã tồn tại**
+                        existingQuestion.TypeId = typeId;
+                        existingQuestion.Modeid = modeId;
+                        existingQuestion.Solution = solution;
+                        existingQuestion.AnswerContent = answers;
+
+                        _context.CorrectAnswers.RemoveRange(existingQuestion.CorrectAnswers);
+                        var newCorrectAnswers = correctAnswers.Split(',')
+                            .Where(a => !string.IsNullOrWhiteSpace(a))
+                            .Select(a => new CorrectAnswer { Quesid = existingQuestion.Quesid, Content = a.Trim() });
+
+                        await _context.CorrectAnswers.AddRangeAsync(newCorrectAnswers);
+                    }
+                    else
+                    {
+                        // ✅ **Thêm mới câu hỏi**
+                        var newQuestion = new Question
+                        {
+                            Quescontent = quesContent,
+                            Secid = sectionId,
+                            TypeId = typeId,
+                            Modeid = modeId,
+                            Solution = solution,
+                            AnswerContent = answers
+                        };
+                        _context.Questions.Add(newQuestion);
+                        await _context.SaveChangesAsync();
+
+                        var newCorrectAnswers = correctAnswers.Split(',')
+                            .Where(a => !string.IsNullOrWhiteSpace(a))
+                            .Select(a => new CorrectAnswer { Quesid = newQuestion.Quesid, Content = a.Trim() });
+
+                        await _context.CorrectAnswers.AddRangeAsync(newCorrectAnswers);
+                    }
+
+                    row++;
+                }
+
+                // ✅ **XÓA câu hỏi không còn trong file Excel**
+                var questionsToDelete = existingQuestions.Where(q => !excelQuestions.Contains(q.Quescontent)).ToList();
+                if (questionsToDelete.Count > 0)
+                {
+                    var correctAnswersToDelete = questionsToDelete.SelectMany(q => q.CorrectAnswers).ToList();
+                    _context.CorrectAnswers.RemoveRange(correctAnswersToDelete);
+                    _context.Questions.RemoveRange(questionsToDelete);
+                }
+
+                await _context.SaveChangesAsync();
+                return Ok(new { message = "✅ Import dữ liệu thành công!" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "❌ Lỗi hệ thống khi xử lý file Excel.", error = ex.Message });
+            }
+        }
 
 
         // ✅ Cập nhật câu hỏi
@@ -129,30 +397,40 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
                 return NotFound(new { message = "Không tìm thấy câu hỏi!" });
             }
 
+            // 🔹 Cập nhật thông tin chung
             question.Quescontent = questionDto.Quescontent;
             question.Secid = questionDto.Secid;
             question.TypeId = questionDto.TypeId;
             question.Modeid = questionDto.Modeid;
-            question.Solution = (questionDto.TypeId == 2 || questionDto.TypeId == 3) ? questionDto.Solution : null;
 
-            question.AnswerContent = questionDto.TypeId == 1 ? string.Join(",", questionDto.Answers) : null;
-
-            _context.Questions.Update(question);
-
-            if (questionDto.TypeId == 1)
+            if (questionDto.TypeId == 1) // ✅ Nếu chuyển sang Multiple Choice
             {
+                question.Solution = null; // ❌ Xóa giải thích cũ của dạng tự luận
+                question.AnswerContent = string.Join(",", questionDto.Answers); // ✅ Cập nhật danh sách đáp án
+
+                // ❌ Xóa toàn bộ CorrectAnswers cũ nếu có
                 var existingCorrectAnswers = _context.CorrectAnswers.Where(a => a.Quesid == id);
                 _context.CorrectAnswers.RemoveRange(existingCorrectAnswers);
 
+                // ✅ Thêm CorrectAnswers mới từ danh sách
                 foreach (var correctAns in questionDto.CorrectAnswers)
                 {
                     _context.CorrectAnswers.Add(new CorrectAnswer { Content = correctAns, Quesid = id });
                 }
             }
+            else // Nếu chuyển sang Tự luận (Type 2, 3)
+            {
+                question.Solution = questionDto.Solution;
+                question.AnswerContent = null; // ❌ Xóa AnswerContent vì dạng này không cần
+            }
 
+            _context.Questions.Update(question);
             await _context.SaveChangesAsync();
-            return Ok(new { message = "Câu hỏi đã được cập nhật!" });
+
+            return Ok(new { message = "✅ Câu hỏi đã được cập nhật!" });
         }
+
+
 
 
         // ✅ Xóa câu hỏi
