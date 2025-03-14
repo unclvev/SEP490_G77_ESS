@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Card, Button, Input, Spin, Modal } from "antd";
-import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import { EditOutlined, DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { delExam, getExams, updateExam } from "../../services/api";
 import { toast } from "react-toastify";
@@ -90,7 +90,13 @@ const ExamManagement = () => {
         <Input.Search placeholder="Tìm kiếm đề thi..." style={{ width: 300 }} />
       </div>
 
-      <h3>ĐỀ CỦA BẠN</h3>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <h3>ĐỀ CỦA BẠN</h3>
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate("/exam/matrix")}>
+          Tạo đề thi
+        </Button>
+      </div>
+
       {loading ? (
         <div style={{ display: "flex", justifyContent: "center", marginTop: 50 }}>
           <Spin size="large" />
