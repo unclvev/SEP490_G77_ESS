@@ -3,12 +3,27 @@ import { Select, Button, message, Spin } from "antd";
 import axios from "axios";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
+import { useSelector } from 'react-redux';
+import { jwtDecode } from "jwt-decode";
+import { useLocation } from 'react-router-dom';
 const { Option } = Select;
 
 const CreateQuestionBank = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams(); // ✅ Lấy params từ URL
-  const accid = searchParams.get("accid") || localStorage.getItem("accid"); // ✅ Ưu tiên lấy từ URL trước
+  const token = useSelector((state) => state.token);
+
+    let accid = searchParams.get("accid") || localStorage.getItem("accid"); // Mặc định cũ
+
+    // Nếu token tồn tại, giải mã để lấy AccId
+    if (token) {
+        try {
+            const decoded = jwtDecode(token);
+            accid = decoded.AccId || accid; // Ưu tiên lấy từ token nếu có
+        } catch (error) {
+            console.error("Invalid token", error);
+        }
+    }
 
   const [grades, setGrades] = useState([]);
   const [subjects, setSubjects] = useState([]);

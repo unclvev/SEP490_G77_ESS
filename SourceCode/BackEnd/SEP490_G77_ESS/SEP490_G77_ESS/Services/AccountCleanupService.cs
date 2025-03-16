@@ -11,7 +11,7 @@ namespace SEP490_G77_ESS.Services
     public class AccountCleanupService : BackgroundService
     {
         private readonly IServiceScopeFactory _scopeFactory;
-        private readonly TimeSpan _checkInterval = TimeSpan.FromMinutes(1);
+        private readonly TimeSpan _checkInterval = TimeSpan.FromMinutes(5);
 
         public AccountCleanupService(IServiceScopeFactory scopeFactory)
         {

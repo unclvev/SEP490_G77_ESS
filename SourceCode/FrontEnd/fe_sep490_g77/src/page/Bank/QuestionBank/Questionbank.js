@@ -5,6 +5,9 @@ import { SearchOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons'
 import axios from 'axios';
 import { toast } from "react-toastify";
 import { useSearchParams } from "react-router-dom";
+import { useSelector } from 'react-redux';
+import { jwtDecode } from "jwt-decode";
+import { useLocation } from 'react-router-dom'
 
 import 'tailwindcss/tailwind.css';
 
@@ -23,7 +26,20 @@ const QuestionBank = () => {
   const itemsPerPage = 8;
 
   const [searchParams] = useSearchParams();
-const accid = searchParams.get("accid") || localStorage.getItem("accid");
+
+  const token = useSelector((state) => state.token);
+  
+      let accid = searchParams.get("accid") || localStorage.getItem("accid"); // Mặc định cũ
+  
+      // Nếu token tồn tại, giải mã để lấy AccId
+      if (token) {
+          try {
+              const decoded = jwtDecode(token);
+              accid = decoded.AccId || accid; // Ưu tiên lấy từ token nếu có
+          } catch (error) {
+              console.error("Invalid token", error);
+          }
+      }
 
 
   useEffect(() => {
