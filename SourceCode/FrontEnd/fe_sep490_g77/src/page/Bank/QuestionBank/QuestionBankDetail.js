@@ -1,126 +1,220 @@
-import React from "react";
-import { useNavigate } from "react-router-dom";
-import { Button, Collapse, Dropdown, Menu } from "antd";
+import React, { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { Collapse, Dropdown, Input, Modal, Button, message, Skeleton } from "antd";
 import { MoreOutlined, EditOutlined, DeleteOutlined, PlusOutlined } from "@ant-design/icons";
-import "tailwindcss/tailwind.css";
-
+import axios from "axios";
+import { toast } from "react-toastify";
 const { Panel } = Collapse;
 
 const QuestionBankDetail = () => {
+  const { bankId } = useParams();
   const navigate = useNavigate();
+  const [sections, setSections] = useState([]);
+  const [bankInfo, setBankInfo] = useState(null);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [modalType, setModalType] = useState("");
+  const [currentSection, setCurrentSection] = useState(null);
+  const [sectionName, setSectionName] = useState("");
 
-  // Điều hướng đến trang phân quyền
-  const handleNavigateDecentralization = () => {
-    navigate("/decentralization");
+  useEffect(() => {
+    if (bankId) {
+      fetchSections();
+      fetchBankInfo();
+    }
+  }, [bankId]);
+
+  /** ✅ Lấy thông tin ngân hàng câu hỏi */
+  const fetchBankInfo = async () => {
+    try {
+        console.log("🚀 Gọi API:", `https://localhost:7052/api/Bank/${bankId}`);
+        const response = await axios.get(`https://localhost:7052/api/Bank/${bankId}`);
+        console.log("✅ API Response:", response.data);
+        setBankInfo(response.data);
+    } catch (error) {
+        console.error("❌ Lỗi khi gọi API:", error);
+        toast.error("Không thể tải dữ liệu!");
+    }
+};
+  /** ✅ Lấy danh sách Sections từ API */
+  const fetchSections = async () => {
+    try {
+      const response = await axios.get(`https://localhost:7052/api/Bank/${bankId}/sections`);
+      setSections(response.data);
+    } catch (error) {
+      toast.error("Lỗi khi tải dữ liệu section!");
+    }
   };
 
-  // Điều hướng đến trang danh sách câu hỏi
-  const handleNavigateQuestionList = () => {
-    navigate("/question-list");
+  /** ✅ Hiển thị modal */
+  const showModal = (type, section = null) => {
+    setModalType(type);
+    setCurrentSection(section);
+    setSectionName(type === "edit" ? section?.secname : "");
+    setIsModalVisible(true);
   };
 
-  // Cấu trúc câu hỏi
-  const detail = {
-    id: 2,
-    title: "NGÂN HÀNG CÂU HỎI TOÁN 2",
-    structure: [
-      {
-        title: "Số và phép tính",
-        children: [{ title: "Số tự nhiên", children: ["Các phép tính với số tự nhiên"] }],
-      },
-      {
-        title: "Hình học và đo lường",
-        children: [{ title: "Hình học trực quan", children: ["Hình phẳng và hình không gian", "Hình học tọa độ"] }],
-      },
-      {
-        title: "Một số yếu tố thống kê và xác suất",
-        children: [{ title: "Một số yếu tố xác suất", children: [] }],
-      },
-    ],
+  /** ✅ Thêm Section chính hoặc con */
+  const handleAddSection = async () => {
+    if (!sectionName.trim()) {
+      message.warning("Tên section không được để trống!");
+      return;
+    }
+    try {
+      const url =
+        modalType === "add-main"
+          ? `https://localhost:7052/api/Bank/${bankId}/add-section`
+          : `https://localhost:7052/api/Bank/${currentSection.secid}/add-subsection`;
+
+      await axios.post(url, { secname: sectionName });
+      toast.success("✅ Thêm section thành công!", 2); // 🟢 Thông báo UI thành công
+      setIsModalVisible(false);
+      setSectionName("");
+      fetchSections();
+      message.success("Thêm section thành công!");
+      setIsModalVisible(false);
+      setSectionName("");
+    } catch (error) {
+      toast.error("Lỗi khi thêm section!");
+    }
   };
 
-  // Menu cho dấu ba chấm
-  const menu = (
-    <Menu>
-      <Menu.Item key="1" icon={<PlusOutlined />}>Thêm cấu trúc con</Menu.Item>
-      <Menu.Item key="2" icon={<EditOutlined />}>Sửa</Menu.Item>
-      <Menu.Item key="3" icon={<DeleteOutlined />} danger>Xóa</Menu.Item>
-    </Menu>
-  );
+  /** ✅ Sửa tên Section */
+  const handleEditSection = async () => {
+    if (!sectionName.trim()) {
+      toast.warning("Tên section không được để trống!");
+      return;
+    }
+    try {
+      await axios.put(`https://localhost:7052/api/Bank/section/${currentSection.secid}`, {
+        secname: sectionName,
+      });
+
+      fetchSections();
+      toast.success("Cập nhật section thành công!");
+      setIsModalVisible(false);
+      setSectionName("");
+    } catch (error) {
+      toast.error("Lỗi khi cập nhật section!");
+    }
+  };
+
+  /** ✅ Xóa Section */
+  const handleDeleteSection = async (sectionId) => {
+    try {
+      await axios.delete(`https://localhost:7052/api/Bank/section/${sectionId}`);
+      fetchSections();
+      toast.success("Xóa section thành công!");
+    } catch (error) {
+      toast.error("Lỗi khi xóa section!");
+    }
+  };
+
+  /** ✅ Điều hướng đến trang danh sách câu hỏi của section */
+  const handleGoToQuestionList = (sectionId) => {
+    navigate(`/question-list/${sectionId}`);
+  };
+
+  /** ✅ Hiển thị danh sách Sections */
+ /** ✅ Hiển thị danh sách Sections */
+const renderSections = (sections) => {
+  return sections.map((section) => (
+    <Panel
+      key={section.secid}
+      header={
+        <div className="flex justify-between items-center w-full">
+          <div className="flex items-center">
+            <span className="font-semibold">{section.secname}</span>
+            <span
+              className="text-blue-600 text-sm ml-2 cursor-pointer hover:underline"
+              onClick={(e) => {
+                e.stopPropagation(); // Ngăn chặn sự kiện click mở/đóng panel
+                handleGoToQuestionList(section.secid);
+              }}
+            >
+              ({section.questionCount} câu hỏi)
+            </span>
+          </div>
+          <Dropdown
+            menu={{
+              items: [
+                {
+                  key: "1",
+                  label: "Thêm Section con",
+                  icon: <PlusOutlined />,
+                  onClick: () => showModal("add-sub", section),
+                },
+                {
+                  key: "2",
+                  label: "Sửa",
+                  icon: <EditOutlined />,
+                  onClick: () => showModal("edit", section),
+                },
+                {
+                  key: "3",
+                  label: "Xóa",
+                  icon: <DeleteOutlined />,
+                  danger: true,
+                  onClick: () => handleDeleteSection(section.secid),
+                },
+              ],
+            }}
+            trigger={["click"]}
+          >
+            <MoreOutlined className="text-xl cursor-pointer" />
+          </Dropdown>
+        </div>
+      }
+    >
+      {section.children?.length > 0 ? (
+        <Collapse className="ml-4">{renderSections(section.children)}</Collapse>
+      ) : (
+        <p className="ml-4 text-gray-500">Không có section con</p>
+      )}
+    </Panel>
+  ));
+};
+
 
   return (
-    <div className="p-4 bg-gray-100 min-h-screen">
-      {/* Tiêu đề */}
-      <h1 className="text-2xl md:text-3xl font-bold mb-6 text-center">{detail.title}</h1>
-
-      {/* Nhóm nút chức năng */}
-      <div className="flex justify-between items-center mb-8">
-        <div className="flex gap-4">
-          <Button className="bg-indigo-500 hover:bg-indigo-600 text-white">Cấu trúc</Button>
-          <Button className="bg-indigo-500 hover:bg-indigo-600 text-white" onClick={handleNavigateDecentralization}>
-            Phân quyền
-          </Button>
-          <Button className="bg-indigo-500 hover:bg-indigo-600 text-white" onClick={handleNavigateQuestionList}>
-            Xem số lượng câu hỏi
-          </Button>
-        </div>
-
-        <div className="flex gap-4">
-          <Button type="primary" className="bg-blue-500 hover:bg-blue-600 text-white">+ Tạo câu hỏi trong ngân hàng</Button>
-          <Button className="bg-blue-100 hover:bg-blue-200">+ Nhập câu hỏi</Button>
-        </div>
+    <div className="p-6 bg-gray-100 min-h-screen">
+      <div className="bg-white p-6 shadow-md rounded-lg mb-6 w-3/4 mx-auto">
+        {bankInfo ? (
+          <>
+            <h1 className="text-2xl font-bold mb-2">Tên Bank: {bankInfo.bankname}</h1>
+            <p className="text-gray-600">Khối: {bankInfo.grade}</p>
+            <p className="text-gray-600">Môn: {bankInfo.subject}</p>
+            <p className="text-gray-600 font-semibold">
+  Tổng số câu hỏi:{" "}
+  <span className="text-blue-600">
+    {bankInfo.totalquestion !== undefined ? bankInfo.totalquestion : "Đang tải..."}
+  </span>
+</p>
+          </>
+        ) : (
+          <Skeleton active />
+        )}
       </div>
 
-      {/* Cấu trúc câu hỏi dưới dạng Collapse */}
-      <div className="bg-white p-4 shadow-md rounded">
-        <h2 className="text-xl font-semibold mb-4">Cấu trúc ngân hàng câu hỏi</h2>
-        <Collapse accordion>
-          {detail.structure.map((item, index) => (
-            <Panel
-              header={
-                <div className="flex justify-between items-center">
-                  <span>{item.title}</span>
-                  <Dropdown overlay={menu} trigger={["click"]}>
-                    <MoreOutlined className="text-xl cursor-pointer" />
-                  </Dropdown>
-                </div>
-              }
-              key={index}
-            >
-              <Collapse accordion>
-                {item.children.map((subItem, subIndex) => (
-                  <Panel
-                    header={
-                      <div className="flex justify-between items-center">
-                        <span>{subItem.title}</span>
-                        <Dropdown overlay={menu} trigger={["click"]}>
-                          <MoreOutlined className="text-xl cursor-pointer" />
-                        </Dropdown>
-                      </div>
-                    }
-                    key={`${index}-${subIndex}`}
-                  >
-                    <ul className="list-disc list-inside space-y-1 pl-4">
-                      {subItem.children.length > 0 ? (
-                        subItem.children.map((content, contentIndex) => (
-                          <li key={`${index}-${subIndex}-${contentIndex}`} className="flex justify-between">
-                            {content}
-                            <Dropdown overlay={menu} trigger={["click"]}>
-                              <MoreOutlined className="text-xl cursor-pointer" />
-                            </Dropdown>
-                          </li>
-                        ))
-                      ) : (
-                        <li className="italic text-gray-500">Không có nội dung</li>
-                      )}
-                    </ul>
-                  </Panel>
-                ))}
-              </Collapse>
-            </Panel>
-          ))}
-        </Collapse>
+      <div className="flex justify-start mb-4 w-3/4 mx-auto">
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => showModal("add-main")}>
+          Thêm Section
+        </Button>
       </div>
+
+      {/* ✅ Hiển thị danh sách section */}
+      <div className="bg-white p-6 shadow-lg rounded-lg w-full max-w-5xl mx-auto">
+        <Collapse>{sections.length > 0 ? renderSections(sections) : <p>Không có dữ liệu</p>}</Collapse>
+      </div>
+
+      {/* ✅ Modal thêm/sửa section */}
+      <Modal
+        title={modalType === "add-main" ? "Thêm Section" : modalType === "add-sub" ? "Thêm Section con" : "Sửa Section"}
+        open={isModalVisible}
+        onOk={modalType === "add-main" ? handleAddSection : modalType === "add-sub" ? handleAddSection : handleEditSection}
+        onCancel={() => setIsModalVisible(false)}
+      >
+        <Input value={sectionName} onChange={(e) => setSectionName(e.target.value)} placeholder="Nhập tên section" />
+      </Modal>
     </div>
   );
 };

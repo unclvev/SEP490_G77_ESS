@@ -44,22 +44,27 @@ namespace SEP490_G77_ESS.Controllers.Common
             }
 
             // Map dữ liệu Account sang ProfileDTO
-            var profile = new ProfileDTO
+            var profile = new Account
             {
-                AccId = account.AccId,
                 Username = account.Username,
                 Email = account.Email,
-               
+                Phone = account.Phone,
+                Gender = account.Gender,
+                Datejoin = account.Datejoin,
+                IsActive = account.IsActive,
+                Subject = account.Subject,
+                Skill = account.Skill,
+                Address = account.Address,
+                Accname = account.Accname
+
             };
 
             return Ok(profile);
         }
 
-        // Endpoint cập nhật thông tin cá nhân
         [HttpPut("update")]
         public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileDTO updateProfileDto)
         {
-            // Lấy AccId từ claims (giả sử claim "AccId" được lưu khi đăng nhập)
             var claimAccId = User.FindFirst("AccId")?.Value;
             if (string.IsNullOrEmpty(claimAccId))
             {
@@ -75,18 +80,18 @@ namespace SEP490_G77_ESS.Controllers.Common
             {
                 return NotFound("Tài khoản không tồn tại.");
             }
-
-            // Ví dụ: cập nhật tên đầy đủ (Accname) theo thông tin nhận được từ client.
-            // Nếu mô hình Account mở rộng thêm các thuộc tính khác (Phone, Gender,...) thì cập nhật tương ứng.
-            account.Accname = updateProfileDto.FullName;
-            // Bạn có thể lưu thêm thông tin khác vào một bảng Profile riêng nếu cần.
-            // Ví dụ: account.Phone = updateProfileDto.Phone; ...
+            account.Email = updateProfileDto.Email;
+            account.Accname = updateProfileDto.Accname;
+            account.Phone = updateProfileDto.Phone;
+            account.Gender = updateProfileDto.Gender;
+            account.Datejoin = updateProfileDto.Datejoin;
+            account.Address = updateProfileDto.Address;
+            account.Subject = updateProfileDto.Subject;
 
             await _context.SaveChangesAsync();
             return Ok(new { message = "Cập nhật thông tin cá nhân thành công." });
         }
 
-        // Endpoint đổi mật khẩu
         [HttpPut("changePassword")]
         public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDTO changePasswordDto)
         {

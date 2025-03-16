@@ -1,0 +1,84 @@
+﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using SEP490_G77_ESS.DTO.UserDTO;
+using SEP490_G77_ESS.Models;
+using SEP490_G77_ESS.Services;
+using SEP490_G77_ESS.Utils;
+
+namespace SEP490_G77_ESS.Controllers.Common
+{
+    [Route("api/[controller]")]
+    [ApiController]
+    public class ForgotPasswordController : ControllerBase
+    {
+        private readonly EssDbV11Context _context;
+        private readonly EmailService _emailService;
+        private readonly PasswordHandler _passwordHandler;
+
+
+        public ForgotPasswordController(EssDbV11Context context, EmailService emailService, PasswordHandler passwordHandler)
+        {
+            _context = context;
+            _emailService = emailService;
+            _passwordHandler = passwordHandler;
+        }
+
+        [HttpGet("forgot-password")]
+        public async Task<IActionResult> ForgotPassword([FromQuery] string email)
+        {
+            var account = await _context.Accounts.FirstOrDefaultAsync(u => u.Email == email);
+            if (account == null)
+            {
+                return NotFound(new { message = "Email không tồn tại" });
+            }
+
+            account.PasswordResetToken = Guid.NewGuid().ToString();
+            account.ResetTokenExpires = DateTime.Now;
+            var resetUrl = $"{Request.Scheme}://{Request.Host}/api/ForgotPassword/verify-email-for-password?token={account.PasswordResetToken}";
+
+            await _emailService.SendVerificationEmailAsync(email, resetUrl);
+
+            await _context.SaveChangesAsync();
+            return Ok(new { message = "Vui lòng kiểm tra email để xác thực và đặt lại mật khẩu." });
+        }
+
+        [HttpGet("verify-email-for-password")]
+        public async Task<IActionResult> VerifyEmailForPassword([FromQuery] string token)
+        {
+            var account = await _context.Accounts.FirstOrDefaultAsync(u => u.PasswordResetToken == token);
+            if (account == null)
+            {
+                return NotFound(new { message = "Người dùng không tồn tại hoặc token không hợp lệ." });
+            }
+
+            // Kiểm tra thời gian xác thực (ví dụ: token chỉ hợp lệ trong 5 phút)
+            if (account.ResetTokenExpires.HasValue && (DateTime.Now - account.ResetTokenExpires.Value).TotalMinutes > 5)
+            {
+                account.PasswordResetToken = null;
+                _context.Accounts.Update(account);
+                await _context.SaveChangesAsync();
+                return BadRequest(new { message = "Thời gian xác thực đã quá 5 phút, vui lòng đăng ký lại." });
+            }
+
+            return Redirect("http://localhost:3000/reset-password");
+        }
+
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromQuery] string token, [FromQuery] string newPassword)
+        {
+            var account = await _context.Accounts.FirstOrDefaultAsync(u => u.PasswordResetToken == token);
+            if (account == null)
+            {
+                return NotFound(new { message = "Token không hợp lệ" });
+            }
+
+            account.Userpass = _passwordHandler.HashPassword(newPassword);
+            account.PasswordResetToken = null;
+
+            _context.Accounts.Update(account);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Mật khẩu đã được cập nhật" });
+        }
+    }
+}

@@ -17,6 +17,16 @@ public partial class Account
 
     public DateTime? Datejoin { get; set; }
 
+    public string? Gender { get; set; }
+
+    public string? Subject { get; set; }
+
+    public string? Address { get; set; }
+
+    public string? Skill { get; set; }
+
+    public string? Phone { get; set; }
+
     public long? Roleid { get; set; }
 
     public string? PasswordResetToken { get; set; }
@@ -24,6 +34,8 @@ public partial class Account
     public DateTime? ResetTokenExpires { get; set; }
 
     public string? VerificationToken { get; set; }
+
+    public int? IsActive { get; set; }
 
     public virtual ICollection<BankAccess> BankAccesses { get; set; } = new List<BankAccess>();
 

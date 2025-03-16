@@ -15,6 +15,10 @@ public partial class Curriculum
 
     public long? DfSectionId { get; set; }
 
+    public virtual ICollection<Bank> Banks { get; set; } = new List<Bank>();
+
+    public virtual ICollection<DefaultSectionHierarchy> DefaultSectionHierarchies { get; set; } = new List<DefaultSectionHierarchy>();
+
     public virtual Grade? Grade { get; set; }
 
     public virtual Subject? Subject { get; set; }
