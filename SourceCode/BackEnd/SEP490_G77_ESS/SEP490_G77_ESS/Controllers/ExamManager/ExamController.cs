@@ -76,7 +76,7 @@ namespace SEP490_G77_ESS.Controllers.ExamManager
         //Testing
         [HttpPut("{examid}")]
         [Authorize]
-        public async Task<IActionResult> UpdateExamName(int examid, [FromBody] string newName)
+        public async Task<IActionResult> UpdateExamName(int examid, [FromBody] ExamName newName)
         {
             var accId = await GetAccIdFromToken();
             if (accId == null)
@@ -86,7 +86,7 @@ namespace SEP490_G77_ESS.Controllers.ExamManager
             if (exam == null)
                 return NotFound(new { message = "Không tìm thấy bài kiểm tra hoặc bạn không có quyền chỉnh sửa." });
 
-            exam.Examname = newName;
+            exam.Examname = newName.NewName;
             await _context.SaveChangesAsync();
 
             return Ok(new { message = $"Đã cập nhật tên bài kiểm tra thành '{newName}'." });
