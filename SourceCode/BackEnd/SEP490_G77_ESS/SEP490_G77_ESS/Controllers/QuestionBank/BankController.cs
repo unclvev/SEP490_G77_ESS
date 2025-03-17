@@ -66,6 +66,27 @@ namespace SEP490_G77_ESS.Controllers
         }
 
 
+        [HttpGet("default-banks")]
+        public async Task<IActionResult> GetDefaultBanks()
+        {
+            var banks = await _context.DefaultSectionHierarchies
+                .Include(d => d.Grade)
+                .Include(d => d.Subject)
+                .Include(d => d.Curriculum)
+                .Select(d => new {
+                    BankId = d.DfSectionId,
+                    BankName = $"{d.Subject.SubjectName}-{d.Grade.GradeLevel}",
+                    Grade = d.Grade.GradeLevel,
+                    Subject = d.Subject.SubjectName,
+                    Curriculum = d.Curriculum.CurriculumName,
+                    TotalQuestion = _context.Questions
+                        .Count(q => q.Secid == d.DfSectionId)
+                })
+                .ToListAsync();
+
+            return Ok(banks);
+        }
+
 
 
 
@@ -171,15 +192,21 @@ namespace SEP490_G77_ESS.Controllers
                 return NotFound(new { message = "Không tìm thấy ngân hàng câu hỏi" });
             }
 
+            // ✅ Xóa dữ liệu trong Correct_Answer trước
+            // ✅ Xóa dữ liệu trong Correct_Answer trước
+            var questionIds = bank.Sections.SelectMany(s => s.Questions).Select(q => q.Quesid).ToList();
+            var correctAnswers = _context.CorrectAnswers
+      .Where(ca => ca.Quesid.HasValue && questionIds.Contains(ca.Quesid.Value))
+      .ToList();
+
+
+
             // ✅ Xóa toàn bộ câu hỏi thuộc các Sections của Bank
-            var sections = bank.Sections.ToList();
-            foreach (var section in sections)
-            {
-                var questions = _context.Questions.Where(q => q.Secid == section.Secid);
-                _context.Questions.RemoveRange(questions);
-            }
+            var questions = _context.Questions.Where(q => questionIds.Contains(q.Quesid));
+            _context.Questions.RemoveRange(questions);
 
             // ✅ Xóa toàn bộ Sections thuộc Bank
+            var sections = bank.Sections.ToList();
             _context.Sections.RemoveRange(sections);
 
             // ✅ Xóa quan hệ SectionHierarchy liên quan đến Bank
@@ -188,6 +215,10 @@ namespace SEP490_G77_ESS.Controllers
                 .Where(sh => sectionIds.Contains(sh.AncestorId) || sectionIds.Contains(sh.DescendantId));
             _context.SectionHierarchies.RemoveRange(sectionHierarchies);
 
+            // ✅ Xóa toàn bộ dữ liệu trong BankAccess liên quan đến Bank
+            var bankAccesses = _context.BankAccesses.Where(ba => ba.Bankid == id);
+            _context.BankAccesses.RemoveRange(bankAccesses);
+
             // ✅ Xóa ngân hàng câu hỏi
             _context.Banks.Remove(bank);
 
@@ -195,6 +226,7 @@ namespace SEP490_G77_ESS.Controllers
 
             return Ok(new { message = "Xóa ngân hàng câu hỏi và toàn bộ dữ liệu liên quan thành công" });
         }
+
 
 
         // ✅ Tìm kiếm ngân hàng câu hỏi theo tên

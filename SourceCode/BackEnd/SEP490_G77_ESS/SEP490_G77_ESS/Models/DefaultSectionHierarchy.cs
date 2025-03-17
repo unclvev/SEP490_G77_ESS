@@ -12,6 +12,11 @@ public partial class DefaultSectionHierarchy
     public string? DfInformation { get; set; }
 
     public long? CurriculumId { get; set; }
+    public long? GradeId { get; set; }  // Thêm vào
+    public long? SubjectId { get; set; } // Thêm vào
 
+    // Các navigation properties tương ứng
     public virtual Curriculum? Curriculum { get; set; }
+    public virtual Grade? Grade { get; set; } // Thêm vào
+    public virtual Subject? Subject { get; set; } // Thêm vào
 }
