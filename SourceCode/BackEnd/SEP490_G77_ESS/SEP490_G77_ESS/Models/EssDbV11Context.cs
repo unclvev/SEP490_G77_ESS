@@ -267,18 +267,22 @@ public partial class EssDbV11Context : DbContext
 
             entity.Property(e => e.DfSectionId).HasColumnName("df_section_id");
             entity.Property(e => e.CurriculumId).HasColumnName("curriculum_id");
-            entity.Property(e => e.GradeId).HasColumnName("grade_id"); // Thêm vào
-            entity.Property(e => e.SubjectId).HasColumnName("subject_id"); // Thêm vào
+            entity.Property(e => e.GradeId).HasColumnName("grade_id");
+            entity.Property(e => e.SubjectId).HasColumnName("subject_id");
             entity.Property(e => e.DfInformation).HasColumnName("df_information");
             entity.Property(e => e.DfSectionName)
                 .HasMaxLength(255)
                 .HasColumnName("df_section_name");
 
+            // ✅ Thêm quan hệ cha - con
+            entity.Property(e => e.AncestorId).HasColumnName("ancestor_id");
+            entity.Property(e => e.DescendantId).HasColumnName("descendant_id");
+            entity.Property(e => e.Depth).HasColumnName("depth");
+
             entity.HasOne(d => d.Curriculum).WithMany(p => p.DefaultSectionHierarchies)
                 .HasForeignKey(d => d.CurriculumId)
                 .HasConstraintName("FK__Default_S__curri__7B5B524B");
 
-            // Thêm 2 liên kết này:
             entity.HasOne(d => d.Grade).WithMany()
                 .HasForeignKey(d => d.GradeId)
                 .HasConstraintName("FK_DefaultSectionHierarchy_Grade");
@@ -287,6 +291,7 @@ public partial class EssDbV11Context : DbContext
                 .HasForeignKey(d => d.SubjectId)
                 .HasConstraintName("FK_DefaultSectionHierarchy_Subject");
         });
+
 
 
         modelBuilder.Entity<Exam>(entity =>

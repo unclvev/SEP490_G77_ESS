@@ -23,6 +23,7 @@ import ExamPreview from "./page/Exam/ExamPreview";
 import GenQRCode from "./page/GenQRCode/CreateQRCode.js"
 import PreviewGenQR from "./page/GenQRCode/PreviewGenQr"
 import Home from "./page/Home/Home";
+import EssQuestionBankDetail from "./page/Bank/QuestionBank/EssQuestionBankDetail.js";
 
 function App() {
   return (
@@ -42,6 +43,7 @@ function App() {
           <Route path="/create-question-bank" element={<MainLayout><CreateQuestionBank /></MainLayout>} />
           <Route path="/decentralization" element={<MainLayout><Decentralization /></MainLayout>} />
           <Route path="/question-list/:sectionId" element={<MainLayout><QuestionList /></MainLayout>} />
+          <Route path="/default-bank-detail/:bankId" element={<MainLayout><EssQuestionBankDetail /></MainLayout>} />
 
           <Route path="/exam" element={<MainLayout><ExamManagement /></MainLayout>} />
           <Route path="/exam/content" element={<MainLayout><ExamDetail /></MainLayout>} />

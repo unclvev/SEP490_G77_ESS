@@ -90,11 +90,15 @@ const QuestionBank = () => {
   const fetchDefaultBanks = async () => {
     setLoadingDefaultBanks(true);
     try {
-      const response = await axios.get('https://localhost:7052/api/Bank/default-banks');
-      const filteredBanks = defaultSearchQuery ? 
-        response.data.filter(bank => bank.bankName.toLowerCase().includes(defaultSearchQuery.toLowerCase())) : 
-        response.data;
-      
+      let url = `https://localhost:7052/api/Bank/default-banks?`;
+      if (defaultSearchQuery) url += `query=${defaultSearchQuery}&`;
+      if (selectedGrade) url += `grade=${selectedGrade}&`;
+      if (selectedSubject) url += `subject=${selectedSubject}&`;
+      if (selectedCurriculum) url += `curriculum=${selectedCurriculum}&`;
+  
+      const response = await axios.get(url);
+      const filteredBanks = response.data;
+  
       setDefaultBanks(filteredBanks.slice((currentDefaultPage - 1) * itemsPerPage, currentDefaultPage * itemsPerPage));
       setTotalDefaultBanks(filteredBanks.length);
     } catch (error) {
@@ -104,6 +108,7 @@ const QuestionBank = () => {
       setLoadingDefaultBanks(false);
     }
   };
+  
 
   const fetchGrades = async () => {
     try {
@@ -153,6 +158,7 @@ const QuestionBank = () => {
   const handleDefaultCardClick = (id) => {
     navigate(`/default-bank-detail/${id}`);
   };
+  
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
@@ -373,6 +379,42 @@ const QuestionBank = () => {
         Tìm kiếm
       </Button>
     </div>
+  </div>
+  {/* ✅ Bổ sung bộ lọc ở đây */}
+  <div className="flex flex-wrap gap-2 mb-4">
+    <Select 
+      placeholder="Khối học" 
+      allowClear 
+      onChange={(value) => setSelectedGrade(value)}
+      style={{ width: '150px' }}
+      size="middle"
+    >
+      {grades.map(g => <Select.Option key={g.gradeId} value={g.gradeLevel}>{g.gradeLevel}</Select.Option>)}
+    </Select>
+    
+    <Select 
+      placeholder="Môn học" 
+      allowClear 
+      onChange={(value) => setSelectedSubject(value)}
+      style={{ width: '150px' }}
+      size="middle"
+    >
+      {subjects.map(s => <Select.Option key={s.subjectId} value={s.subjectName}>{s.subjectName}</Select.Option>)}
+    </Select>
+    
+    <Select 
+      placeholder="Chương trình" 
+      allowClear 
+      onChange={(value) => setSelectedCurriculum(value)}
+      style={{ width: '150px' }}
+      size="middle"
+    >
+      {curriculums.map(c => <Select.Option key={c.curriculumId} value={c.curriculumName}>{c.curriculumName}</Select.Option>)}
+    </Select>
+    
+    <Button icon={<SearchOutlined />} onClick={handleDefaultSearch}>
+      Tìm kiếm
+    </Button>
   </div>
 
   {loadingDefaultBanks ? (

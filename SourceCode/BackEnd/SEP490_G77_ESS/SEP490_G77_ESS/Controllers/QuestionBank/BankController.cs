@@ -65,26 +65,133 @@ namespace SEP490_G77_ESS.Controllers
             return Ok(banks);
         }
 
-
         [HttpGet("default-banks")]
-        public async Task<IActionResult> GetDefaultBanks()
+        public async Task<IActionResult> GetDefaultBanks(
+            [FromQuery] string grade = "",
+            [FromQuery] string subject = "",
+            [FromQuery] string curriculum = "")
         {
-            var banks = await _context.DefaultSectionHierarchies
+            var banksQuery = _context.DefaultSectionHierarchies
                 .Include(d => d.Grade)
                 .Include(d => d.Subject)
                 .Include(d => d.Curriculum)
+                .AsQueryable();
+
+            if (!string.IsNullOrEmpty(grade))
+                banksQuery = banksQuery.Where(d => d.Grade.GradeLevel == grade);
+
+            if (!string.IsNullOrEmpty(subject))
+                banksQuery = banksQuery.Where(d => d.Subject.SubjectName.Contains(subject));
+
+            if (!string.IsNullOrEmpty(curriculum))
+                banksQuery = banksQuery.Where(d => d.Curriculum.CurriculumName.Contains(curriculum));
+
+            var banks = await banksQuery
                 .Select(d => new {
                     BankId = d.DfSectionId,
                     BankName = $"{d.Subject.SubjectName}-{d.Grade.GradeLevel}",
                     Grade = d.Grade.GradeLevel,
                     Subject = d.Subject.SubjectName,
                     Curriculum = d.Curriculum.CurriculumName,
-                    TotalQuestion = _context.Questions
-                        .Count(q => q.Secid == d.DfSectionId)
+                    TotalQuestion = _context.Questions.Count(q => q.Secid == d.DfSectionId)
                 })
                 .ToListAsync();
 
             return Ok(banks);
+        }
+
+
+        [HttpGet("default/{id}")]
+        public async Task<ActionResult<object>> GetDefaultBank(long id)
+        {
+            var bank = await _context.DefaultSectionHierarchies
+                .Include(d => d.Grade)
+                .Include(d => d.Subject)
+                .Include(d => d.Curriculum)
+                .Where(d => d.DfSectionId == id)
+                .Select(d => new
+                {
+                    BankId = d.DfSectionId,
+                    BankName = $"{d.Subject.SubjectName} - {d.Grade.GradeLevel}",
+                    Grade = d.Grade.GradeLevel,
+                    Subject = d.Subject.SubjectName,
+                    Curriculum = d.Curriculum.CurriculumName,
+                    TotalQuestion = _context.Questions
+                        .Count(q => q.Secid == d.DfSectionId)
+                })
+                .FirstOrDefaultAsync();
+
+            if (bank == null)
+            {
+                return NotFound(new { message = "Không tìm thấy ngân hàng câu hỏi" });
+            }
+
+            return Ok(bank);
+        }
+        [HttpGet("default/{bankId}/sections")]
+        public async Task<ActionResult<IEnumerable<object>>> GetDefaultSectionsByBankId(long bankId)
+        {
+            // ✅ Lấy curriculumId từ DefaultSectionHierarchies
+            var curriculumId = await _context.DefaultSectionHierarchies
+                .Where(d => d.DfSectionId == bankId)
+                .Select(d => d.CurriculumId)
+                .FirstOrDefaultAsync();
+
+            if (curriculumId == null)
+            {
+                return NotFound(new { message = "Không tìm thấy curriculum cho bank này!" });
+            }
+
+            // ✅ Lấy danh sách Sections của curriculum
+            var sections = await _context.DefaultSectionHierarchies
+                .Where(s => s.CurriculumId == curriculumId)
+                .ToListAsync();
+
+            // ✅ Lọc quan hệ cha-con hợp lệ (Loại bỏ ancestor_id = descendant_id)
+            var hierarchyRelations = await _context.DefaultSectionHierarchies
+                .Where(s => s.AncestorId != null && s.DescendantId != null && s.AncestorId != s.DescendantId)
+                .ToListAsync();
+
+            // ✅ Xác định Root Sections: Sections không làm `descendant_id` trong bất kỳ quan hệ nào
+            // Find all sections that are descendants in relationships
+            var descendantIds = hierarchyRelations.Select(h => h.DescendantId.Value).ToHashSet();
+
+            // Root sections are those that don't appear as descendants in any relationship
+            // (except for self-relationships)
+            var rootSections = sections
+    .Where(s => (s.AncestorId == s.DfSectionId) ||
+                (s.AncestorId == null && !descendantIds.Contains(s.DfSectionId)))
+    .ToList();
+
+            // ✅ Sử dụng Dictionary để ánh xạ nhanh hơn
+            var sectionLookup = sections.ToDictionary(s => s.DfSectionId);
+            var hierarchyLookup = hierarchyRelations
+                .GroupBy(h => h.AncestorId)
+                .ToDictionary(g => g.Key, g => g.Select(h => h.DescendantId.Value).ToList());
+
+            // ✅ Xây dựng cây section
+            var sectionTree = rootSections
+                .Select(s => BuildSectionTree(s, sectionLookup, hierarchyLookup))
+                .ToList();
+
+            return Ok(sectionTree);
+        }
+
+        // ✅ Build cây đệ quy tối ưu
+        private object BuildSectionTree(DefaultSectionHierarchy section, Dictionary<long, DefaultSectionHierarchy> sectionLookup, Dictionary<long?, List<long>> hierarchyLookup)
+        {
+            // ✅ Lấy danh sách section con nếu có
+            var childSections = hierarchyLookup.ContainsKey(section.DfSectionId)
+                ? hierarchyLookup[section.DfSectionId].Where(sectionLookup.ContainsKey).Select(id => sectionLookup[id]).ToList()
+                : new List<DefaultSectionHierarchy>();
+
+            return new
+            {
+                secid = section.DfSectionId,
+                secname = section.DfSectionName,
+                questionCount = _context.Questions.Count(q => q.Secid == section.DfSectionId),
+                children = childSections.Select(s => BuildSectionTree(s, sectionLookup, hierarchyLookup)).ToList()
+            };
         }
 
 
