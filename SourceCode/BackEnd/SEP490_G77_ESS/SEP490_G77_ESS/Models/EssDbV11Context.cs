@@ -365,6 +365,8 @@ public partial class EssDbV11Context : DbContext
             entity.Property(e => e.Secid).HasColumnName("secid");
             entity.Property(e => e.Solution).HasColumnName("solution");
             entity.Property(e => e.TypeId).HasColumnName("type_id");
+            entity.Property(e => e.DfSectionId).HasColumnName("df_section_id"); // ✅ Thêm cột mới
+
 
             entity.HasOne(d => d.Mode).WithMany(p => p.Questions)
                 .HasForeignKey(d => d.Modeid)
@@ -378,6 +380,10 @@ public partial class EssDbV11Context : DbContext
                 .HasForeignKey(d => d.TypeId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Question_Type");
+            entity.HasOne(d => d.DefaultSection)
+        .WithMany()
+        .HasForeignKey(d => d.DfSectionId)
+        .HasConstraintName("FK_Question_Default_Section_Hierarchy"); // ✅ Thiết lập khóa ngoại
         });
 
         modelBuilder.Entity<Role>(entity =>
