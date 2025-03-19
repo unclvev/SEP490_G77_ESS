@@ -64,7 +64,6 @@ namespace SEP490_G77_ESS.Controllers
 
             return Ok(banks);
         }
-        
         [HttpGet("default-banks")]
         public async Task<IActionResult> GetDefaultBanks(
             [FromQuery] string grade = "",
@@ -79,26 +78,56 @@ namespace SEP490_G77_ESS.Controllers
 
             if (!string.IsNullOrEmpty(grade))
                 banksQuery = banksQuery.Where(d => d.Grade.GradeLevel == grade);
-
             if (!string.IsNullOrEmpty(subject))
                 banksQuery = banksQuery.Where(d => d.Subject.SubjectName.Contains(subject));
-
             if (!string.IsNullOrEmpty(curriculum))
                 banksQuery = banksQuery.Where(d => d.Curriculum.CurriculumName.Contains(curriculum));
 
-            var banks = await banksQuery
-                .Select(d => new {
-                    BankId = d.DfSectionId,
-                    BankName = $"{d.Subject.SubjectName}-{d.Grade.GradeLevel}",
-                    Grade = d.Grade.GradeLevel,
-                    Subject = d.Subject.SubjectName,
-                    Curriculum = d.Curriculum.CurriculumName,
-                    TotalQuestion = _context.Questions.Count(q => q.Secid == d.DfSectionId)
-                })
-                .ToListAsync();
+            // Get the basic bank information first
+            var banks = await banksQuery.ToListAsync();
 
-            return Ok(banks);
+            // Create a list to hold our final result
+            var result = new List<object>();
+
+            // Process each bank individually
+            foreach (var bank in banks)
+            {
+                try
+                {
+                    // Get all section IDs for this bank's curriculum
+                    var sectionIds = await _context.DefaultSectionHierarchies
+                        .Where(s => s.CurriculumId == bank.CurriculumId)
+                        .Select(s => s.DfSectionId)
+                        .ToListAsync();
+
+                    // Count questions using the same logic as in GetDefaultBank
+                    var questionCount = await _context.Questions
+                        .Where(q => q.DfSectionId.HasValue && sectionIds.Contains(q.DfSectionId.Value))
+                        .CountAsync();
+
+                    // Add to result with all fields explicitly set
+                    result.Add(new
+                    {
+                        BankId = bank.DfSectionId,
+                        BankName = $"{bank.Subject.SubjectName}-{bank.Grade.GradeLevel}",
+                        Grade = bank.Grade.GradeLevel,
+                        Subject = bank.Subject.SubjectName,
+                        Curriculum = bank.Curriculum.CurriculumName,
+                        TotalQuestion = questionCount
+                    });
+                }
+                catch (Exception ex)
+                {
+                    // Log the exception but continue processing other banks
+                    Console.WriteLine($"Error processing bank {bank.DfSectionId}: {ex.Message}");
+                }
+            }
+
+            return Ok(result);
         }
+
+
+
 
 
 
