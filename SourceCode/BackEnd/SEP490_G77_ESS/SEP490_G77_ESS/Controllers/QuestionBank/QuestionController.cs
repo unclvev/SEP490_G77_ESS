@@ -147,7 +147,7 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
 
             using var workbook = new XLWorkbook();
 
-            // 🟢 **Sheet 1: Dữ liệu câu hỏi**
+            // Sheet 1: Dữ liệu câu hỏi
             var worksheet = workbook.Worksheets.Add("Section Questions");
             worksheet.Cell(1, 1).Value = "Question Content";
             worksheet.Cell(1, 2).Value = "Type ID";
@@ -172,17 +172,17 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
                 row++;
             }
 
-            // 🎯 **Sheet 2: Hướng dẫn Import**
+            // Sheet 2: Hướng dẫn Import với thông tin chính xác
             var guideSheet = workbook.Worksheets.Add("Import Guide");
             guideSheet.Cell(1, 1).Value = "HƯỚNG DẪN IMPORT EXCEL";
             guideSheet.Cell(2, 1).Value = "1. Cột 'Question Content': Nhập nội dung câu hỏi.";
-            guideSheet.Cell(3, 1).Value = "2. Cột 'Type ID': Loại câu hỏi (1: Trắc nghiệm, 2: Tự luận).";
+            guideSheet.Cell(3, 1).Value = "2. Cột 'Type ID': Loại câu hỏi (1: Trắc nghiệm, 2: True/False, 3: Điền kết quả).";
             guideSheet.Cell(4, 1).Value = "3. Cột 'Mode ID': Mức độ khó của câu hỏi.";
-            guideSheet.Cell(5, 1).Value = "4. Cột 'Solution': Giải thích (Chỉ áp dụng cho tự luận).";
-            guideSheet.Cell(6, 1).Value = "5. Cột 'Answers': Các đáp án (Ngăn cách bằng dấu ',').";
-            guideSheet.Cell(7, 1).Value = "6. Cột 'Correct Answers': Đáp án đúng (Ngăn cách bằng dấu ',').";
+            guideSheet.Cell(5, 1).Value = "4. Cột 'Solution': Giải thích (Áp dụng cho TypeID 2 và 3).";
+            guideSheet.Cell(6, 1).Value = "5. Cột 'Answers': Các đáp án (Ngăn cách bằng dấu ',', TypeID 2 luôn là 'True,False', TypeID 3 để trống).";
+            guideSheet.Cell(7, 1).Value = "6. Cột 'Correct Answers': Đáp án đúng (TypeID 1, 2: Nội dung đáp án; TypeID 3: Đáp án 4 ký tự).";
 
-            // 🔒 **Làm cho sheet hướng dẫn chỉ đọc**
+            // Làm cho sheet hướng dẫn chỉ đọc
             guideSheet.Protect().AllowElement(XLSheetProtectionElements.SelectLockedCells);
 
             using var stream = new MemoryStream();
@@ -192,6 +192,7 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
             return File(stream.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 $"Section_{sectionId}_Questions.xlsx");
         }
+
 
 
 
@@ -311,7 +312,7 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
                 await file.CopyToAsync(stream);
                 using var workbook = new XLWorkbook(stream);
 
-                // 🔍 **Tìm sheet có tên 'Section Questions'**
+                // Tìm sheet có tên 'Section Questions'
                 var worksheet = workbook.Worksheets.FirstOrDefault(w => w.Name == "Section Questions")
                                 ?? workbook.Worksheets.FirstOrDefault(); // Nếu không tìm thấy thì lấy sheet đầu tiên
 
@@ -327,6 +328,10 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
                 var excelQuestions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
                 int row = 2;
+                int importCount = 0;
+                int updateCount = 0;
+                var errors = new List<string>();
+
                 while (!worksheet.Cell(row, 1).IsEmpty())
                 {
                     var quesContent = worksheet.Cell(row, 1).GetString().Trim();
@@ -338,55 +343,140 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
 
                     excelQuestions.Add(quesContent);
 
-                    int.TryParse(worksheet.Cell(row, 2).GetString(), out int typeId);
-                    int.TryParse(worksheet.Cell(row, 3).GetString(), out int modeId);
+                    // Sử dụng GetValue để lấy giá trị đúng kiểu dữ liệu
+                    int typeId = 0;
+                    int modeId = 0;
+
+                    // Xử lý kiểu dữ liệu số nguyên đúng cách
+                    if (worksheet.Cell(row, 2).TryGetValue(out int typeIdValue))
+                        typeId = typeIdValue;
+                    else if (!int.TryParse(worksheet.Cell(row, 2).GetString(), out typeId))
+                    {
+                        errors.Add($"Dòng {row}: TypeID không hợp lệ");
+                        row++;
+                        continue;
+                    }
+
+                    if (worksheet.Cell(row, 3).TryGetValue(out int modeIdValue))
+                        modeId = modeIdValue;
+                    else if (!int.TryParse(worksheet.Cell(row, 3).GetString(), out modeId))
+                    {
+                        errors.Add($"Dòng {row}: ModeID không hợp lệ");
+                        row++;
+                        continue;
+                    }
+
                     var solution = worksheet.Cell(row, 4).GetString().Trim();
                     var answers = worksheet.Cell(row, 5).GetString().Trim();
                     var correctAnswers = worksheet.Cell(row, 6).GetString().Trim();
 
+                    // Kiểm tra TypeID và điều chỉnh dữ liệu phù hợp
+                    if (typeId < 1 || typeId > 3)
+                    {
+                        errors.Add($"Dòng {row}: TypeID phải từ 1-3");
+                        row++;
+                        continue;
+                    }
+
+                    // Xử lý dữ liệu theo TypeID
+                    switch (typeId)
+                    {
+                        case 1: // Single choice
+                            if (string.IsNullOrWhiteSpace(answers))
+                            {
+                                errors.Add($"Dòng {row}: Câu hỏi trắc nghiệm cần có các đáp án");
+                                row++;
+                                continue;
+                            }
+                            if (string.IsNullOrWhiteSpace(correctAnswers))
+                            {
+                                errors.Add($"Dòng {row}: Câu hỏi trắc nghiệm cần có đáp án đúng");
+                                row++;
+                                continue;
+                            }
+                            // Kiểm tra xem đáp án đúng có nằm trong danh sách đáp án không
+                            var answersList = answers.Split(',').Select(a => a.Trim()).ToList();
+                            if (!answersList.Contains(correctAnswers))
+                            {
+                                errors.Add($"Dòng {row}: Đáp án đúng phải có trong danh sách đáp án");
+                                row++;
+                                continue;
+                            }
+                            break;
+
+                        case 2: // True/False
+                                // Đảm bảo answers luôn là "True,False"
+                            answers = "True,False";
+                            if (correctAnswers != "True" && correctAnswers != "False")
+                            {
+                                errors.Add($"Dòng {row}: Đáp án đúng cho câu hỏi True/False phải là 'True' hoặc 'False'");
+                                row++;
+                                continue;
+                            }
+                            break;
+
+                        case 3: // Điền kết quả
+                                // Không cần answers
+                            answers = null;
+                            if (string.IsNullOrWhiteSpace(correctAnswers) || correctAnswers.Length != 4)
+                            {
+                                errors.Add($"Dòng {row}: Đáp án cho câu hỏi điền kết quả phải có đúng 4 ký tự");
+                                row++;
+                                continue;
+                            }
+                            break;
+                    }
+
                     if (questionMap.TryGetValue(quesContent.ToLower(), out var existingQuestion))
                     {
-                        // ✅ **Cập nhật nếu câu hỏi đã tồn tại**
+                        // Cập nhật nếu câu hỏi đã tồn tại
                         existingQuestion.TypeId = typeId;
                         existingQuestion.Modeid = modeId;
-                        existingQuestion.Solution = solution;
+                        existingQuestion.Solution = (typeId == 2 || typeId == 3) ? solution : null;
                         existingQuestion.AnswerContent = answers;
 
                         _context.CorrectAnswers.RemoveRange(existingQuestion.CorrectAnswers);
-                        var newCorrectAnswers = correctAnswers.Split(',')
-                            .Where(a => !string.IsNullOrWhiteSpace(a))
-                            .Select(a => new CorrectAnswer { Quesid = existingQuestion.Quesid, Content = a.Trim() });
 
-                        await _context.CorrectAnswers.AddRangeAsync(newCorrectAnswers);
+                        await _context.CorrectAnswers.AddAsync(new CorrectAnswer
+                        {
+                            Quesid = existingQuestion.Quesid,
+                            Content = correctAnswers.Trim()
+                        });
+
+                        updateCount++;
                     }
                     else
                     {
-                        // ✅ **Thêm mới câu hỏi**
+                        // Thêm mới câu hỏi
                         var newQuestion = new Question
                         {
                             Quescontent = quesContent,
                             Secid = sectionId,
                             TypeId = typeId,
                             Modeid = modeId,
-                            Solution = solution,
+                            Solution = (typeId == 2 || typeId == 3) ? solution : null,
                             AnswerContent = answers
                         };
                         _context.Questions.Add(newQuestion);
                         await _context.SaveChangesAsync();
 
-                        var newCorrectAnswers = correctAnswers.Split(',')
-                            .Where(a => !string.IsNullOrWhiteSpace(a))
-                            .Select(a => new CorrectAnswer { Quesid = newQuestion.Quesid, Content = a.Trim() });
+                        await _context.CorrectAnswers.AddAsync(new CorrectAnswer
+                        {
+                            Quesid = newQuestion.Quesid,
+                            Content = correctAnswers.Trim()
+                        });
 
-                        await _context.CorrectAnswers.AddRangeAsync(newCorrectAnswers);
+                        importCount++;
                     }
 
                     row++;
                 }
 
-                // ✅ **XÓA câu hỏi không còn trong file Excel**
+                // XÓA câu hỏi không còn trong file Excel
                 var questionsToDelete = existingQuestions.Where(q => !excelQuestions.Contains(q.Quescontent)).ToList();
-                if (questionsToDelete.Count > 0)
+                int deleteCount = questionsToDelete.Count;
+
+                if (deleteCount > 0)
                 {
                     var correctAnswersToDelete = questionsToDelete.SelectMany(q => q.CorrectAnswers).ToList();
                     _context.CorrectAnswers.RemoveRange(correctAnswersToDelete);
@@ -394,7 +484,17 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
                 }
 
                 await _context.SaveChangesAsync();
-                return Ok(new { message = "✅ Import dữ liệu thành công!" });
+
+                // Tạo thông báo chi tiết kết quả
+                string resultMessage = $"✅ Import thành công: {importCount} câu hỏi mới, {updateCount} câu hỏi cập nhật, {deleteCount} câu hỏi đã xóa.";
+                if (errors.Any())
+                {
+                    resultMessage += $"\n⚠️ {errors.Count} lỗi: {string.Join("; ", errors.Take(5))}";
+                    if (errors.Count > 5)
+                        resultMessage += "...";
+                }
+
+                return Ok(new { message = resultMessage });
             }
             catch (Exception ex)
             {
