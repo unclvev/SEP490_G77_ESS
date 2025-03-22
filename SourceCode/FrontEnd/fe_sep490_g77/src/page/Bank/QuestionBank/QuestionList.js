@@ -4,7 +4,11 @@ import { Button, List, Card, Select, Input, Radio, message, Popconfirm, Upload }
 import { DeleteOutlined, DownloadOutlined, UploadOutlined } from "@ant-design/icons";
 import axios from "axios";
 import { toast } from "react-toastify";
-
+import { Editor } from 'react-draft-wysiwyg';
+import { EditorState, ContentState, convertToRaw } from 'draft-js';
+import { stateToHTML } from 'draft-js-export-html';
+import 'react-draft-wysiwyg/dist/react-draft-wysiwyg.css';
+import { stateFromHTML } from 'draft-js-import-html';
 const { TextArea } = Input;
 const { Option } = Select;
 
@@ -25,6 +29,8 @@ const QuestionList = () => {
     answers: [],
     correctAnswers: [""],
   });
+  const [editorState, setEditorState] = useState(EditorState.createEmpty());
+
 
   useEffect(() => {
     fetchQuestions();
@@ -89,7 +95,14 @@ const QuestionList = () => {
     setIsEditing(true);
     if (question) {
       setCurrentQuestion(question);
-
+      // trong hàm handleEdit
+if (question && question.quescontent) {
+  const contentState = stateFromHTML(question.quescontent);
+  setEditorState(EditorState.createWithContent(contentState));
+} else {
+  setEditorState(EditorState.createEmpty());
+}
+      
       let updatedAnswers = [];
       let correctAnswer = question.correctAnswers.length > 0 ? question.correctAnswers[0] : "";
 
@@ -389,8 +402,8 @@ const renderQuestionContent = (question) => {
           renderItem={(question, index) => (
             <List.Item key={question.quesid}>
               <Card
-                title={`#${index + 1} - ${question.quescontent}`}
-                className="mb-2"
+                 title={<div dangerouslySetInnerHTML={{ __html: question.quescontent }}></div>}
+  className="mb-2"
                 extra={
                   <>
                     <Button onClick={() => handleEdit(question)}>Sửa</Button>
@@ -453,13 +466,26 @@ const renderQuestionContent = (question) => {
           </Select>
 
           <label className="font-semibold">Nội dung câu hỏi</label>
-          <TextArea 
-            rows={4} 
-            className="mb-4" 
-            placeholder="Nhập nội dung câu hỏi"
-            value={newQuestion.quescontent} 
-            onChange={(e) => setNewQuestion({ ...newQuestion, quescontent: e.target.value })}
-          />
+<Editor
+  editorState={editorState}
+  onEditorStateChange={(state) => {
+    setEditorState(state);
+    setNewQuestion({
+      ...newQuestion,
+      quescontent: stateToHTML(state.getCurrentContent())
+    });
+  }}
+  wrapperClassName="mb-4 border border-gray-200"
+  editorClassName="p-2 bg-white min-h-[200px]"
+  toolbar={{
+    options: ['inline', 'list', 'link', 'history'],
+    inline: { inDropdown: false },
+    list: { inDropdown: true },
+    link: { inDropdown: false },
+    history: { inDropdown: false },
+  }}
+/>
+
 
           {/* Fields specific to question type */}
           {renderQuestionFields()}
