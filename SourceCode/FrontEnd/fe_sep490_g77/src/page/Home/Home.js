@@ -53,7 +53,7 @@ const Home = () => {
               className="shadow-md hover:shadow-lg transition-shadow duration-300 cursor-pointer p-6 flex flex-col items-center text-center"
               onClick={() => navigate(item.path)}
             >
-              <img src={item.img} alt={item.title} className="mb-3 w-20 h-20" />
+              <img src={item.img} alt={item.title} className="mb-3 w-20 h-20 mx-auto" />
               <h2 className="text-lg font-bold mb-2">{item.title}</h2>
               <p className="text-gray-600">{item.description}</p>
             </Card>
