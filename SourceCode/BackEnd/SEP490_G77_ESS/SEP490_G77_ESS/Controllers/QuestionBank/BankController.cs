@@ -453,10 +453,8 @@ namespace SEP490_G77_ESS.Controllers
         }
 
 
-        // ✅ Tạo ngân hàng câu hỏi tự động nếu chưa có
-        // ✅ Tạo ngân hàng câu hỏi tự động luôn tạo mới
         [HttpPost("generate/{accid}")]
-        public async Task<ActionResult<BankDto>> GenerateQuestionBank(long accid, [FromBody] Bank bank)
+        public async Task<ActionResult<object>> GenerateQuestionBank(long accid, [FromBody] Bank bank)
         {
             var grade = await _context.Grades.FindAsync(bank.GradeId);
             var subject = await _context.Subjects.FindAsync(bank.SubjectId);
@@ -486,12 +484,23 @@ namespace SEP490_G77_ESS.Controllers
             _context.Banks.Add(newBank);
             await _context.SaveChangesAsync();
 
+            // Get all default sections for this curriculum
             var defaultSections = await _context.DefaultSectionHierarchies
                 .Where(d => d.CurriculumId == bank.CurriculumId)
                 .ToListAsync();
 
-            List<SectionDto> createdSections = new List<SectionDto>();
+            // Get hierarchy relations from default sections
+            var hierarchyRelations = await _context.DefaultSectionHierarchies
+                .Where(s => s.CurriculumId == bank.CurriculumId &&
+                            s.AncestorId != null && s.DescendantId != null &&
+                            s.AncestorId != s.DescendantId)
+                .ToListAsync();
 
+            // Create a mapping from default section IDs to new section IDs
+            Dictionary<long, long> sectionMapping = new Dictionary<long, long>();
+            Dictionary<long, string> sectionNames = new Dictionary<long, string>();
+
+            // Create sections first
             foreach (var defaultSection in defaultSections)
             {
                 var newSection = new Section
@@ -503,25 +512,102 @@ namespace SEP490_G77_ESS.Controllers
                 _context.Sections.Add(newSection);
                 await _context.SaveChangesAsync();
 
-                createdSections.Add(new SectionDto
+                // Store mapping from default section ID to new section ID
+                sectionMapping[defaultSection.DfSectionId] = newSection.Secid;
+                sectionNames[newSection.Secid] = defaultSection.DfSectionName;
+            }
+            foreach (var defaultSection in defaultSections)
+            {
+                var selfHierarchy = new SectionHierarchy
                 {
-                    Secid = newSection.Secid,
-                    Secname = newSection.Secname
-                });
+                    AncestorId = sectionMapping[defaultSection.DfSectionId],
+                    DescendantId = sectionMapping[defaultSection.DfSectionId],
+                    Depth = 0
+                };
+                _context.SectionHierarchies.Add(selfHierarchy);
             }
 
-            // ✅ Chỉ trả về dữ liệu cần thiết
-            return Ok(new BankDto
+            // Create section hierarchy relationships
+            foreach (var relation in hierarchyRelations)
+            {
+                if (relation.AncestorId.HasValue && relation.DescendantId.HasValue)
+                {
+                    // Create the same relationship in the new sections
+                    if (sectionMapping.ContainsKey(relation.AncestorId.Value) &&
+                        sectionMapping.ContainsKey(relation.DescendantId.Value))
+                    {
+                        var sectionHierarchy = new SectionHierarchy
+                        {
+                            AncestorId = sectionMapping[relation.AncestorId.Value],
+                            DescendantId = sectionMapping[relation.DescendantId.Value],
+                            Depth = relation.Depth.HasValue ? (long)relation.Depth.Value : 0
+                        };
+
+                        _context.SectionHierarchies.Add(sectionHierarchy);
+                    }
+                }
+            }
+
+            await _context.SaveChangesAsync();
+
+            // Identify root sections by using the same logic as GetDefaultSectionsByBankId
+            var descendantIds = hierarchyRelations
+                .Select(h => h.DescendantId.Value)
+                .ToHashSet();
+
+            var rootDefaultSections = defaultSections
+                .Where(s => (s.AncestorId == s.DfSectionId) ||
+                           (s.AncestorId == null && !descendantIds.Contains(s.DfSectionId)))
+                .ToList();
+
+            var sectionLookup = defaultSections.ToDictionary(s => s.DfSectionId);
+            var hierarchyLookup = hierarchyRelations
+                .GroupBy(h => h.AncestorId)
+                .ToDictionary(g => g.Key, g => g.Select(h => h.DescendantId.Value).ToList());
+
+            // Build the response with multiple root sections
+            var sectionTree = rootDefaultSections
+                .Select(s => BuildSectionTreeForResponse(s, sectionLookup, hierarchyLookup, sectionMapping))
+                .ToList();
+
+            // Return the bank with sections at the proper hierarchy
+            return Ok(new
             {
                 BankId = newBank.BankId,
                 BankName = newBank.Bankname,
                 CurriculumId = newBank.CurriculumId,
                 Grade = grade.GradeLevel,
                 Subject = subject.SubjectName,
-                Sections = createdSections
+                Sections = sectionTree  // This is now a list of root sections
             });
         }
 
+        // Build a hierarchical section tree for the response
+        private object BuildSectionTreeForResponse(
+            DefaultSectionHierarchy defaultSection,
+            Dictionary<long, DefaultSectionHierarchy> sectionLookup,
+            Dictionary<long?, List<long>> hierarchyLookup,
+            Dictionary<long, long> sectionMapping)
+        {
+            var childSections = hierarchyLookup.ContainsKey(defaultSection.DfSectionId)
+                ? hierarchyLookup[defaultSection.DfSectionId]
+                    .Where(sectionLookup.ContainsKey)
+                    .Select(id => sectionLookup[id])
+                    .ToList()
+                : new List<DefaultSectionHierarchy>();
+
+            var children = childSections
+                .Select(s => BuildSectionTreeForResponse(s, sectionLookup, hierarchyLookup, sectionMapping))
+                .ToList();
+
+            return new
+            {
+                secid = sectionMapping[defaultSection.DfSectionId],
+                secname = defaultSection.DfSectionName,
+                questionCount = 0, // Initially 0 since it's a new bank
+                children = children
+            };
+        }
 
 
 
