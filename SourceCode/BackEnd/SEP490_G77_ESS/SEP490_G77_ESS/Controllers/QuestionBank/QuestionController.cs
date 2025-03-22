@@ -93,7 +93,8 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
                 Secid = questionDto.Secid,
                 TypeId = questionDto.TypeId,
                 Modeid = questionDto.Modeid,
-                Solution = (questionDto.TypeId == 2 || questionDto.TypeId == 3) ? questionDto.Solution : null
+                Solution = questionDto.Solution
+
                 // ✅ TypeId = 2 (True/False) giờ có thể lưu `Solution`
             };
 
@@ -178,7 +179,7 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
             guideSheet.Cell(2, 1).Value = "1. Cột 'Question Content': Nhập nội dung câu hỏi.";
             guideSheet.Cell(3, 1).Value = "2. Cột 'Type ID': Loại câu hỏi (1: Trắc nghiệm, 2: True/False, 3: Điền kết quả).";
             guideSheet.Cell(4, 1).Value = "3. Cột 'Mode ID': Mức độ khó của câu hỏi.";
-            guideSheet.Cell(5, 1).Value = "4. Cột 'Solution': Giải thích (Áp dụng cho TypeID 2 và 3).";
+            guideSheet.Cell(5, 1).Value = "4. Cột 'Solution': Giải thích (Có thể nhập cho tất cả các TypeID).";
             guideSheet.Cell(6, 1).Value = "5. Cột 'Answers': Các đáp án (Ngăn cách bằng dấu ',', TypeID 2 luôn là 'True,False', TypeID 3 để trống).";
             guideSheet.Cell(7, 1).Value = "6. Cột 'Correct Answers': Đáp án đúng (TypeID 1, 2: Nội dung đáp án; TypeID 3: Đáp án 4 ký tự).";
 
@@ -432,7 +433,7 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
                         // Cập nhật nếu câu hỏi đã tồn tại
                         existingQuestion.TypeId = typeId;
                         existingQuestion.Modeid = modeId;
-                        existingQuestion.Solution = (typeId == 2 || typeId == 3) ? solution : null;
+                        existingQuestion.Solution = solution;
                         existingQuestion.AnswerContent = answers;
 
                         _context.CorrectAnswers.RemoveRange(existingQuestion.CorrectAnswers);
@@ -454,7 +455,7 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
                             Secid = sectionId,
                             TypeId = typeId,
                             Modeid = modeId,
-                            Solution = (typeId == 2 || typeId == 3) ? solution : null,
+                            Solution = solution,
                             AnswerContent = answers
                         };
                         _context.Questions.Add(newQuestion);
@@ -517,7 +518,8 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
             question.Secid = questionDto.Secid;
             question.TypeId = questionDto.TypeId;
             question.Modeid = questionDto.Modeid;
-            question.Solution = (questionDto.TypeId == 2 || questionDto.TypeId == 3) ? questionDto.Solution : null;
+            question.Solution = questionDto.Solution;
+
             // ✅ TypeId = 2 (True/False) giờ có thể có Solution
 
             _context.CorrectAnswers.RemoveRange(_context.CorrectAnswers.Where(a => a.Quesid == id));
