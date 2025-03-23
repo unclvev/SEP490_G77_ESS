@@ -18,6 +18,9 @@ export const delExam = (examid) => Http.delete(`/Exam/${examid}`);
 
 export const updateExam = (examid, data) => Http.put(`/Exam/${examid}`, data)
 
+//exam-analysis-api
+//export const
+
 //question-api
 
 export const createQuestion = () => Http.get("/")
