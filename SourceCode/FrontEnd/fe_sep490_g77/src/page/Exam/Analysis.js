@@ -1,6 +1,6 @@
 import { LeftOutlined } from "@ant-design/icons";
 import { Button, Card, Checkbox, Table, Tabs } from "antd";
-import { React } from "react";
+import { React, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -16,47 +16,6 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-
-// Dữ liệu bảng điểm
-const scoreData = [
-  { key: "1", studentId: "021", name: "Phạm Hồng Long", class: "12A1", examCode: "M01", time: "10:56 19-2-2025", score: 10 },
-  { key: "2", studentId: "015", name: "Phọng Hoàng Lam", class: "12A3", examCode: "M02", time: "10:58 19-2-2025", score: 9 },
-  { key: "3", studentId: "032", name: "Nguyễn Ngọc Việt", class: "12A1", examCode: "M03", time: "10:50 19-2-2025", score: 8 },
-  { key: "4", studentId: "007", name: "Lê Quang Trung", class: "12K", examCode: "M02", time: "10:45 19-2-2025", score: 7 },
-];
-
-// Sắp xếp theo điểm từ cao xuống thấp để xếp hạng
-const rankedData = [...scoreData].sort((a, b) => b.score - a.score).map((student, index) => ({
-  ...student,
-  rank: index + 1,
-}));
-
-// Dữ liệu biểu đồ
-const chartData = [
-  { range: "<3", count: 0 },
-  { range: "<6", count: 2 },
-  { range: "<7", count: 0 },
-  { range: "<8", count: 0 },
-  { range: "<10", count: 1 },
-];
-
-// Dữ liệu biểu đồ đường (Phổ điểm làm tròn)
-const lineChartData = [
-  { score: 6, students: 3 },
-  { score: 7, students: 8 },
-  { score: 8, students: 12 },
-  { score: 9, students: 6 },
-  { score: 10, students: 4 },
-];
-
-// Dữ liệu biểu đồ tròn (Xếp loại học sinh)
-const pieChartData = [
-  { name: "Xuất sắc (>9)", value: 10 },
-  { name: "Giỏi (8 - 9)", value: 20 },
-  { name: "Khá (6.5 - 8)", value: 30 },
-  { name: "Trung bình (5 - 6.5)", value: 25 },
-  { name: "Dưới trung bình (<5)", value: 15 },
-];
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#DC143C"];
 
@@ -81,6 +40,44 @@ const top5Columns = [
 ];
 
 const Analysis = () => {
+
+  const [scoreData, setScoreData] = useState([
+    { key: "1", studentId: "021", name: "Phạm Hồng Long", class: "12A1", examCode: "M01", time: "10:56 19-2-2025", score: 10 },
+    { key: "2", studentId: "015", name: "Phọng Hoàng Lam", class: "12A3", examCode: "M02", time: "10:58 19-2-2025", score: 9 },
+    { key: "3", studentId: "032", name: "Nguyễn Ngọc Việt", class: "12A1", examCode: "M03", time: "10:50 19-2-2025", score: 8 },
+    { key: "4", studentId: "007", name: "Lê Quang Trung", class: "12K", examCode: "M02", time: "10:45 19-2-2025", score: 7 },
+  ]);
+
+  // Sắp xếp theo điểm từ cao xuống thấp để xếp hạng
+  const rankedData = [...scoreData].sort((a, b) => b.score - a.score).map((student, index) => ({
+    ...student,
+    rank: index + 1,
+  }));
+
+  const [chartData, setChartData] = useState([
+    { range: "<3", count: 0 },
+    { range: "<6", count: 2 },
+    { range: "<7", count: 0 },
+    { range: "<8", count: 0 },
+    { range: "<10", count: 1 },
+  ]);
+
+  const [lineChartData, setLineChartData] = useState([
+    { score: 6, students: 3 },
+    { score: 7, students: 8 },
+    { score: 8, students: 12 },
+    { score: 9, students: 6 },
+    { score: 10, students: 4 },
+  ]);
+
+  const [pieChartData, setPieChartData] = useState([
+    { name: "Xuất sắc (>9)", value: 10 },
+    { name: "Giỏi (8 - 9)", value: 20 },
+    { name: "Khá (6.5 - 8)", value: 30 },
+    { name: "Trung bình (5 - 6.5)", value: 25 },
+    { name: "Dưới trung bình (<5)", value: 15 },
+  ]);
+
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
       {/* Header */}
@@ -92,7 +89,7 @@ const Analysis = () => {
       {/* Thông tin cơ bản */}
       <div className="grid grid-cols-3 gap-4">
         <Card className="col-span-2">
-          <h3 className="font-semibold mb-2">CƠ BẢN</h3>
+          <h3 className="font-semibold mb-2">Cơ bản</h3>
           <div className="grid grid-cols-2 gap-4 text-sm">
             <p><strong>Tên bài thi:</strong></p>
             <p><strong>Điểm trung bình:</strong> 6</p>
@@ -109,7 +106,7 @@ const Analysis = () => {
 
         {/* Xuất dữ liệu */}
         <Card>
-          <h3 className="font-semibold mb-2">XUẤT DỮ LIỆU</h3>
+          <h3 className="font-semibold mb-2">Xuất dữ liệu</h3>
           <div className="flex flex-col gap-2">
             <Checkbox checked>Bảng điểm</Checkbox>
             <Checkbox checked>Phổ điểm</Checkbox>
