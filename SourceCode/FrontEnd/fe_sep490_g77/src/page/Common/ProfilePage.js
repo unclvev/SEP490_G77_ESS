@@ -1,6 +1,8 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Form, Input, Select, Button, Avatar } from 'antd';
 import { UserOutlined } from '@ant-design/icons';
+import { toast } from 'react-toastify';
+import { getProfile, updateProfile, changePassword } from '../../services/api';
 
 const { Option } = Select;
 
@@ -10,34 +12,73 @@ const ProfilePage = () => {
 
   // State lưu URL ảnh đại diện
   const [avatarUrl, setAvatarUrl] = useState('https://via.placeholder.com/150');
-  // Dùng useRef để trỏ đến thẻ input file ẩn
+  // useRef dùng để trỏ đến thẻ input file ẩn
   const fileInputRef = useRef(null);
 
-  const handleUpdateInfo = (values) => {
-    console.log('Thông tin cá nhân:', values);
-    // TODO: Gửi thông tin lên server qua API
+  // Khi component mount, gọi API lấy thông tin người dùng
+  useEffect(() => {
+    getProfile()
+      .then((response) => {
+        const profile = response.data;
+        // Gán giá trị vào form
+        form.setFieldsValue({
+          fullName: profile.fullName,
+          phone: profile.phone,
+          gender: profile.gender,
+          address: profile.address,
+          major: profile.major,
+          level: profile.level,
+        });
+        // Nếu có avatarUrl thì set vào state để hiển thị
+        if (profile.avatarUrl) {
+          setAvatarUrl(profile.avatarUrl);
+        }
+      })
+      .catch(() => {
+        toast.error('Không thể tải thông tin người dùng!');
+      });
+  }, [form]);
+
+  // Xử lý cập nhật thông tin cá nhân
+  const handleUpdateInfo = async (values) => {
+    const payload = { ...values, avatarUrl };
+    try {
+      await updateProfile(payload);
+      toast.success('Cập nhật thông tin thành công!');
+    } catch (error) {
+      const errMsg =
+        error.response?.data?.message || 'Cập nhật thông tin thất bại!';
+      toast.error(errMsg);
+    }
   };
 
-  const handleChangePassword = (values) => {
-    console.log('Đổi mật khẩu:', values);
-    // TODO: Gửi mật khẩu cũ/mới lên server để xử lý
+  // Xử lý đổi mật khẩu
+  const handleChangePassword = async (values) => {
+    try {
+      await changePassword(values);
+      toast.success('Đổi mật khẩu thành công!');
+      passwordForm.resetFields();
+    } catch (error) {
+      const errMsg =
+        error.response?.data?.message || 'Đổi mật khẩu thất bại!';
+      toast.error(errMsg);
+    }
   };
 
-  // Khi người dùng nhấn vào Avatar, kích hoạt input file
+  // Khi người dùng nhấn vào Avatar, kích hoạt input file ẩn
   const handleAvatarClick = () => {
     if (fileInputRef.current) {
       fileInputRef.current.click();
     }
   };
 
-  // Khi người dùng chọn file, ta đọc file và cập nhật avatarUrl
+  // Khi người dùng chọn file, đọc file và cập nhật avatarUrl (dạng base64)
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
     const reader = new FileReader();
     reader.onload = (event) => {
-      // event.target.result là chuỗi base64 của ảnh
       setAvatarUrl(event.target.result);
     };
     reader.readAsDataURL(file);
@@ -52,11 +93,11 @@ const ProfilePage = () => {
           <Avatar
             size={64}
             icon={<UserOutlined />}
-            src={avatarUrl} 
+            src={avatarUrl}
             className="mr-4 cursor-pointer"
             onClick={handleAvatarClick}
           />
-          {/* input file ẩn */}
+          {/* Input file ẩn */}
           <input
             type="file"
             accept="image/*"
@@ -65,6 +106,7 @@ const ProfilePage = () => {
             style={{ display: 'none' }}
           />
           <div>
+            {/* Có thể hiển thị tạm cứng hoặc lấy từ profile */}
             <h2 className="text-xl font-semibold mb-0">Nguyễn Hoàng Việt</h2>
             <p className="text-sm text-gray-600">nhv298@gmail.com</p>
           </div>
