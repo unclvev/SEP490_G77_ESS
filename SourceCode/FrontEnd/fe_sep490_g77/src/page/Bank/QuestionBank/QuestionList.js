@@ -2,16 +2,19 @@ import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Button, List, Card, Select, Input, Radio, message, Popconfirm, Upload } from "antd";
 import { DeleteOutlined, DownloadOutlined, UploadOutlined } from "@ant-design/icons";
+import { EditorState, ContentState, convertToRaw, Modifier, SelectionState } from 'draft-js';
+import parse from 'html-react-parser';
 import axios from "axios";
 import { toast } from "react-toastify";
 import { Editor } from 'react-draft-wysiwyg';
-import { EditorState, ContentState, convertToRaw } from 'draft-js';
 import { stateToHTML } from 'draft-js-export-html';
 import 'react-draft-wysiwyg/dist/react-draft-wysiwyg.css';
 import { stateFromHTML } from 'draft-js-import-html';
+import 'katex/dist/katex.min.css';
+import { InlineMath, BlockMath } from 'react-katex';
+import { Modal } from 'antd'; 
 const { TextArea } = Input;
 const { Option } = Select;
-
 const QuestionList = () => {
   const { sectionId } = useParams();
   const [questions, setQuestions] = useState([]);
@@ -30,8 +33,13 @@ const QuestionList = () => {
     correctAnswers: [""],
   });
   const [editorState, setEditorState] = useState(EditorState.createEmpty());
-
-
+// Thêm vào các state hiện có
+const [showMathInput, setShowMathInput] = useState(false);
+const [mathExpression, setMathExpression] = useState('');
+const [formulaListModalVisible, setFormulaListModalVisible] = useState(false);
+const [formulaList, setFormulaList] = useState([]); // Danh sách công thức [MATH:...]
+const [selectedFormulaIndex, setSelectedFormulaIndex] = useState(null);
+const [editingFormula, setEditingFormula] = useState('');
   useEffect(() => {
     fetchQuestions();
     fetchQuestionTypes();
@@ -63,6 +71,51 @@ const QuestionList = () => {
       }));
     }
   }, [newQuestion.typeId]);
+  
+  useEffect(() => {
+    if (currentQuestion && currentQuestion.quescontent) {
+      const rawHTML = currentQuestion.quescontent;
+  
+      const cleanHTML = rawHTML
+        .replace(/<span[^>]*class="katex-math"[^>]*data-formula="(.*?)"[^>]*>.*?<\/span>/g, (_, formula) => `[MATH:${formula}]`)
+        .replace(/style="[^"]*"/g, '')
+        .replace(/class="[^"]*"/g, '')
+        .replace(/&nbsp;/g, ' ');
+  
+      let contentState = stateFromHTML(cleanHTML);
+      let newContent = contentState;
+  
+      const blocks = contentState.getBlockMap();
+      blocks.forEach(block => {
+        const text = block.getText();
+        const blockKey = block.getKey();
+        const regex = /\[MATH:(.+?)\]/g;
+        let match;
+        while ((match = regex.exec(text)) !== null) {
+          const formula = match[1];
+          const start = match.index;
+          const end = start + match[0].length;
+  
+          newContent = newContent.createEntity('KATEX', 'IMMUTABLE', { formula });
+          const entityKey = newContent.getLastCreatedEntityKey();
+  
+          const selection = SelectionState.createEmpty(blockKey).merge({
+            anchorOffset: start,
+            focusOffset: end
+          });
+  
+          newContent = Modifier.replaceText(newContent, selection, `[MATH:${formula}]`, null, entityKey);
+        }
+      });
+  
+      setEditorState(EditorState.createWithContent(newContent));
+    } else {
+      setEditorState(EditorState.createEmpty());
+    }
+  }, [currentQuestion]);
+  
+  
+  
 
   const fetchQuestions = async () => {
     try {
@@ -95,25 +148,54 @@ const QuestionList = () => {
     setIsEditing(true);
     if (question) {
       setCurrentQuestion(question);
-      // trong hàm handleEdit
-if (question && question.quescontent) {
-  const contentState = stateFromHTML(question.quescontent);
-  setEditorState(EditorState.createWithContent(contentState));
-} else {
-  setEditorState(EditorState.createEmpty());
-}
-      
+  
+      // 🔁 Làm sạch như trong useEffect (để lấy đúng công thức LaTeX)
+      const rawHTML = question.quescontent || "";
+  
+      const cleanHTML = rawHTML
+        .replace(/<span[^>]*class="katex-math"[^>]*data-formula="(.*?)"[^>]*>.*?<\/span>/g, (_, formula) => `[MATH:${formula}]`)
+        .replace(/style="[^"]*"/g, '')
+        .replace(/class="[^"]*"/g, '')
+        .replace(/&nbsp;/g, ' ');
+  
+      let contentState = stateFromHTML(cleanHTML);
+      let newContent = contentState;
+  
+      const blocks = contentState.getBlockMap();
+      blocks.forEach(block => {
+        const text = block.getText();
+        const blockKey = block.getKey();
+        const regex = /\[MATH:(.+?)\]/g;
+        let match;
+        while ((match = regex.exec(text)) !== null) {
+          const formula = match[1];
+          const start = match.index;
+          const end = start + match[0].length;
+  
+          newContent = newContent.createEntity('KATEX', 'IMMUTABLE', { formula });
+          const entityKey = newContent.getLastCreatedEntityKey();
+  
+          const selection = SelectionState.createEmpty(blockKey).merge({
+            anchorOffset: start,
+            focusOffset: end
+          });
+  
+          newContent = Modifier.replaceText(newContent, selection, `[MATH:${formula}]`, null, entityKey);
+        }
+      });
+  
+      setEditorState(EditorState.createWithContent(newContent));
+  
+      // Các dữ liệu khác
       let updatedAnswers = [];
       let correctAnswer = question.correctAnswers.length > 0 ? question.correctAnswers[0] : "";
-
+  
       if (question.typeId === 1) {
-        // Trắc nghiệm: đảm bảo có 4 đáp án
         updatedAnswers = [...(question.answers || []), "", "", "", ""].slice(0, 4);
       } else if (question.typeId === 2) {
-        // True/False: luôn là ["True", "False"]
         updatedAnswers = ["True", "False"];
       }
-
+  
       setNewQuestion({
         quescontent: question.quescontent || "",
         typeId: question.typeId || null,
@@ -124,7 +206,9 @@ if (question && question.quescontent) {
         correctAnswers: [correctAnswer],
       });
     } else {
+      // reset
       setCurrentQuestion(null);
+      setEditorState(EditorState.createEmpty());
       setNewQuestion({
         quescontent: "",
         typeId: null,
@@ -136,6 +220,155 @@ if (question && question.quescontent) {
       });
     }
   };
+  
+  
+  
+// Thêm hàm này
+const insertMathFormula = () => {
+  if (!mathExpression.trim()) return;
+
+  // Tạo HTML chứa công thức toán học
+  const mathHTML = `<span class="katex-math" data-formula="${mathExpression}">$$${mathExpression}$$</span>`;
+  
+  // Chuyển HTML sang ContentState
+  const contentState = editorState.getCurrentContent();
+  const selection = editorState.getSelection();
+  
+  // Chèn một đối tượng KATEX entity
+  const contentWithEntity = contentState.createEntity(
+    'KATEX',
+    'IMMUTABLE',
+    { formula: mathExpression }
+  );
+  
+  const entityKey = contentWithEntity.getLastCreatedEntityKey();
+  
+  // Chèn text và liên kết nó với entity
+  const contentWithFormula = Modifier.insertText(
+    contentWithEntity,
+    selection,
+    `[MATH:${mathExpression}]`, // Placeholder để dễ nhận biết
+    null,
+    entityKey
+  );
+  
+  // Cập nhật EditorState
+  const newEditorState = EditorState.push(
+    editorState,
+    contentWithFormula,
+    'insert-characters'
+  );
+  
+  setEditorState(newEditorState);
+  setMathExpression('');
+  setShowMathInput(false);
+  
+  // Cập nhật quescontent
+  setNewQuestion({
+    ...newQuestion,
+    quescontent: stateToHTML(contentWithFormula, {
+      entityStyleFn: (entity) => {
+        if (entity.getType() === 'KATEX') {
+          const formula = entity.getData().formula;
+          return {
+            element: 'span',
+            attributes: {
+              class: 'katex-math',
+              'data-formula': formula
+            },
+            style: {}
+          };
+        }
+      }
+    })
+  });
+};
+const extractMathFormulas = () => {
+  const regex = /\[MATH:(.+?)\]/g;
+  const matches = [];
+  const raw = newQuestion.quescontent;
+
+  let match;
+  while ((match = regex.exec(raw)) !== null) {
+    matches.push(match[1]);
+  }
+
+  setFormulaList(matches);
+  setFormulaListModalVisible(true);
+};
+const saveEditedFormula = () => {
+  const updatedList = [...formulaList];
+  updatedList[selectedFormulaIndex] = editingFormula;
+
+  const raw = newQuestion.quescontent;
+  const regex = /\[MATH:(.+?)\]/g;
+
+  let currentIndex = -1;
+  const updatedContent = raw.replace(regex, (_, formula) => {
+    currentIndex++;
+    return `[MATH:${updatedList[currentIndex]}]`;
+  });
+
+  // Tạo lại ContentState
+  const newContentState = stateFromHTML(updatedContent);
+
+  let finalContent = newContentState;
+  const blocks = newContentState.getBlockMap();
+
+  blocks.forEach(block => {
+    const text = block.getText();
+    const blockKey = block.getKey();
+    const mathRegex = /\[MATH:(.+?)\]/g;
+    let match;
+
+    while ((match = mathRegex.exec(text)) !== null) {
+      const formula = match[1];
+      const start = match.index;
+      const end = start + match[0].length;
+
+      finalContent = finalContent.createEntity('KATEX', 'IMMUTABLE', { formula });
+      const entityKey = finalContent.getLastCreatedEntityKey();
+
+      const selection = SelectionState.createEmpty(blockKey).merge({
+        anchorOffset: start,
+        focusOffset: end
+      });
+
+      finalContent = Modifier.replaceText(finalContent, selection, `[MATH:${formula}]`, null, entityKey);
+    }
+  });
+
+  setEditorState(EditorState.createWithContent(finalContent));
+
+  // ✅ Thêm đoạn này để cập nhật lại quescontent
+  const html = stateToHTML(finalContent, {
+    entityStyleFn: (entity) => {
+      if (entity.getType() === 'KATEX') {
+        const formula = entity.getData().formula;
+        return {
+          element: 'span',
+          attributes: {
+            class: 'katex-math',
+            'data-formula': formula
+          },
+          style: {}
+        };
+      }
+    }
+  });
+
+  setNewQuestion((prev) => ({
+    ...prev,
+    quescontent: html
+  }));
+
+  setFormulaList(updatedList);
+  setFormulaListModalVisible(false);
+  setSelectedFormulaIndex(null);
+  setEditingFormula('');
+};
+
+
 
   const handleSave = async () => {
     if (!newQuestion.quescontent.trim() || !newQuestion.typeId || !newQuestion.modeid) {
@@ -318,6 +551,19 @@ if (question && question.quescontent) {
         return null;
     }
   };
+  // Thêm vào phần render câu hỏi hiện có
+  const renderQuestionWithMath = (htmlContent) => {
+    const reactElement = parse(htmlContent, {
+      replace: domNode => {
+        if (domNode.attribs && domNode.attribs.class === 'katex-math') {
+          const formula = domNode.attribs['data-formula'];
+          return <InlineMath math={formula} />;
+        }
+      }
+    });
+    
+    return <div>{reactElement}</div>;
+  };
 
   // 🟢 Hiển thị thông tin câu hỏi trong danh sách
 const renderQuestionContent = (question) => {
@@ -377,6 +623,53 @@ const renderQuestionContent = (question) => {
   }
 };
 ;
+// Thêm hàm renderMathInput
+const renderMathInput = () => {
+  if (!showMathInput) return null;
+
+  return (
+    <div className="math-input-container border p-4 mb-4 bg-gray-50 rounded">
+      <h4 className="font-semibold mb-2">Nhập công thức toán học</h4>
+      <p className="text-sm text-gray-600 mb-2">
+        Sử dụng cú pháp LaTeX. Ví dụ: <code>{"\\frac{a}{b}"}</code>, <code>{"\\sqrt{x}"}</code>, <code>{"x^2"}</code>
+      </p>
+
+      <div className="flex flex-wrap gap-2 mb-3">
+        <Button size="small" onClick={() => setMathExpression("\\frac{a}{b}")}>
+          Phân số (a/b)
+        </Button>
+        <Button size="small" onClick={() => setMathExpression("\\sqrt{x}")}>
+          Căn bậc 2
+        </Button>
+        <Button size="small" onClick={() => setMathExpression("x^2")}>
+          Lũy thừa (x²)
+        </Button>
+        <Button size="small" onClick={() => setMathExpression("\\int_{a}^{b} f(x) dx")}>
+          Tích phân
+        </Button>
+      </div>
+
+      <div className="flex">
+        <Input
+          value={mathExpression}
+          onChange={(e) => setMathExpression(e.target.value)}
+          placeholder="Nhập công thức LaTeX"
+          className="flex-grow mr-2"
+        />
+        <Button type="primary" onClick={insertMathFormula}>Chèn</Button>
+        <Button className="ml-2" onClick={() => setShowMathInput(false)}>Hủy</Button>
+      </div>
+
+      {mathExpression && (
+        <div className="mt-3 p-2 border rounded bg-white">
+          <p className="text-sm mb-1">Xem trước:</p>
+          <BlockMath math={mathExpression} />
+        </div>
+      )}
+    </div>
+  );
+};
+
 
   return (
     <div className="p-6 bg-gray-100 min-h-screen grid grid-cols-2 gap-6">
@@ -402,7 +695,7 @@ const renderQuestionContent = (question) => {
           renderItem={(question, index) => (
             <List.Item key={question.quesid}>
               <Card
-                 title={<div dangerouslySetInnerHTML={{ __html: question.quescontent }}></div>}
+                title={renderQuestionWithMath(question.quescontent)}
   className="mb-2"
                 extra={
                   <>
@@ -465,14 +758,49 @@ const renderQuestionContent = (question) => {
             ))}
           </Select>
 
-          <label className="font-semibold">Nội dung câu hỏi</label>
+          
+<label className="font-semibold">Nội dung câu hỏi</label>
+<div className="mb-2">
+  <Button 
+    type="primary" 
+    size="small" 
+    onClick={() => setShowMathInput(!showMathInput)}
+    className="mr-2"
+  >
+    {showMathInput ? "Ẩn công thức" : "Thêm công thức toán học"}
+  </Button>
+  <Button 
+  size="small"
+  type="dashed"
+  onClick={extractMathFormulas}
+>
+  Chỉnh sửa công thức toán học
+</Button>
+
+</div>
+
+{renderMathInput()}
+
 <Editor
   editorState={editorState}
   onEditorStateChange={(state) => {
     setEditorState(state);
+    const content = state.getCurrentContent();
     setNewQuestion({
       ...newQuestion,
-      quescontent: stateToHTML(state.getCurrentContent())
+      quescontent: stateToHTML(content, {
+        entityStyleFn: (entity) => {
+          if (entity.get('type') === 'KATEX') {
+            return {
+              element: 'span',
+              attributes: {
+                class: 'katex-math',
+                'data-formula': entity.getData().formula
+              }
+            };
+          }
+        }
+      })
     });
   }}
   wrapperClassName="mb-4 border border-gray-200"
@@ -485,6 +813,57 @@ const renderQuestionContent = (question) => {
     history: { inDropdown: false },
   }}
 />
+<Modal
+  title="Chỉnh sửa công thức toán học"
+  open={formulaListModalVisible}
+  onCancel={() => setFormulaListModalVisible(false)}
+  footer={null}
+>
+  {formulaList.length === 0 ? (
+    <p>Không tìm thấy công thức nào.</p>
+  ) : selectedFormulaIndex === null ? (
+    <>
+      <p>Chọn công thức để chỉnh sửa:</p>
+      <ul className="list-disc pl-4">
+        {formulaList.map((formula, idx) => (
+          <li key={idx} className="mb-2">
+            <code className="bg-gray-100 p-1 rounded">{formula}</code>
+            <Button
+              size="small"
+              className="ml-2"
+              onClick={() => {
+                setSelectedFormulaIndex(idx);
+                setEditingFormula(formula);
+              }}
+            >
+              Chỉnh sửa
+            </Button>
+          </li>
+        ))}
+      </ul>
+    </>
+  ) : (
+    <>
+      <p className="mb-2">Cập nhật công thức LaTeX:</p>
+      <Input.TextArea
+        rows={2}
+        value={editingFormula}
+        onChange={(e) => setEditingFormula(e.target.value)}
+      />
+      <div className="flex justify-end mt-3 gap-2">
+        <Button onClick={() => {
+          setSelectedFormulaIndex(null);
+          setEditingFormula('');
+        }}>
+          Quay lại
+        </Button>
+        <Button type="primary" onClick={saveEditedFormula}>
+          Lưu
+        </Button>
+      </div>
+    </>
+  )}
+</Modal>
 
 
           {/* Fields specific to question type */}
