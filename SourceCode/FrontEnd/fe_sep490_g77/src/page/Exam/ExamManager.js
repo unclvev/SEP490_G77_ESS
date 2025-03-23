@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Card, Button, Input, Spin, Modal } from "antd";
-import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import { EditOutlined, DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { delExam, getExams, updateExam } from "../../services/api";
 import { toast } from "react-toastify";
@@ -32,19 +32,20 @@ const ExamManagement = () => {
 
   const deleteExamById = async () => {
     try {
-      const response = await delExam(examid);
-      if (!response.ok) {
-        toast.error("Xóa đề thi thất bại!");
-      } else {
+        const response = await delExam(examid);
         toast.success("Xóa đề thi thành công!");
         setExams((prevExams) => prevExams.filter((exam) => exam.examId !== examid));
         setDeleteModalVisible(false);
-      }
     } catch (error) {
-      toast.error("Không thể xóa đề thi!");
-      console.error("Can not delete the exam:", error);
+        if (error.response && error.response.status === 404) {
+            toast.error("Không tìm thấy bài kiểm tra hoặc bạn không có quyền xóa.");
+        } else {
+            toast.error("Xóa đề thi thất bại!");
+        }
+        console.error("Can not delete the exam:", error);
     }
-  };
+};
+
 
   const showDeleteModal = (examId) => {
     setExamid(examId);
@@ -62,25 +63,26 @@ const ExamManagement = () => {
       toast.warning("Tên đề thi không được để trống!");
       return;
     }
-
+  
     try {
-      const response = await updateExam(examid, newName);
-      if (!response.ok) {
-        toast.error("Cập nhật tên đề thi thất bại!");
-      } else {
-        toast.success("Cập nhật tên đề thi thành công!");
-        setExams((prevExams) =>
-          prevExams.map((exam) =>
-            exam.examId === examid ? { ...exam, examname: newName } : exam
-          )
-        );
-        setEditModalVisible(false);
-      }
+      await updateExam(examid, { newName }); 
+  
+      toast.success("Cập nhật tên đề thi thành công!");
+  
+      setExams((prevExams) =>
+        prevExams.map((exam) =>
+          exam.examId === examid ? { ...exam, examname: newName } : exam
+        )
+      );
+  
+      setEditModalVisible(false);
+  
     } catch (error) {
-      toast.error("Không thể cập nhật tên đề thi!");
+      toast.error("Cập nhật tên đề thi thất bại!");
       console.error("Can not update the exam:", error);
     }
   };
+  
 
   return (
     <div style={{ padding: 20, backgroundColor: "#f5f5f5", minHeight: "100vh" }}>
@@ -90,7 +92,13 @@ const ExamManagement = () => {
         <Input.Search placeholder="Tìm kiếm đề thi..." style={{ width: 300 }} />
       </div>
 
-      <h3>ĐỀ CỦA BẠN</h3>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <h3>ĐỀ CỦA BẠN</h3>
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate("/exam/matrix")}>
+          Tạo đề thi
+        </Button>
+      </div>
+
       {loading ? (
         <div style={{ display: "flex", justifyContent: "center", marginTop: 50 }}>
           <Spin size="large" />

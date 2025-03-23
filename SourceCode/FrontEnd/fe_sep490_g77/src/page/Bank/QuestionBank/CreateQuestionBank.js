@@ -2,13 +2,28 @@ import React, { useState, useEffect } from "react";
 import { Select, Button, message, Spin } from "antd";
 import axios from "axios";
 import { useNavigate, useSearchParams } from "react-router-dom";
-
+import { toast } from "react-toastify";
+import { useSelector } from 'react-redux';
+import { jwtDecode } from "jwt-decode";
+import { useLocation } from 'react-router-dom';
 const { Option } = Select;
 
 const CreateQuestionBank = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams(); // ✅ Lấy params từ URL
-  const accid = searchParams.get("accid") || localStorage.getItem("accid"); // ✅ Ưu tiên lấy từ URL trước
+  const token = useSelector((state) => state.token);
+
+    let accid = searchParams.get("accid") || localStorage.getItem("accid"); // Mặc định cũ
+
+    // Nếu token tồn tại, giải mã để lấy AccId
+    if (token) {
+        try {
+            const decoded = jwtDecode(token);
+            accid = decoded.AccId || accid; // Ưu tiên lấy từ token nếu có
+        } catch (error) {
+            console.error("Invalid token", error);
+        }
+    }
 
   const [grades, setGrades] = useState([]);
   const [subjects, setSubjects] = useState([]);
@@ -20,7 +35,7 @@ const CreateQuestionBank = () => {
 
   useEffect(() => {
     if (!accid) {
-      message.error("❌ Không tìm thấy thông tin tài khoản!");
+      toast .error("❌ Không tìm thấy thông tin tài khoản!");
       return;
     }
 
@@ -29,7 +44,7 @@ const CreateQuestionBank = () => {
         const response = await axios.get("https://localhost:7052/api/Bank/grades");
         setGrades(response.data || []);
       } catch (error) {
-        message.error("Lỗi khi tải danh sách Khối học.");
+        toast.error("Lỗi khi tải danh sách Khối học.");
       }
     };
 
@@ -38,7 +53,7 @@ const CreateQuestionBank = () => {
         const response = await axios.get("https://localhost:7052/api/Bank/subjects");
         setSubjects(response.data || []);
       } catch (error) {
-        message.error("Lỗi khi tải danh sách Môn học.");
+        toast.error("Lỗi khi tải danh sách Môn học.");
       }
     };
 
@@ -47,7 +62,7 @@ const CreateQuestionBank = () => {
         const response = await axios.get("https://localhost:7052/api/Bank/curriculums");
         setCurriculums(response.data || []);
       } catch (error) {
-        message.error("Lỗi khi tải danh sách Chương trình học.");
+        toast.error("Lỗi khi tải danh sách Chương trình học.");
       }
     };
 
@@ -58,12 +73,12 @@ const CreateQuestionBank = () => {
 
   const handleCreateBank = async () => {
     if (!grade || !subject || !curriculum) {
-      message.error("⚠️ Vui lòng chọn đầy đủ Khối học, Môn học và Chương trình!");
+      toast.error("⚠️ Vui lòng chọn đầy đủ Khối học, Môn học và Chương trình!");
       return;
     }
 
     if (!accid) {
-      message.error("❌ Không tìm thấy thông tin tài khoản!");
+      toast.error("❌ Không tìm thấy thông tin tài khoản!");
       return;
     }
 
@@ -79,11 +94,11 @@ const CreateQuestionBank = () => {
       const response = await axios.post(`https://localhost:7052/api/Bank/generate/${accid}`, requestData);
 
       if (response.status === 200) {
-        message.success(`✅ Ngân hàng câu hỏi "${response.data.bankName}" đã được tạo thành công!`);
+        toast.success(`✅ Ngân hàng câu hỏi "${response.data.bankName}" đã được tạo thành công!`);
         navigate(`/question-bank-detail/${response.data.bankId}`);
       }
     } catch (error) {
-      message.error("❌ Không thể tạo ngân hàng câu hỏi.");
+      toast.error("❌ Không thể tạo ngân hàng câu hỏi.");
     } finally {
       setLoading(false);
     }

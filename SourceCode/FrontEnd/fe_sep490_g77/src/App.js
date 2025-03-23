@@ -1,27 +1,34 @@
 import React from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import store from "./redux-setup/store";
-import { Provider } from 'react-redux'
+import { Provider } from 'react-redux';
+import { Route, BrowserRouter as Router, Routes } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
+import store from "./redux-setup/store";
 
-import Home from "./page/Home/Home";
 import MainLayout from "./Layout/MainLayout";
-import QuestionBank from "./page/Bank/QuestionBank/QuestionBank";
-import Profile from "./page/Common/ProfilePage";
-import QuestionBankDetail from "./page/Bank/QuestionBank/QuestionBankDetail";
 import CreateQuestionBank from "./page/Bank/QuestionBank/CreateQuestionBank";
-import ForgotPassword from "./page/Common/ForgotPasswordPage";
-import ResetPassword from "./page/Common/ResetPasswordPage";
 import Decentralization from "./page/Bank/QuestionBank/Decentralization";
+import QuestionBank from "./page/Bank/QuestionBank/Questionbank";
+import QuestionBankDetail from "./page/Bank/QuestionBank/QuestionBankDetail";
 import QuestionList from "./page/Bank/QuestionBank/QuestionList";
-import ExamManagement from "./page/Exam/ExamManager";
+import ForgotPassword from "./page/Common/ForgotPasswordPage";
+import LoginPage from "./page/Common/LoginPage";
+import Profile from "./page/Common/ProfilePage";
+import RegistrationPage from "./page/Common/RegisterPage";
+import ResetPassword from "./page/Common/ResetPasswordPage";
+import Analysis from "./page/Exam/Analysis";
 import ExamDetail from "./page/Exam/ExamContent";
+import ExamManagement from "./page/Exam/ExamManager";
 import ExamCreation from "./page/Exam/ExamMatrix";
 import ExamPreview from "./page/Exam/ExamPreview";
+
 import LoginPage from "./page/Common/LoginPage";
 import RegistrationPage from "./page/Common/RegisterPage";
 import MainLayout2 from "./newLayout/MainLayout";
 
+
+import GenQRCode from "./page/GenQRCode/CreateQRCode.js"
+import PreviewGenQR from "./page/GenQRCode/PreviewGenQr"
+import Home from "./page/Home/Home";
 
 function App() {
   return (
@@ -48,6 +55,9 @@ function App() {
           <Route path="/exam/content" element={<MainLayout><ExamDetail /></MainLayout>} />
           <Route path="/exam/matrix" element={<MainLayout><ExamCreation /></MainLayout>} />
           <Route path="/exam/preview" element={<MainLayout><ExamPreview /></MainLayout>} />
+          <Route path="/exam/analysis" element={<MainLayout><Analysis /></MainLayout>} />
+        <Route path="/genqr" element={<MainLayout><GenQRCode></GenQRCode></MainLayout>}/>
+        <Route path="/preview-gen-qr" element={<MainLayout><PreviewGenQR></PreviewGenQR></MainLayout>}/>
         </Routes>
       </Router>
                                                 
