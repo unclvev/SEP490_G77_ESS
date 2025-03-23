@@ -20,12 +20,15 @@ import ExamCreation from "./page/Exam/ExamMatrix";
 import ExamPreview from "./page/Exam/ExamPreview";
 import LoginPage from "./page/Common/LoginPage";
 import RegistrationPage from "./page/Common/RegisterPage";
+import MainLayout2 from "./newLayout/MainLayout";
+
 
 function App() {
   return (
     <Provider store={store}> {/* Thêm Provider */}
       <Router>
         <Routes>
+          
           {/* Home dùng Sidebar riêng */}
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<LoginPage />} />
@@ -33,6 +36,7 @@ function App() {
           <Route path="/profile" element={<Profile /> } />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/MainLayout2" element={<MainLayout2 />} />
           {/* Các trang khác bọc trong MainLayout */}
           <Route path="/question-bank" element={<MainLayout><QuestionBank /></MainLayout>} />
           <Route path="/question-bank-detail/:bankId" element={<MainLayout><QuestionBankDetail /></MainLayout>} />

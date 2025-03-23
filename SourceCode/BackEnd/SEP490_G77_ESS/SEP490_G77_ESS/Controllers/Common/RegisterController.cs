@@ -25,27 +25,6 @@ namespace SEP490_G77_ESS.Controllers.Common
             _emailService = emailService;
         }
 
-        private IActionResult ValidateRegister(RegisterDTO registerDto)
-        {
-            
-
-            
-
-
-            //int age = DateTime.Now.Year - registerDto.Datejoin.Year;
-            //if (registerDto.Datejoin > DateTime.Now.AddYears(-age))
-            //{
-            //    age--;
-            //}
-            //if (age < 16)
-            //{
-            //    return BadRequest(new { message = "Bạn phải đủ 16 tuổi để đăng ký" });
-            //}
-
-            // Nếu không có lỗi nào, trả về null
-            return null;
-        }
-
         [HttpPost]
         public async Task<IActionResult> Register([FromBody] RegisterDTO registerDto)
         {
