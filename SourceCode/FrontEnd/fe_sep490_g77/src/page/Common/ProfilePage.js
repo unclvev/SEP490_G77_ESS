@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useSelector } from 'react-redux';
+import { jwtDecode } from 'jwt-decode';
 import { Form, Input, Select, Button, Avatar } from 'antd';
 import { UserOutlined } from '@ant-design/icons';
 import { toast } from 'react-toastify';
@@ -9,27 +11,35 @@ const { Option } = Select;
 const ProfilePage = () => {
   const [form] = Form.useForm();
   const [passwordForm] = Form.useForm();
-
-  // State lưu URL ảnh đại diện
   const [avatarUrl, setAvatarUrl] = useState('https://via.placeholder.com/150');
-  // useRef dùng để trỏ đến thẻ input file ẩn
   const fileInputRef = useRef(null);
 
-  // Khi component mount, gọi API lấy thông tin người dùng
+  // ✅ Lấy token từ Redux và decode
+  const token = useSelector((state) => state.token);
+  let accid = null;
+
+  if (token) {
+    try {
+      const decoded = jwtDecode(token);
+      accid = decoded.AccId || null;
+    } catch (error) {
+      console.error('Invalid token', error);
+    }
+  }
+
   useEffect(() => {
     getProfile()
       .then((response) => {
         const profile = response.data;
-        // Gán giá trị vào form
         form.setFieldsValue({
-          fullName: profile.fullName,
+          accname: profile.accname,
           phone: profile.phone,
           gender: profile.gender,
           address: profile.address,
-          major: profile.major,
-          level: profile.level,
+          subject: profile.subject,
+          skill: profile.skill,
+          email: profile.email,
         });
-        // Nếu có avatarUrl thì set vào state để hiển thị
         if (profile.avatarUrl) {
           setAvatarUrl(profile.avatarUrl);
         }
@@ -39,7 +49,6 @@ const ProfilePage = () => {
       });
   }, [form]);
 
-  // Xử lý cập nhật thông tin cá nhân
   const handleUpdateInfo = async (values) => {
     const payload = { ...values, avatarUrl };
     try {
@@ -52,7 +61,6 @@ const ProfilePage = () => {
     }
   };
 
-  // Xử lý đổi mật khẩu
   const handleChangePassword = async (values) => {
     try {
       await changePassword(values);
@@ -65,18 +73,15 @@ const ProfilePage = () => {
     }
   };
 
-  // Khi người dùng nhấn vào Avatar, kích hoạt input file ẩn
   const handleAvatarClick = () => {
     if (fileInputRef.current) {
       fileInputRef.current.click();
     }
   };
 
-  // Khi người dùng chọn file, đọc file và cập nhật avatarUrl (dạng base64)
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
     const reader = new FileReader();
     reader.onload = (event) => {
       setAvatarUrl(event.target.result);
@@ -86,10 +91,8 @@ const ProfilePage = () => {
 
   return (
     <div className="max-w-5xl mx-auto my-10">
-      {/* Header - Thông tin người dùng */}
       <div className="flex items-center justify-between bg-gradient-to-r from-blue-200 to-blue-50 p-6 rounded-md shadow-sm">
         <div className="flex items-center">
-          {/* Avatar (nhấn vào để chọn ảnh) */}
           <Avatar
             size={64}
             icon={<UserOutlined />}
@@ -97,7 +100,6 @@ const ProfilePage = () => {
             className="mr-4 cursor-pointer"
             onClick={handleAvatarClick}
           />
-          {/* Input file ẩn */}
           <input
             type="file"
             accept="image/*"
@@ -106,9 +108,16 @@ const ProfilePage = () => {
             style={{ display: 'none' }}
           />
           <div>
-            {/* Có thể hiển thị tạm cứng hoặc lấy từ profile */}
-            <h2 className="text-xl font-semibold mb-0">Nguyễn Hoàng Việt</h2>
-            <p className="text-sm text-gray-600">nhv298@gmail.com</p>
+            <h2 className="text-xl font-semibold mb-0">
+              {form.getFieldValue('accname') || 'Tên người dùng'}
+            </h2>
+            <p className="text-sm text-gray-600">
+              {form.getFieldValue('email') || 'Email người dùng'}
+            </p>
+            {/* ✅ Hiển thị AccId nếu có */}
+            {accid && (
+              <p className="text-xs text-gray-500">Mã tài khoản: {accid}</p>
+            )}
           </div>
         </div>
         <Button type="primary" className="rounded-full px-6">
@@ -116,7 +125,6 @@ const ProfilePage = () => {
         </Button>
       </div>
 
-      {/* Form cập nhật thông tin cá nhân */}
       <div className="mt-8">
         <Form
           form={form}
@@ -126,10 +134,18 @@ const ProfilePage = () => {
         >
           <Form.Item
             label="Tên đầy đủ"
-            name="fullName"
+            name="accname"
             rules={[{ required: true, message: 'Vui lòng nhập tên đầy đủ' }]}
           >
             <Input placeholder="Tên đầy đủ của bạn" />
+          </Form.Item>
+
+          <Form.Item
+            label="Email"
+            name="email"
+            rules={[{ required: true, message: 'Vui lòng nhập email' }]}
+          >
+            <Input placeholder="Email của bạn" />
           </Form.Item>
 
           <Form.Item
@@ -162,7 +178,7 @@ const ProfilePage = () => {
 
           <Form.Item
             label="Chuyên ngành"
-            name="major"
+            name="subject"
             rules={[{ required: true, message: 'Vui lòng nhập chuyên ngành' }]}
           >
             <Input placeholder="Chuyên ngành của bạn" />
@@ -170,7 +186,7 @@ const ProfilePage = () => {
 
           <Form.Item
             label="Trình độ"
-            name="level"
+            name="skill"
             rules={[{ required: true, message: 'Vui lòng nhập trình độ' }]}
           >
             <Input placeholder="Trình độ chuyên môn của bạn" />
@@ -184,7 +200,6 @@ const ProfilePage = () => {
         </Form>
       </div>
 
-      {/* Form đổi mật khẩu */}
       <div className="mt-10">
         <h3 className="text-xl font-semibold mb-4">Đổi mật khẩu</h3>
         <Form

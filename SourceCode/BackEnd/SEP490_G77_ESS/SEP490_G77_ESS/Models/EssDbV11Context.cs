@@ -41,6 +41,8 @@ public partial class EssDbV11Context : DbContext
 
     public virtual DbSet<Question> Questions { get; set; }
 
+    public virtual DbSet<RefreshToken> RefreshTokens { get; set; }
+
     public virtual DbSet<Role> Roles { get; set; }
 
     public virtual DbSet<RolePermission> RolePermissions { get; set; }
@@ -367,6 +369,33 @@ public partial class EssDbV11Context : DbContext
                 .HasForeignKey(d => d.TypeId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Question_Type");
+        });
+
+        modelBuilder.Entity<RefreshToken>(entity =>
+        {
+            entity.HasKey(e => e.RefreshTokenId).HasName("PK__RefreshT__B0A1F7C755F852F9");
+
+            entity.ToTable("RefreshToken");
+
+            entity.Property(e => e.RefreshTokenId).HasColumnName("refresh_token_id");
+            entity.Property(e => e.AccountId).HasColumnName("account_id");
+            entity.Property(e => e.Created)
+                .HasColumnType("datetime")
+                .HasColumnName("created");
+            entity.Property(e => e.Expires)
+                .HasColumnType("datetime")
+                .HasColumnName("expires");
+            entity.Property(e => e.Revoked)
+                .HasColumnType("datetime")
+                .HasColumnName("revoked");
+            entity.Property(e => e.Token)
+                .HasMaxLength(255)
+                .HasColumnName("token");
+
+            entity.HasOne(d => d.Account).WithMany(p => p.RefreshTokens)
+                .HasForeignKey(d => d.AccountId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_RefreshToken_Account");
         });
 
         modelBuilder.Entity<Role>(entity =>
