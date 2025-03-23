@@ -19,7 +19,6 @@ const MainLayout = ({ children }) => {
       >
         <Header collapsed={collapsed} />
         <main className="p-6 pt-3 flex-grow">{children}</main>
-        <Footer />
       </div>
     </div>
   );

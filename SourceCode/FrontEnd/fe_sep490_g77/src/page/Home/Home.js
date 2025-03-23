@@ -25,10 +25,10 @@ const features = [
     path: "/grading",
   },
   {
-    title: "Gen QR code cho bài thi tự luận",
-    description: "Tạo mã QR để quản lý & quét bài thi.",
-    img: "https://img.icons8.com/color/96/qr-code.png",
-    path: "/genqr",
+    title: "Tự luận",
+    description: "Lưu danh sách sinh viên & tạo phiếu trả lời chuyên biệt",
+    img: "https://img.icons8.com/color/96/list.png",
+    path: "/essay",
   },
 ];
 
