@@ -51,6 +51,18 @@ const ExamCreation = () => {
     }
   };
 
+  const handleCreateExam = () => {
+    const examStructure = selectedTopics.map(topic => ({
+      sectionId: topic.key.replace("section-", ""), // Lấy ID section từ key
+      easy: topic.levels.easy || 0,
+      medium: topic.levels.medium || 0,
+      hard: topic.levels.hard || 0
+    }));
+  
+    console.log("Cấu trúc đề thi:", JSON.stringify(examStructure, null, 2));
+  };
+  
+
   const handleBankSelect = (value) => {
     setSelectedBank(value);
     fetchBankDetails(value);
@@ -105,7 +117,8 @@ const ExamCreation = () => {
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", padding: 20, background: "#f5f5f5" }}>
       <div style={{ width: "100%", display: "flex", justifyContent: "flex-end", marginBottom: 10 }}>
-        <Button type="primary">Khởi tạo</Button>
+       <Button type="primary" onClick={handleCreateExam}>Khởi tạo</Button>
+
       </div>
       <div style={{ display: "flex", flex: 1 }}>
         <div style={{ width: "25%", background: "#fff", padding: 10, borderRight: "1px solid #ddd", overflowY: "auto" }}>

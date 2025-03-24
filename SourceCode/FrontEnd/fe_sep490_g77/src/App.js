@@ -20,6 +20,14 @@ import ExamDetail from "./page/Exam/ExamContent";
 import ExamManagement from "./page/Exam/ExamManager";
 import ExamCreation from "./page/Exam/ExamMatrix";
 import ExamPreview from "./page/Exam/ExamPreview";
+<<<<<<< Updated upstream
+=======
+
+
+import MainLayout2 from "./newLayout/MainLayout";
+
+
+>>>>>>> Stashed changes
 import GenQRCode from "./page/GenQRCode/CreateQRCode.js"
 import PreviewGenQR from "./page/GenQRCode/PreviewGenQr"
 import Home from "./page/Home/Home";
