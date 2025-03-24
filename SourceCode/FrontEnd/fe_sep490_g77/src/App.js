@@ -20,6 +20,10 @@ import ExamDetail from "./page/Exam/ExamContent";
 import ExamManagement from "./page/Exam/ExamManager";
 import ExamCreation from "./page/Exam/ExamMatrix";
 import ExamPreview from "./page/Exam/ExamPreview";
+
+import LoginPage from "./page/Common/LoginPage";
+import RegistrationPage from "./page/Common/RegisterPage";
+import MainLayout2 from "./newLayout/MainLayout";
 import GenQRCode from "./page/Essay/CreateQRCode.js";
 import PreviewGenQR from "./page/Essay/PreviewGenQr";
 import CreateEssayExam from "./page/Essay/CreateEssayExam";
@@ -31,6 +35,7 @@ function App() {
     <Provider store={store}> {/* Thêm Provider */}
       <Router>
         <Routes>
+          
           {/* Home dùng Sidebar riêng */}
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<LoginPage />} />
@@ -38,6 +43,7 @@ function App() {
           <Route path="/profile" element={<Profile /> } />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/MainLayout2" element={<MainLayout2 />} />
           {/* Các trang khác bọc trong MainLayout */}
           <Route path="/question-bank" element={<MainLayout><QuestionBank /></MainLayout>} />
           <Route path="/question-bank-detail/:bankId" element={<MainLayout><QuestionBankDetail /></MainLayout>} />
