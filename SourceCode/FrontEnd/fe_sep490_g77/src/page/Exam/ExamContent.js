@@ -1,4 +1,4 @@
-import {React, useState} from "react";
+import { React, useEffect, useState } from "react";
 import { Card, Button, List } from "antd";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTrash, faUser, faChartBar, faPlus, faGear } from "@fortawesome/free-solid-svg-icons";
@@ -6,39 +6,41 @@ import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import UserSearchModal from "../../components/Exam/usersearch";
 import Swal from "sweetalert2";
-
-const examInfo = {
-  title: "TÊN BÀI THI",
-  createdAt: "12/02/2025 14:15",
-  creator: "Hoàng Long Phạm",
-  attempts: 0,
-};
-
-const questions = [
-  {
-    id: 1,
-    question: "Hàm số y = f(x) liên tục trên R và có bảng biến thiên như hình vẽ. Mệnh đề nào sau đây là đúng?",
-    image: "https://via.placeholder.com/400x150",
-    answers: ["Hàm số có hai điểm cực trị.", "Hàm số có một điểm cực trị.", "Hàm số không có giá trị cực tiểu.", "Hàm số không có giá trị cực đại."],
-  },
-  {
-    id: 2,
-    question: "Cho hàm số có bảng xét dấu đạo hàm như sau. Hàm số đã cho nghịch biến trên khoảng nào dưới đây?",
-    image: "https://via.placeholder.com/400x150",
-    answers: ["(2; +∞).", "(0; +∞).", "(-2;0).", "(0;2)."],
-  },
-  {
-    id: 3,
-    question: "Trong các hàm số sau, hàm số đồng biến trên R là:",
-    image: null,
-    answers: ["f(x) = -3x².", "f(x) = -3 - x².", "f(x) = (1 / √3)x³.", "f(x) = x³ - x."],
-  },
-];
-
-const members = ["longph", "VietNguyen", "DuyAnh"];
+import { useSearchParams } from "react-router-dom";
+import { getExam } from "../../services/api";
 
 const ExamDetail = () => {
+  const [searchParams] = useSearchParams();
+  const id = searchParams.get("id");
+  const [examInfo, setExamInfo] = useState(null);
+  const [questions, setQuestions] = useState([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
+
+  useEffect(() => {
+    const fetchExam = async () => {
+      try {
+        const response = await getExam(id);
+        //if (!response.ok) throw new Error(`Error ${response.status}: ${response.statusText}`);
+
+        const data = await response.data;
+        const examData = JSON.parse(data.examdata); // Giải mã chuỗi JSON trong `Examdata`
+
+        setExamInfo({
+          title: data.examname,
+          createdAt: new Date(data.createdate).toLocaleString(),
+          creator: "Unknown", // Có thể cần API khác để lấy tên người tạo từ `AccId`
+          attempts: 0, // Thêm nếu API có trả về số lượt làm
+        });
+
+        setQuestions(examData.Questions);
+      } catch (error) {
+        console.error("Error fetching exam:", error);
+        toast.error("Lỗi khi tải dữ liệu bài thi");
+      }
+    };
+
+    fetchExam();
+  }, [id]);
 
   const handleDelete = () => {
     Swal.fire({
@@ -50,19 +52,21 @@ const ExamDetail = () => {
       cancelButtonColor: "#3085d6",
       confirmButtonText: "Xóa",
       cancelButtonText: "Hủy",
-    }).then((result) => {
+    }).then(async (result) => {
       if (result.isConfirmed) {
-        Swal.fire("Đã xóa!", "Bài thi đã bị xóa.", "success");
-        // Thêm logic xóa bài thi ở đây
+        try {
+          await fetch(`https://your-api-url.com/exams/${id}`, { method: "DELETE" });
+          Swal.fire("Đã xóa!", "Bài thi đã bị xóa.", "success");
+        } catch (error) {
+          Swal.fire("Lỗi!", "Không thể xóa bài thi.", "error");
+        }
       }
     });
   };
 
-  const confirmDelete = () => {
-    toast.dismiss();
-    toast.success("Bài thi đã bị xóa!", { position: "top-center" });
-    // TODO: Thực hiện hành động xóa ở đây
-  };
+  if (!examInfo) {
+    return <p style={{ textAlign: "center", marginTop: 50 }}>Đang tải...</p>;
+  }
 
   return (
     <div style={{ display: "flex", height: "100vh", backgroundColor: "#f9f9f9" }}>
@@ -87,31 +91,16 @@ const ExamDetail = () => {
           <FontAwesomeIcon icon={faPlus} /> Thêm người dùng
         </Button>
         <UserSearchModal visible={isModalVisible} onClose={() => setIsModalVisible(false)} />
-
-        <h4 style={{ marginTop: 20 }}>Thành viên</h4>
-        <List
-          dataSource={members}
-          bordered
-          renderItem={(item) => (
-            <List.Item>
-              <FontAwesomeIcon icon={faUser} style={{ marginRight: 8 }} />
-              {item}
-            </List.Item>
-          )}
-        />
       </div>
 
       {/* Question List */}
       <div style={{ flex: 1, padding: 20, overflowY: "auto" }}>
         {questions.map((q, index) => (
-          <Card key={q.id} title={`Câu ${index + 1}`} style={{ marginBottom: 20, border: "2px solid #007bff", borderRadius: "8px" }}>
-            <p>{q.question}</p>
-            {q.image && <img src={q.image} alt="Hình minh họa" style={{ width: "100%", marginBottom: 10, borderRadius: "6px" }} />}
-            <List
-              bordered
-              dataSource={q.answers}
-              renderItem={(answer) => <List.Item>{answer}</List.Item>}
-            />
+          <Card key={q.QuestionId} title={`Câu ${index + 1}`} style={{ marginBottom: 20, border: "2px solid #007bff", borderRadius: "8px" }}>
+            <p>{q.Content}</p>
+            {q.Answers && (
+              <List bordered dataSource={q.Answers} renderItem={(answer) => <List.Item>{answer.Content}</List.Item>} />
+            )}
           </Card>
         ))}
       </div>

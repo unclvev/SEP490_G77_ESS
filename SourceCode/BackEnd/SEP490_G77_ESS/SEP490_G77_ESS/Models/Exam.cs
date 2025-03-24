@@ -13,5 +13,7 @@ public partial class Exam
 
     public long? AccId { get; set; }
 
+    public string? Examdata { get; set; }
+
     public virtual Account? Acc { get; set; }
 }
