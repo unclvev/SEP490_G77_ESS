@@ -4,7 +4,7 @@ import { Tooltip } from "antd";
 import {
   FileTextOutlined,
   BookOutlined,
-  CheckCircleOutlined,
+  CheckOutlined,
   UnorderedListOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,

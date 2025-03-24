@@ -20,9 +20,6 @@ import ExamDetail from "./page/Exam/ExamContent";
 import ExamManagement from "./page/Exam/ExamManager";
 import ExamCreation from "./page/Exam/ExamMatrix";
 import ExamPreview from "./page/Exam/ExamPreview";
-
-import LoginPage from "./page/Common/LoginPage";
-import RegistrationPage from "./page/Common/RegisterPage";
 import MainLayout2 from "./newLayout/MainLayout";
 import GenQRCode from "./page/Essay/CreateQRCode.js";
 import PreviewGenQR from "./page/Essay/PreviewGenQr";

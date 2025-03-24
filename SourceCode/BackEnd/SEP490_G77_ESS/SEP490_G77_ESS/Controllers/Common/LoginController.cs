@@ -36,7 +36,7 @@ namespace SEP490_G77_ESS.Controllers.Common
 
             // Nếu muốn sử dụng refresh token, tạo và thiết lập cho người dùng
             var refreshToken = GenerateRefreshToken();
-            SetRefreshToken(userLogin, refreshToken);
+            SaveRefreshToken(userLogin, refreshToken);
 
             // Lưu các thay đổi vào cơ sở dữ liệu
             _context.SaveChanges();
