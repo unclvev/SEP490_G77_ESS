@@ -6,6 +6,7 @@ import { useState, useRef } from "react";
 const ImportEssayPage = () => {
   const [file, setFile] = useState(null);
   const inputRef = useRef();
+  const [importResult, setImportResult] = useState("");
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
@@ -13,17 +14,17 @@ const ImportEssayPage = () => {
 
     const isExcel = selectedFile.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
     if (!isExcel) {
-      message.error("Chỉ chấp nhận file Excel (.xlsx)");
+      message.error("❌ Chỉ chấp nhận file Excel (.xlsx)");
       return;
     }
 
     setFile(selectedFile);
-    message.success(`Đã chọn file: ${selectedFile.name}`);
+    message.success(`📄 Đã chọn file: ${selectedFile.name}`);
   };
 
   const handleUpload = async () => {
     if (!file) {
-      message.warning("Vui lòng chọn file trước khi lưu danh sách học sinh");
+      message.warning("⚠️ Vui lòng chọn file trước khi lưu danh sách học sinh");
       return;
     }
 
@@ -31,15 +32,18 @@ const ImportEssayPage = () => {
     formData.append("file", file);
 
     try {
-      await axios.post("http://localhost:3000/essay/saveStudentList", formData, {
+      const response = await axios.post("https://localhost:7052/essay/savestudentlist", formData, {
         headers: { "Content-Type": "multipart/form-data" }
       });
-      message.success("Tải lên thành công!");
+
+      message.success("✅ Tải lên thành công!");
+      setImportResult(response.data); // Có thể là "Import thành công!" hoặc kèm tổng số
       setFile(null);
-      inputRef.current.value = ""; // reset input
+      inputRef.current.value = "";
     } catch (error) {
       console.error(error);
-      message.error("Tải lên thất bại!");
+      const msg = error.response?.data || "Tải lên thất bại!";
+      message.error(`❌ ${msg}`);
     }
   };
 
@@ -47,9 +51,8 @@ const ImportEssayPage = () => {
     <div className="p-6 max-w-xl mx-auto bg-white rounded shadow">
       <h1 className="text-2xl font-bold mb-4">Import danh sách học sinh</h1>
 
-      {/* Link tải template */}
       <p className="text-sm text-gray-600 mb-4">
-        📥 Nếu chưa có file, bạn có thể tải 
+        📥 Nếu chưa có file, bạn có thể tải
         <a
           href="/templateAnswerEssay/TemplateImportStudentList/EssTemplate.xlsx"
           download
@@ -59,7 +62,6 @@ const ImportEssayPage = () => {
         </a>
       </p>
 
-      {/* Chọn file */}
       <input
         type="file"
         accept=".xlsx"
@@ -68,7 +70,6 @@ const ImportEssayPage = () => {
         className="mb-4"
       />
 
-      {/* Gửi file */}
       <div>
         <Button
           type="primary"
@@ -79,6 +80,12 @@ const ImportEssayPage = () => {
           Lưu danh sách
         </Button>
       </div>
+
+      {importResult && (
+        <p className="text-green-600 mt-4 font-semibold">
+          ✅ {importResult}
+        </p>
+      )}
     </div>
   );
 };
