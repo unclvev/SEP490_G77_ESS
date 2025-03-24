@@ -10,5 +10,6 @@
         public long Modeid { get; set; }
         public List<string>? Answers { get; set; } = new(); // ✅ Đặt nullable để tránh lỗi
         public List<string> CorrectAnswers { get; set; }
+        public string? ImageUrl { get; set; } // ✅ Thêm dòng này
     }
 }

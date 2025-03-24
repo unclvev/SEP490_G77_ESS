@@ -5,6 +5,7 @@ using SEP490_G77_ESS.DTO.BankdDTO;
 using SEP490_G77_ESS.Models;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace SEP490_G77_ESS.Controllers.QuestionBank
@@ -38,6 +39,7 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
                 TypeId = q.TypeId,
                 Solution = q.Solution,
                 Modeid = q.Modeid ?? 0,
+                ImageUrl = q.ImageUrl,
 
                 // ✅ Nếu là TypeId = 3 (Điền kết quả), không cần `Answers`
                 Answers = (q.TypeId == 3) ? new List<string>() : q.AnswerContent?.Split(",").ToList() ?? new List<string>(),
@@ -93,7 +95,8 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
                 Secid = questionDto.Secid,
                 TypeId = questionDto.TypeId,
                 Modeid = questionDto.Modeid,
-                Solution = questionDto.Solution
+                Solution = questionDto.Solution,
+                ImageUrl = questionDto.ImageUrl
 
                 // ✅ TypeId = 2 (True/False) giờ có thể lưu `Solution`
             };
@@ -519,6 +522,7 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
             question.TypeId = questionDto.TypeId;
             question.Modeid = questionDto.Modeid;
             question.Solution = questionDto.Solution;
+            question.ImageUrl = questionDto.ImageUrl; // ✅ NEW
 
             // ✅ TypeId = 2 (True/False) giờ có thể có Solution
 
@@ -555,6 +559,53 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
             return Ok(new { message = "Câu hỏi đã được cập nhật!" });
         }
 
+        [HttpPost("upload-image-base64")]
+        public IActionResult UploadBase64Image([FromBody] Base64ImageDto dto)
+        {
+            if (string.IsNullOrEmpty(dto.Base64Image))
+                return BadRequest(new { message = "Không có dữ liệu ảnh base64!" });
+
+            try
+            {
+                var base64Data = Regex.Match(dto.Base64Image, @"data:image/(?<type>.+?);base64,(?<data>.+)").Groups["data"].Value;
+                var fileType = Regex.Match(dto.Base64Image, @"data:image/(?<type>.+?);base64,").Groups["type"].Value;
+
+                if (string.IsNullOrEmpty(base64Data) || string.IsNullOrEmpty(fileType))
+                    return BadRequest(new { message = "Dữ liệu base64 không hợp lệ!" });
+
+                var fileBytes = Convert.FromBase64String(base64Data);
+
+                var extension = fileType switch
+                {
+                    "jpeg" => ".jpg",
+                    "jpg" => ".jpg",
+                    "png" => ".png",
+                    "gif" => ".gif",
+                    _ => ".jpg"
+                };
+
+                var fileName = $"{Guid.NewGuid()}{extension}";
+                var folderPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images");
+
+                if (!Directory.Exists(folderPath))
+                    Directory.CreateDirectory(folderPath);
+
+                var fullPath = Path.Combine(folderPath, fileName);
+                System.IO.File.WriteAllBytes(fullPath, fileBytes);
+
+                var imageUrl = $"/images/{fileName}";
+                return Ok(new { imageUrl });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Lỗi khi xử lý ảnh base64!", error = ex.Message });
+            }
+        }
+
+        public class Base64ImageDto
+        {
+            public string Base64Image { get; set; }
+        }
 
 
 
@@ -569,12 +620,26 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
                 return NotFound(new { message = "Không tìm thấy câu hỏi!" });
             }
 
+            // ✅ Xóa ảnh nếu có
+            if (!string.IsNullOrEmpty(question.ImageUrl))
+            {
+                var imagePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", question.ImageUrl.TrimStart('/'));
+                if (System.IO.File.Exists(imagePath))
+                {
+                    System.IO.File.Delete(imagePath); // ✅ Xóa file ảnh khỏi server
+                }
+            }
+
+            // ✅ Xóa đáp án đúng
             var correctAnswers = _context.CorrectAnswers.Where(a => a.Quesid == id);
             _context.CorrectAnswers.RemoveRange(correctAnswers);
 
+            // ✅ Xóa câu hỏi
             _context.Questions.Remove(question);
             await _context.SaveChangesAsync();
+
             return Ok(new { message = "Đã xóa câu hỏi!" });
         }
+
     }
 }

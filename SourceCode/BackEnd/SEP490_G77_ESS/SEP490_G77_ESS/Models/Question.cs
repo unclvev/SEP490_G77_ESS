@@ -31,4 +31,6 @@ public partial class Question
 
 
     public virtual TypeQuestion Type { get; set; } = null!;
+
+    public string? ImageUrl { get; set; } // ✅ Thêm dòng này
 }

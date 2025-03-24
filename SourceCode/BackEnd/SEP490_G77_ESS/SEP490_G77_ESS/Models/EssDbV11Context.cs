@@ -366,6 +366,7 @@ public partial class EssDbV11Context : DbContext
             entity.Property(e => e.Solution).HasColumnName("solution");
             entity.Property(e => e.TypeId).HasColumnName("type_id");
             entity.Property(e => e.DfSectionId).HasColumnName("df_section_id"); // ✅ Thêm cột mới
+            entity.Property(e => e.ImageUrl).HasColumnName("ImageUrl");
 
 
             entity.HasOne(d => d.Mode).WithMany(p => p.Questions)

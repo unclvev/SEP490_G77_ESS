@@ -13,6 +13,7 @@ import { stateFromHTML } from 'draft-js-import-html';
 import 'katex/dist/katex.min.css';
 import { InlineMath, BlockMath } from 'react-katex';
 import { Modal } from 'antd'; 
+import { useRef } from "react";
 const { TextArea } = Input;
 const { Option } = Select;
 const QuestionList = () => {
@@ -31,6 +32,7 @@ const QuestionList = () => {
     solution: "",
     answers: [],
     correctAnswers: [""],
+    imageUrl: "",
   });
   const [editorState, setEditorState] = useState(EditorState.createEmpty());
 // Thêm vào các state hiện có
@@ -41,6 +43,7 @@ const [formulaList, setFormulaList] = useState([]); // Danh sách công thức [
 const [selectedFormulaIndex, setSelectedFormulaIndex] = useState(null);
 const [editingFormula, setEditingFormula] = useState('');
 const [editingAnswerIndex, setEditingAnswerIndex] = useState(null);
+const isMountedRef = useRef(true);
   useEffect(() => {
     fetchQuestions();
     fetchQuestionTypes();
@@ -114,6 +117,12 @@ const [editingAnswerIndex, setEditingAnswerIndex] = useState(null);
       setEditorState(EditorState.createEmpty());
     }
   }, [currentQuestion]);
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
   
   
   
@@ -123,6 +132,7 @@ const [editingAnswerIndex, setEditingAnswerIndex] = useState(null);
       const response = await axios.get(`https://localhost:7052/api/Question/questions?sectionId=${sectionId}`);
       setQuestions(response.data);
     } catch (error) {
+      if (!isMountedRef.current) return;
       toast.error("Lỗi khi tải danh sách câu hỏi!");
     }
   };
@@ -132,6 +142,7 @@ const [editingAnswerIndex, setEditingAnswerIndex] = useState(null);
       const response = await axios.get(`https://localhost:7052/api/Question/types`);
       setQuestionTypes(response.data);
     } catch (error) {
+      if (!isMountedRef.current) return;
       toast.error("Lỗi khi tải danh sách loại câu hỏi!");
     }
   };
@@ -141,6 +152,7 @@ const [editingAnswerIndex, setEditingAnswerIndex] = useState(null);
       const response = await axios.get(`https://localhost:7052/api/Question/levels`);
       setLevels(response.data);
     } catch (error) {
+      if (!isMountedRef.current) return;
       toast.error("Lỗi khi tải danh sách độ khó!");
     }
   };
@@ -205,6 +217,7 @@ const [editingAnswerIndex, setEditingAnswerIndex] = useState(null);
         solution: question.solution || "",
         answers: updatedAnswers,
         correctAnswers: [correctAnswer],
+        imageUrl: question.imageUrl || "",
       });
     } else {
       // reset
@@ -218,6 +231,7 @@ const [editingAnswerIndex, setEditingAnswerIndex] = useState(null);
         solution: "",
         answers: [],
         correctAnswers: [""],
+        imageUrl: "", 
       });
     }
   };
@@ -432,6 +446,7 @@ const saveEditedFormula = () => {
         solution: newQuestion.solution,
         answers: newQuestion.typeId === 1 ? newQuestion.answers : [],
         correctAnswers: [newQuestion.correctAnswers[0]],
+        imageUrl: newQuestion.imageUrl,
       };
 
       let response;
@@ -623,6 +638,7 @@ const renderQuestionFields = () => {
       case 1: // Trắc nghiệm
         return (
           <>
+           
             <p><strong>Loại câu hỏi:</strong> Trắc nghiệm</p>
             <p><strong>Đáp án:</strong></p>
             {question.answers && question.answers.length > 0 ? (
@@ -655,6 +671,7 @@ const renderQuestionFields = () => {
     case 2: // True/False
       return (
         <>
+         
           <p><strong>Loại câu hỏi:</strong> True/False</p>
           {question.correctAnswers && question.correctAnswers.length === 1 ? (
             <p><strong>Đáp án đúng:</strong> {question.correctAnswers[0]}</p>
@@ -670,6 +687,7 @@ const renderQuestionFields = () => {
     case 3: // Điền kết quả
       return (
         <>
+         
           <p><strong>Loại câu hỏi:</strong> Điền kết quả</p>
           {question.correctAnswers && question.correctAnswers[0] && question.correctAnswers[0].length === 4 ? (
             <p><strong>Đáp án đúng:</strong> {question.correctAnswers[0]}</p>
@@ -686,6 +704,8 @@ const renderQuestionFields = () => {
       return <p className="text-red-500">⚠️ Lỗi: Loại câu hỏi không xác định!</p>;
   }
 };
+// Image upload component
+
 
 // Thêm hàm renderMathInput
 const renderMathInput = () => {
@@ -766,7 +786,22 @@ const renderMathInput = () => {
           renderItem={(question, index) => (
             <List.Item key={question.quesid}>
               <Card
-                title={renderQuestionWithMath(question.quescontent)}
+                title={ <div>
+                  {renderQuestionWithMath(question.quescontent)}
+                  {question.imageUrl && (
+                    <div className="mt-3 border rounded p-2 bg-gray-50">
+                      <img 
+                       src={question.imageUrl.startsWith("http") 
+                        ? question.imageUrl 
+                        : `https://localhost:7052${question.imageUrl}`}
+                        alt="Question image" 
+                        className="max-w-full max-h-64 object-contain" 
+                      />
+                    </div>
+                  )}
+                </div>
+              }
+                
   className="mb-2"
                 extra={
                   <>
@@ -939,7 +974,101 @@ const renderMathInput = () => {
 
           {/* Fields specific to question type */}
           {renderQuestionFields()}
+          <div className="mb-4">
+  <label className="font-semibold block mb-2">Hình ảnh (không bắt buộc)</label>
+  <Upload
+  name="image"
+  listType="picture-card"
+  showUploadList={false}
+  beforeUpload={file => {
+    const isImage = file.type.startsWith('image/');
+    const isLt5M = file.size / 1024 / 1024 < 5;
 
+    if (!isImage) {
+      message.error('Chỉ chấp nhận file hình ảnh!');
+      return Upload.LIST_IGNORE;
+    }
+
+    if (!isLt5M) {
+      message.error('Ảnh phải nhỏ hơn 5MB!');
+      return Upload.LIST_IGNORE;
+    }
+
+    return true;
+  }}
+  customRequest={async ({ file }) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+
+    reader.onload = async () => {
+      try {
+        const base64Image = reader.result;
+
+        const response = await axios.post('https://localhost:7052/api/Question/upload-image-base64', {
+          base64Image
+        });
+
+        let imageUrl = response.data.imageUrl;
+
+        if (imageUrl && imageUrl.startsWith("/")) {
+          imageUrl = `https://localhost:7052${imageUrl}`;
+        }
+        setNewQuestion(prev => ({
+          ...prev,
+          imageUrl
+        }));
+
+        toast.success("Tải ảnh lên thành công!");
+      } catch (error) {
+        toast.error("Lỗi khi tải ảnh base64 lên!");
+        console.error(error);
+      }
+    };
+  }}
+>
+  {newQuestion.imageUrl ? (
+    <div className="relative w-full h-full">
+      <img src={newQuestion.imageUrl} alt="Uploaded" className="w-full h-full object-cover" />
+      <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+        <Button type="primary" icon={<UploadOutlined />} className="mr-2">Thay đổi</Button>
+        <Button 
+          danger 
+          icon={<DeleteOutlined />} 
+          onClick={(e) => {
+            e.stopPropagation();
+            setNewQuestion(prev => ({ ...prev, imageUrl: "" }));
+          }}
+        />
+      </div>
+    </div>
+  ) : (
+    <div>
+      <UploadOutlined />
+      <div className="mt-2">Tải ảnh lên</div>
+    </div>
+  )}
+</Upload>
+
+  {/* Hiển thị ảnh sau khi upload */}
+{newQuestion.imageUrl && (
+  <div className="mt-2">
+    <img
+      src={newQuestion.imageUrl}
+      alt="Preview"
+      className="max-h-64 object-contain border rounded"
+    />
+    
+  </div>
+)}
+  
+  {newQuestion.imageUrl && (
+    <div className="mt-2">
+      <a href={newQuestion.imageUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
+        {newQuestion.imageUrl.split('/').pop()}
+      </a>
+    </div>
+  )}
+</div>
           {/* Solution field for all question types */}
           <label className="font-semibold">Giải thích (Solution)</label>
           <TextArea 
