@@ -43,5 +43,7 @@ public partial class Account
 
     public virtual ICollection<Exam> Exams { get; set; } = new List<Exam>();
 
+    public virtual ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
+
     public virtual Role? Role { get; set; }
 }

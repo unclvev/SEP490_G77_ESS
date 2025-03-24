@@ -23,28 +23,48 @@ namespace SEP490_G77_ESS.Controllers
 
         // ✅ Lấy danh sách ngân hàng câu hỏi
         [HttpGet("account/{accid}")]
-        public async Task<ActionResult<IEnumerable<object>>> GetBanksByAccount(long accid)
+        public async Task<ActionResult<IEnumerable<object>>> GetBanksByAccount(
+     long accid, [FromQuery] string query = "", [FromQuery] string grade = "", [FromQuery] string subject = "", [FromQuery] string curriculum = "")
         {
-            var banks = await _context.Banks
-                .Where(b => b.Accid == accid) // Lọc theo Accid
-                .Include(b => b.Grade)  // Sử dụng navigation property thay vì GradeId
-                .Include(b => b.Subject) // Sử dụng navigation property thay vì SubjectId
-                .Include(b => b.Sections) // Bao gồm Sections nếu cần
+            var banksQuery = _context.Banks
+                .Where(b => b.Accid == accid)
+                .Include(b => b.Grade)
+                .Include(b => b.Subject)
+                .Include(b => b.Curriculum)
+                .Include(b => b.Sections)
+                .AsQueryable();
+
+            if (!string.IsNullOrEmpty(query))
+                banksQuery = banksQuery.Where(b => b.Bankname.Contains(query));
+
+            if (!string.IsNullOrEmpty(grade))
+                banksQuery = banksQuery.Where(b => b.Grade.GradeLevel == grade);
+
+            if (!string.IsNullOrEmpty(subject))
+                banksQuery = banksQuery.Where(b => b.Subject.SubjectName.Contains(subject));
+
+            if (!string.IsNullOrEmpty(curriculum))
+                banksQuery = banksQuery.Where(b => b.Curriculum.CurriculumName.Contains(curriculum));
+
+            var banks = await banksQuery
+                .OrderByDescending(b => b.CreateDate)
                 .Select(b => new
                 {
                     b.BankId,
                     b.Bankname,
                     Totalquestion = _context.Questions
-                        .Where(q => q.Secid != null && b.Sections.Any(s => s.Secid == q.Secid))
-                        .Count(),
+                        .Count(q => q.Secid != null && b.Sections.Any(s => s.Secid == q.Secid)),
                     b.CreateDate,
                     Grade = b.Grade != null ? b.Grade.GradeLevel : "Không xác định",
-                    Subject = b.Subject != null ? b.Subject.SubjectName : "Không xác định"
+                    Subject = b.Subject != null ? b.Subject.SubjectName : "Không xác định",
+                    Curriculum = b.Curriculum != null ? b.Curriculum.CurriculumName : "Không xác định"
                 })
+                .OrderByDescending(b => b.CreateDate)
                 .ToListAsync();
 
             return Ok(banks);
         }
+
 
 
 

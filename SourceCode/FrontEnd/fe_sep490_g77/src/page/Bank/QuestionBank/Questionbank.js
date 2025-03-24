@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Input, Button, Card, Pagination, Modal, message } from 'antd';
+import { Input, Button, Card, Pagination, Modal, message, Select } from 'antd';
 import { SearchOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import axios from 'axios';
 import { toast } from "react-toastify";
 import { useSearchParams } from "react-router-dom";
 import { useSelector } from 'react-redux';
 import { jwtDecode } from "jwt-decode";
-import { useLocation } from 'react-router-dom'
 
 import 'tailwindcss/tailwind.css';
 
@@ -24,34 +23,43 @@ const QuestionBank = () => {
   const [deletingBank, setDeletingBank] = useState(null);
   const [newBankName, setNewBankName] = useState("");
   const itemsPerPage = 8;
-
+  const [grades, setGrades] = useState([]);
+  const [subjects, setSubjects] = useState([]);
+  const [curriculums, setCurriculums] = useState([]);
+  const [selectedGrade, setSelectedGrade] = useState(null);
+  const [selectedSubject, setSelectedSubject] = useState(null);
+  const [selectedCurriculum, setSelectedCurriculum] = useState(null);
   const [searchParams] = useSearchParams();
 
   const token = useSelector((state) => state.token);
   
-      let accid = searchParams.get("accid") || localStorage.getItem("accid"); // Mặc định cũ
+  let accid = searchParams.get("accid") || localStorage.getItem("accid");
   
-      // Nếu token tồn tại, giải mã để lấy AccId
-      if (token) {
-          try {
-              const decoded = jwtDecode(token);
-              accid = decoded.AccId || accid; // Ưu tiên lấy từ token nếu có
-          } catch (error) {
-              console.error("Invalid token", error);
-          }
-      }
-
+  // Decode token to get AccId if available
+  if (token) {
+    try {
+      const decoded = jwtDecode(token);
+      accid = decoded.AccId || accid;
+    } catch (error) {
+      console.error("Invalid token", error);
+    }
+  }
 
   useEffect(() => {
-    fetchBanks();
+    fetchGrades();
+    fetchSubjects();
+    fetchCurriculums();
+    fetchBanks(); // Initial fetch without filters
   }, [currentPage]);
 
-  const fetchBanks = async (query = "") => {
+  const fetchBanks = async () => {
     setLoading(true);
     try {
-      const url = query
-        ? `https://localhost:7052/api/Bank/account/${accid}?query=${query}`
-        : `https://localhost:7052/api/Bank/account/${accid}`;
+      let url = `https://localhost:7052/api/Bank/account/${accid}?`;
+      if (searchQuery) url += `query=${searchQuery}&`;
+      if (selectedGrade) url += `grade=${selectedGrade}&`;
+      if (selectedSubject) url += `subject=${selectedSubject}&`;
+      if (selectedCurriculum) url += `curriculum=${selectedCurriculum}&`;
 
       const response = await axios.get(url);
       setBanks(response.data.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage));
@@ -63,9 +71,36 @@ const QuestionBank = () => {
     }
   };
 
+  const fetchGrades = async () => {
+    try {
+      const res = await axios.get('https://localhost:7052/api/Bank/grades');
+      setGrades(res.data);
+    } catch (error) {
+      console.error("Error fetching grades:", error);
+    }
+  };
+
+  const fetchSubjects = async () => {
+    try {
+      const res = await axios.get('https://localhost:7052/api/Bank/subjects');
+      setSubjects(res.data);
+    } catch (error) {
+      console.error("Error fetching subjects:", error);
+    }
+  };
+
+  const fetchCurriculums = async () => {
+    try {
+      const res = await axios.get('https://localhost:7052/api/Bank/curriculums');
+      setCurriculums(res.data);
+    } catch (error) {
+      console.error("Error fetching curriculums:", error);
+    }
+  };
+
   const handleSearch = () => {
     setCurrentPage(1);
-    fetchBanks(searchQuery);
+    fetchBanks();
   };
 
   const handleCreateBank = () => {
@@ -107,10 +142,9 @@ const QuestionBank = () => {
         bankname: newBankName
       });
   
-      toast.success("✅ Cập nhật tên ngân hàng thành công!", 2); // 👈 Hiển thị trong 2 giây
+      toast.success("✅ Cập nhật tên ngân hàng thành công!", 2);
       setIsEditModalOpen(false);
   
-      // ⏳ Đảm bảo thông báo hiển thị trước khi làm mới dữ liệu
       setTimeout(() => {
         fetchBanks();
       }, 500);
@@ -129,10 +163,9 @@ const QuestionBank = () => {
     try {
       await axios.delete(`https://localhost:7052/api/Bank/${deletingBank.bankId}`);
       
-      toast.success("✅ Xóa ngân hàng câu hỏi thành công!", 2); // 👈 Hiển thị trong 2 giây
+      toast.success("✅ Xóa ngân hàng câu hỏi thành công!", 2);
       setIsDeleteModalOpen(false);
   
-      // ⏳ Đợi 0.5 giây trước khi làm mới danh sách
       setTimeout(() => {
         fetchBanks();
       }, 500);
@@ -146,19 +179,61 @@ const QuestionBank = () => {
       <h1 className="text-2xl md:text-3xl font-bold mb-8 text-center">QUẢN LÝ NGÂN HÀNG CÂU HỎI</h1>
 
       <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-        <div className="flex items-center gap-2 w-full md:w-1/2">
-          <Input
-            placeholder="Nhập tên ngân hàng câu hỏi..."
-            className="w-full"
-            size="large"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onPressEnter={handleSearch}
-          />
-          <Button type="primary" icon={<SearchOutlined />} size="large" onClick={handleSearch} />
+        <div className="flex flex-col w-full md:w-3/4 gap-4">
+          <div className="flex items-center gap-2 w-full">
+            <Input
+              placeholder="Nhập tên ngân hàng câu hỏi..."
+              className="w-full"
+              size="large"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onPressEnter={handleSearch}
+            />
+            <Button type="primary" icon={<SearchOutlined />} size="large" onClick={handleSearch} />
+          </div>
+          
+          <div className="flex flex-wrap gap-2">
+            <Select 
+              placeholder="Khối học" 
+              allowClear 
+              onChange={(value) => setSelectedGrade(value)}
+              style={{ width: '150px' }}
+              size="middle"
+            >
+              {grades.map(g => <Select.Option key={g.gradeId} value={g.gradeLevel}>{g.gradeLevel}</Select.Option>)}
+            </Select>
+            
+            <Select 
+              placeholder="Môn học" 
+              allowClear 
+              onChange={(value) => setSelectedSubject(value)}
+              style={{ width: '150px' }}
+              size="middle"
+            >
+              {subjects.map(s => <Select.Option key={s.subjectId} value={s.subjectName}>{s.subjectName}</Select.Option>)}
+            </Select>
+            
+            <Select 
+              placeholder="Chương trình" 
+              allowClear 
+              onChange={(value) => setSelectedCurriculum(value)}
+              style={{ width: '150px' }}
+              size="middle"
+            >
+              {curriculums.map(c => <Select.Option key={c.curriculumId} value={c.curriculumName}>{c.curriculumName}</Select.Option>)}
+            </Select>
+            
+            <Button icon={<SearchOutlined />} onClick={handleSearch}>
+              Tìm kiếm
+            </Button>
+          </div>
         </div>
 
-        <Button type="primary" className="bg-blue-500 hover:bg-blue-600 text-white" onClick={handleCreateBank}>
+        <Button 
+          type="primary" 
+          className="bg-blue-500 hover:bg-blue-600 text-white w-full md:w-auto"
+          onClick={handleCreateBank}
+        >
           Tạo ngân hàng đề thi
         </Button>
       </div>
@@ -179,18 +254,33 @@ const QuestionBank = () => {
                 <h2 className="font-bold text-lg">{bank.bankname}</h2>
                 <p className="text-gray-600">Ngày tạo: {formatDate(bank.createDate)}</p>
                 <p>{bank.totalquestion || 0} câu hỏi</p>
+                <div className="mt-2 text-sm">
+                  <p className="text-gray-500">Khối: {bank.grade}</p>
+                  <p className="text-gray-500">Môn: {bank.subject}</p>
+                  <p className="text-gray-500">Chương trình: {bank.curriculum}</p>
+                </div>
               </div>
 
-              {/* Nút Sửa & Xóa ở dưới cùng */}
               <div className="mt-auto pt-4 flex justify-between">
-                <Button type="primary" icon={<EditOutlined />} size="small" shape="round"
-                  className="bg-green-500 hover:bg-green-600 text-white w-1/2"
-                  onClick={(e) => handleEditBank(bank, e)}>
+                <Button 
+                  type="primary" 
+                  icon={<EditOutlined />} 
+                  size="small" 
+                  shape="round"
+                  className="bg-green-500 hover:bg-green-600 text-white w-1/2 mr-1"
+                  onClick={(e) => handleEditBank(bank, e)}
+                >
                   Sửa
                 </Button>
-                <Button type="primary" danger icon={<DeleteOutlined />} size="small" shape="round"
-                  className="bg-red-500 hover:bg-red-600 text-white w-1/2"
-                  onClick={(e) => handleDeleteBank(bank, e)}>
+                <Button 
+                  type="primary" 
+                  danger 
+                  icon={<DeleteOutlined />} 
+                  size="small" 
+                  shape="round"
+                  className="bg-red-500 hover:bg-red-600 text-white w-1/2 ml-1"
+                  onClick={(e) => handleDeleteBank(bank, e)}
+                >
                   Xóa
                 </Button>
               </div>
@@ -209,11 +299,27 @@ const QuestionBank = () => {
         />
       </div>
 
-      <Modal title="Chỉnh sửa tên ngân hàng" open={isEditModalOpen} onOk={handleUpdateBankName} onCancel={() => setIsEditModalOpen(false)}>
-        <Input value={newBankName} onChange={(e) => setNewBankName(e.target.value)} placeholder="Nhập tên ngân hàng mới" />
+      <Modal 
+        title="Chỉnh sửa tên ngân hàng" 
+        open={isEditModalOpen} 
+        onOk={handleUpdateBankName} 
+        onCancel={() => setIsEditModalOpen(false)}
+      >
+        <Input 
+          value={newBankName} 
+          onChange={(e) => setNewBankName(e.target.value)} 
+          placeholder="Nhập tên ngân hàng mới" 
+        />
       </Modal>
 
-      <Modal title="Xác nhận xóa" open={isDeleteModalOpen} onOk={confirmDeleteBank} onCancel={() => setIsDeleteModalOpen(false)} okText="Xóa" cancelText="Hủy">
+      <Modal 
+        title="Xác nhận xóa" 
+        open={isDeleteModalOpen} 
+        onOk={confirmDeleteBank} 
+        onCancel={() => setIsDeleteModalOpen(false)} 
+        okText="Xóa" 
+        cancelText="Hủy"
+      >
         <p>Bạn có chắc chắn muốn xóa ngân hàng này không?</p>
       </Modal>
     </div>
