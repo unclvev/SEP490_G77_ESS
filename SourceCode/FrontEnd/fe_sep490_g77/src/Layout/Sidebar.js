@@ -5,7 +5,7 @@ import {
   FileTextOutlined,
   BookOutlined,
   CheckOutlined,
-  QrcodeOutlined,
+  UnorderedListOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   HomeOutlined,
@@ -80,13 +80,13 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
         </li>
         <li>
           <Tooltip title={collapsed ? "Gen QR Code" : ""} placement="right">
-            <a
-              href="/genqr"
-              className="flex items-center space-x-3 text-lg hover:text-gray-200"
+            <Link
+              to="/essay"
+              className="flex items-center space-x-4 text-lg hover:text-gray-300"
             >
-              <QrcodeOutlined className="text-2xl text-purple-300" />
-              {!collapsed && <span>Gen QR Code</span>}
-            </a>
+              <UnorderedListOutlined className="text-2xl text-purple-300" />
+              {!collapsed && <span className="font-semibold">Tự Luận</span>}
+            </Link>
           </Tooltip>
         </li>
       </ul>

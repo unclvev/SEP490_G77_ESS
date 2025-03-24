@@ -25,10 +25,10 @@ const features = [
     path: "/grading",
   },
   {
-    title: "Gen QR code cho bài thi tự luận",
-    description: "Tạo mã QR để quản lý & quét bài thi.",
-    img: "https://img.icons8.com/color/96/qr-code.png",
-    path: "/genqr",
+    title: "Tự luận",
+    description: "Lưu danh sách sinh viên & tạo phiếu trả lời chuyên biệt",
+    img: "https://img.icons8.com/color/96/list.png",
+    path: "/essay",
   },
 ];
 
@@ -53,7 +53,7 @@ const Home = () => {
               className="shadow-md hover:shadow-lg transition-shadow duration-300 cursor-pointer p-6 flex flex-col items-center text-center"
               onClick={() => navigate(item.path)}
             >
-              <img src={item.img} alt={item.title} className="mb-3 w-20 h-20" />
+              <img src={item.img} alt={item.title} className="mb-3 w-20 h-20 mx-auto" />
               <h2 className="text-lg font-bold mb-2">{item.title}</h2>
               <p className="text-gray-600">{item.description}</p>
             </Card>
