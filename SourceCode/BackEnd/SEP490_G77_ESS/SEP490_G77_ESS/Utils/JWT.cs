@@ -45,6 +45,7 @@ namespace SEP490_G77_ESS.Utils
         {
             List<Claim> claims = new List<Claim> {
                 new Claim("AccId", user.AccId.ToString()),
+                new Claim("AccName", user.Username.ToString()),
                 new Claim("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress", user.Email),
                 new Claim("http://schemas.microsoft.com/ws/2008/06/identity/claims/role", role.ToString())
             };

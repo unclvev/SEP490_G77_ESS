@@ -1,19 +1,24 @@
 import React, { useState, useEffect } from "react";
 import { Radio, Button, message } from "antd";
 import { QRCodeCanvas } from "qrcode.react"; 
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import "tailwindcss/tailwind.css";
 
 const GenQRCode = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const savedData = JSON.parse(sessionStorage.getItem("qrFormData")) || {};
   const [layout, setLayout] = useState(savedData.layout || "A4");
   const [testName, setTestName] = useState(savedData.testName || "");
+  const [gradeName, setGradeName] = useState(savedData.gradeName || "");
   const [className, setClassName] = useState(savedData.className || ""); 
+  const [subjectName, setSubjectName] = useState(savedData.subjectName || ""); 
   const [printCount, setPrintCount] = useState(savedData.printCount || "1");
   const today = new Date().toISOString().split("T")[0];
   const [examDate, setExamDate] = useState(savedData.examDate || today);
   const [error, setError] = useState("");
+  const { title, createdDate, grade, subject, nameClass} = location.state || {};
+
 
   // ✅ Chỉ định ảnh mặt trước & mặt sau theo loại giấy
   const paperImages = {
@@ -41,12 +46,14 @@ const GenQRCode = () => {
   useEffect(() => {
     const savedData = JSON.parse(sessionStorage.getItem("qrFormData")) || {};
     setLayout(savedData.layout || "A4");
-    setTestName(savedData.testName || "");
-    setClassName(savedData.className || "");
+    setTestName(savedData.testName || title || "");
+    setClassName(savedData.className || nameClass || "");
+    setGradeName(savedData.gradeName || grade || "");
+    setSubjectName(savedData.subjectName || subject || "");
     setPrintCount(savedData.printCount || "1");
-    setExamDate(savedData.examDate || today);
+    setExamDate(savedData.examDate || createdDate || today);
   }, []);
-
+  
   const handlePrintCountChange = (e) => {
     const value = e.target.value;
     if (value === "" || (/^\d+$/.test(value) && parseInt(value) >= 1)) {
@@ -75,13 +82,13 @@ const GenQRCode = () => {
   const generateQRCodes = () => {
     let qrList = [];
     for (let i = 0; i < parseInt(printCount); i++) {
-      let qrData = `${testName}_${className}_${examDate}_Code_${i+1}`;
+      let qrData = `${testName}_${className}_${gradeName}_${subjectName}_${examDate}_Code_${i+1}`;
       qrList.push({ id: i, qrContent: qrData });
     }
     return qrList;
   };
 
-  const demoQR = encodeBase64(`${testName}_${className}_${examDate}_Demo`);
+  const demoQR = encodeBase64(`${testName}_${className}_${gradeName}_${subjectName}_${examDate}_Demo`);
 
   const handleContinue = () => {
     if (!isFormValid) {
@@ -95,7 +102,7 @@ const GenQRCode = () => {
     sessionStorage.setItem("qrFormData", JSON.stringify(formData));
 
     const qrList = generateQRCodes();
-    navigate("/preview-gen-qr", {
+    navigate("/essay/preview-gen-qr", {
       state: { testName, className, examDate, printCount, qrList, frontImage, backImage, qrPosition },
     });
   };
@@ -116,7 +123,7 @@ const GenQRCode = () => {
           <p className="text-lg font-semibold text-red-500">(*) bắt buộc phải điền</p>
 
           <div className="flex items-center mb-4">
-            <p className="text-lg font-semibold w-1/3">Tên bài kiểm tra(<span className="text-red-500">*</span>)</p>
+            <p className="text-lg font-semibold w-1/3">Tên bài kiểm tra</p>
             <input
               type="text"
               value={testName}
@@ -126,10 +133,30 @@ const GenQRCode = () => {
           </div>
 
           <div className="flex items-center mb-4">
-            <p className="text-lg font-semibold w-1/3">Tên Lớp(<span className="text-red-500">*</span>)</p>
+            <p className="text-lg font-semibold w-1/3">Tên Môn học</p>
+            <input
+              type="text"
+              value={subject}
+              onChange={(e) => setClassName(e.target.value)}
+              className="w-2/3 border border-gray-300 rounded-md p-2"
+            />
+          </div>
+
+          <div className="flex items-center mb-4">
+            <p className="text-lg font-semibold w-1/3">Tên Khối</p>
             <input
               type="text"
               value={className}
+              onChange={(e) => setClassName(e.target.value)}
+              className="w-2/3 border border-gray-300 rounded-md p-2"
+            />
+          </div>
+
+          <div className="flex items-center mb-4">
+            <p className="text-lg font-semibold w-1/3">Tên Lớp</p>
+            <input
+              type="text"
+              value={grade}
               onChange={(e) => setClassName(e.target.value)}
               className="w-2/3 border border-gray-300 rounded-md p-2"
             />

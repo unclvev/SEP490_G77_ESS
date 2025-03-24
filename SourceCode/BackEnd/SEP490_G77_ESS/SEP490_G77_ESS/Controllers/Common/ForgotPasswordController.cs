@@ -60,7 +60,7 @@ namespace SEP490_G77_ESS.Controllers.Common
                 return BadRequest(new { message = "Thời gian xác thực đã quá 5 phút, vui lòng đăng ký lại." });
             }
 
-            return Redirect("http://localhost:3000/reset-password");
+            return Redirect($"http://localhost:3000/reset-password?token={token}");
         }
 
         [HttpPost("reset-password")]
@@ -78,7 +78,7 @@ namespace SEP490_G77_ESS.Controllers.Common
             _context.Accounts.Update(account);
             await _context.SaveChangesAsync();
 
-            return Ok(new { message = "Mật khẩu đã được cập nhật" });
+            return Redirect($"http://localhost:3000/login");
         }
     }
 }

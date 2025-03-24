@@ -31,6 +31,7 @@ const LoginPage = () => {
             message.success('Login successful!');
             window.location.href = '/';
         } catch (error) {
+            setErrorMessage('Tên đăng nhập hoặc mật khẩu không đúng');
             message.error('Invalid username or password');
         }
     };
@@ -60,6 +61,8 @@ const LoginPage = () => {
                 <div className="flex-1 flex justify-center items-center">
                     <div className="w-full max-w-md p-8 mr-32">
                         <h1 className="text-5xl font-bold text-center text-black mb-6">Hello</h1>
+                        
+
                         <span className="text-black text-sm text-center block mb-6">
                            Bạn chưa có tài khoản? <a className="text-blue-600" href="/register">Tạo tài khoản</a>
                         </span>
