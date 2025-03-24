@@ -40,6 +40,7 @@ const [formulaListModalVisible, setFormulaListModalVisible] = useState(false);
 const [formulaList, setFormulaList] = useState([]); // Danh sách công thức [MATH:...]
 const [selectedFormulaIndex, setSelectedFormulaIndex] = useState(null);
 const [editingFormula, setEditingFormula] = useState('');
+const [editingAnswerIndex, setEditingAnswerIndex] = useState(null);
   useEffect(() => {
     fetchQuestions();
     fetchQuestionTypes();
@@ -223,66 +224,91 @@ const [editingFormula, setEditingFormula] = useState('');
   
   
   
-// Thêm hàm này
-const insertMathFormula = () => {
-  if (!mathExpression.trim()) return;
-
-  // Tạo HTML chứa công thức toán học
-  const mathHTML = `<span class="katex-math" data-formula="${mathExpression}">$$${mathExpression}$$</span>`;
+  const insertMathFormula = () => {
+    if (!mathExpression.trim()) return;
   
-  // Chuyển HTML sang ContentState
-  const contentState = editorState.getCurrentContent();
-  const selection = editorState.getSelection();
-  
-  // Chèn một đối tượng KATEX entity
-  const contentWithEntity = contentState.createEntity(
-    'KATEX',
-    'IMMUTABLE',
-    { formula: mathExpression }
-  );
-  
-  const entityKey = contentWithEntity.getLastCreatedEntityKey();
-  
-  // Chèn text và liên kết nó với entity
-  const contentWithFormula = Modifier.insertText(
-    contentWithEntity,
-    selection,
-    `[MATH:${mathExpression}]`, // Placeholder để dễ nhận biết
-    null,
-    entityKey
-  );
-  
-  // Cập nhật EditorState
-  const newEditorState = EditorState.push(
-    editorState,
-    contentWithFormula,
-    'insert-characters'
-  );
-  
-  setEditorState(newEditorState);
-  setMathExpression('');
-  setShowMathInput(false);
-  
-  // Cập nhật quescontent
-  setNewQuestion({
-    ...newQuestion,
-    quescontent: stateToHTML(contentWithFormula, {
-      entityStyleFn: (entity) => {
-        if (entity.getType() === 'KATEX') {
-          const formula = entity.getData().formula;
-          return {
-            element: 'span',
-            attributes: {
-              class: 'katex-math',
-              'data-formula': formula
-            },
-            style: {}
-          };
-        }
+    if (editingAnswerIndex !== null) {
+      // We're editing an answer
+      const updatedAnswers = [...newQuestion.answers];
+      const formula = `[MATH:${mathExpression}]`;
+      updatedAnswers[editingAnswerIndex] = formula;
+      
+      // If this is the selected correct answer, update correctAnswers too
+      if (newQuestion.correctAnswers[0] === newQuestion.answers[editingAnswerIndex]) {
+        setNewQuestion({
+          ...newQuestion,
+          answers: updatedAnswers,
+          correctAnswers: [formula]
+        });
+      } else {
+        setNewQuestion({
+          ...newQuestion,
+          answers: updatedAnswers
+        });
       }
-    })
-  });
-};
+      
+      setEditingAnswerIndex(null);
+    } else {
+      // Tạo HTML chứa công thức toán học
+      const mathHTML = `<span class="katex-math" data-formula="${mathExpression}">$$${mathExpression}$$</span>`;
+      
+      // Chuyển HTML sang ContentState
+      const contentState = editorState.getCurrentContent();
+      const selection = editorState.getSelection();
+      
+      // Chèn một đối tượng KATEX entity
+      const contentWithEntity = contentState.createEntity(
+        'KATEX',
+        'IMMUTABLE',
+        { formula: mathExpression }
+      );
+      
+      const entityKey = contentWithEntity.getLastCreatedEntityKey();
+      
+      // Chèn text và liên kết nó với entity
+      const contentWithFormula = Modifier.insertText(
+        contentWithEntity,
+        selection,
+        `[MATH:${mathExpression}]`, // Placeholder để dễ nhận biết
+        null,
+        entityKey
+      );
+      
+      // Cập nhật EditorState
+      const newEditorState = EditorState.push(
+        editorState,
+        contentWithFormula,
+        'insert-characters'
+      );
+      
+      setEditorState(newEditorState);
+      
+      // Cập nhật quescontent
+      setNewQuestion({
+        ...newQuestion,
+        quescontent: stateToHTML(contentWithFormula, {
+          entityStyleFn: (entity) => {
+            if (entity.getType() === 'KATEX') {
+              const formula = entity.getData().formula;
+              return {
+                element: 'span',
+                attributes: {
+                  class: 'katex-math',
+                  'data-formula': formula
+                },
+                style: {}
+              };
+            }
+          }
+        })
+      });
+    }
+  
+    setMathExpression('');
+    setShowMathInput(false);
+  };
+  
+ 
 const extractMathFormulas = () => {
   const regex = /\[MATH:(.+?)\]/g;
   const matches = [];
@@ -468,21 +494,23 @@ const saveEditedFormula = () => {
   };
 
   // Render các trường dữ liệu tùy theo loại câu hỏi
-  const renderQuestionFields = () => {
-    switch (newQuestion.typeId) {
-      case 1: // Trắc nghiệm
-        return (
-          <div className="mb-4">
-            <label className="font-semibold block mb-2">Đáp án</label>
-            <Radio.Group 
-              value={newQuestion.correctAnswers[0]}
-              onChange={(e) => setNewQuestion({ ...newQuestion, correctAnswers: [e.target.value] })}
-              className="w-full"
-            >
-              {newQuestion.answers.map((answer, index) => (
-                <div key={index} className="flex items-center mb-2">
+  
+const renderQuestionFields = () => {
+  switch (newQuestion.typeId) {
+    case 1: // Trắc nghiệm
+      return (
+        <div className="mb-4">
+          <label className="font-semibold block mb-2">Đáp án</label>
+          <Radio.Group 
+            value={newQuestion.correctAnswers[0]}
+            onChange={(e) => setNewQuestion({ ...newQuestion, correctAnswers: [e.target.value] })}
+            className="w-full"
+          >
+            {newQuestion.answers.map((answer, index) => (
+              <div key={index} className="flex items-center mb-2">
+                <div className="flex-grow mr-2 border rounded relative">
                   <Input
-                    className="mr-2 flex-grow"
+                    className="w-full pr-8"
                     placeholder={`Đáp án ${index + 1}`}
                     value={answer}
                     onChange={(e) => {
@@ -501,12 +529,36 @@ const saveEditedFormula = () => {
                       }
                     }}
                   />
-                  <Radio value={answer}>Đúng</Radio>
+                  <Button 
+                    size="small" 
+                    className="absolute right-1 top-1/2 transform -translate-y-1/2"
+                    onClick={() => {
+                      // Lưu đáp án hiện tại và hiển thị modal nhập công thức cho đáp án
+                      setMathExpression("");
+                      setShowMathInput(true);
+                      // Thêm biến state để biết đang sửa đáp án nào
+                      setEditingAnswerIndex(index);
+                    }}
+                  >
+                    Σ
+                  </Button>
                 </div>
-              ))}
-            </Radio.Group>
-          </div>
-        );
+                <Radio value={answer}>
+                  {/* Hiển thị preview LaTeX cho đáp án */}
+                  {answer.includes("[MATH:") ? (
+                    renderQuestionWithMath(
+                      answer.replace(/\[MATH:(.*?)\]/g, 
+                        '<span class="katex-math" data-formula="$1">$$1</span>')
+                    )
+                  ) : (
+                    "Đúng"
+                  )}
+                </Radio>
+              </div>
+            ))}
+          </Radio.Group>
+        </div>
+      );
       
       case 2: // True/False
         return (
@@ -566,27 +618,39 @@ const saveEditedFormula = () => {
   };
 
   // 🟢 Hiển thị thông tin câu hỏi trong danh sách
-const renderQuestionContent = (question) => {
-  switch (question.typeId) {
-    case 1: // Trắc nghiệm
-      return (
-        <>
-          <p><strong>Loại câu hỏi:</strong> Trắc nghiệm</p>
-          <p><strong>Đáp án:</strong></p>
-          {question.answers && question.answers.length > 0 ? (
-            question.answers.map((answer, index) => (
-              <p key={index}>
-                {answer} {question.correctAnswers.includes(answer) && " ✅"}
-              </p>
-            ))
-          ) : (
-            <p className="text-red-500">⚠️ Lỗi: Câu hỏi trắc nghiệm phải có ít nhất một đáp án!</p>
-          )}
-          {question.solution && (
-            <p><strong>Giải thích:</strong> {question.solution}</p>
-          )}
-        </>
-      );
+  const renderQuestionContent = (question) => {
+    switch (question.typeId) {
+      case 1: // Trắc nghiệm
+        return (
+          <>
+            <p><strong>Loại câu hỏi:</strong> Trắc nghiệm</p>
+            <p><strong>Đáp án:</strong></p>
+            {question.answers && question.answers.length > 0 ? (
+              question.answers.map((answer, index) => (
+                <p key={index}>
+                  {answer.includes("[MATH:") ? (
+                    <>
+                      {renderQuestionWithMath(
+                        answer.replace(/\[MATH:(.*?)\]/g, 
+                          '<span class="katex-math" data-formula="$1">$$1</span>')
+                      )}
+                      {question.correctAnswers.includes(answer) && " ✅"}
+                    </>
+                  ) : (
+                    <>
+                      {answer} {question.correctAnswers.includes(answer) && " ✅"}
+                    </>
+                  )}
+                </p>
+              ))
+            ) : (
+              <p className="text-red-500">⚠️ Lỗi: Câu hỏi trắc nghiệm phải có ít nhất một đáp án!</p>
+            )}
+            {question.solution && (
+              <p><strong>Giải thích:</strong> {question.solution}</p>
+            )}
+          </>
+        );
 
     case 2: // True/False
       return (
@@ -622,14 +686,18 @@ const renderQuestionContent = (question) => {
       return <p className="text-red-500">⚠️ Lỗi: Loại câu hỏi không xác định!</p>;
   }
 };
-;
+
 // Thêm hàm renderMathInput
 const renderMathInput = () => {
   if (!showMathInput) return null;
 
   return (
     <div className="math-input-container border p-4 mb-4 bg-gray-50 rounded">
-      <h4 className="font-semibold mb-2">Nhập công thức toán học</h4>
+      <h4 className="font-semibold mb-2">
+        {editingAnswerIndex !== null 
+          ? `Nhập công thức toán học cho đáp án ${editingAnswerIndex + 1}` 
+          : "Nhập công thức toán học"}
+      </h4>
       <p className="text-sm text-gray-600 mb-2">
         Sử dụng cú pháp LaTeX. Ví dụ: <code>{"\\frac{a}{b}"}</code>, <code>{"\\sqrt{x}"}</code>, <code>{"x^2"}</code>
       </p>
@@ -657,7 +725,10 @@ const renderMathInput = () => {
           className="flex-grow mr-2"
         />
         <Button type="primary" onClick={insertMathFormula}>Chèn</Button>
-        <Button className="ml-2" onClick={() => setShowMathInput(false)}>Hủy</Button>
+        <Button className="ml-2" onClick={() => {
+          setShowMathInput(false);
+          setEditingAnswerIndex(null);
+        }}>Hủy</Button>
       </div>
 
       {mathExpression && (
