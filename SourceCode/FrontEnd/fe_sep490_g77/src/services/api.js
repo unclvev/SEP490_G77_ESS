@@ -26,14 +26,21 @@ export const createExam = () => Http.get("/")
 
 export const getExams = () => Http.get("/exam")
 
-//export const getExam = () => Http.get("/exam")
+export const getExam = (examid) => Http.get(`/Exam/${examid}`)
 
 export const delExam = (examid) => Http.delete(`/Exam/${examid}`);
 
 export const updateExam = (examid, data) => Http.put(`/Exam/${examid}`, data)
 
+
+export const loadbExams = () => Http.get(`/Exam/loadbs`);
+
+export const loadbExam = (bankId) => Http.get(`/Exam/loadb/${bankId}`);
+
+export const countQExam = (examid) => Http.get(`/Exam/${examid}/question-counts`);
+
 //exam-analysis-api
-//export const
+
 
 //question-api
 

@@ -61,13 +61,17 @@ public partial class EssDbV11Context : DbContext
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
+
         => optionsBuilder.UseSqlServer("server=qtrumlee;user=sa;password=root;database=ess_db_v11;TrustServerCertificate=True;Encrypt=False");
+
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Account>(entity =>
         {
+
             entity.HasKey(e => e.AccId).HasName("PK__Account__9A20D554DBA6677B");
+
 
             entity.ToTable("Account");
 
@@ -107,7 +111,9 @@ public partial class EssDbV11Context : DbContext
 
         modelBuilder.Entity<AuditLog>(entity =>
         {
+
             entity.HasKey(e => e.AuditId).HasName("PK__AuditLog__5AF33E33D3A66DD1");
+
 
             entity.ToTable("AuditLog");
 
@@ -133,7 +139,9 @@ public partial class EssDbV11Context : DbContext
 
         modelBuilder.Entity<Bank>(entity =>
         {
+
             entity.HasKey(e => e.BankId).HasName("PK__Bank__4076F70348E1903C");
+
 
             entity.ToTable("Bank");
 
@@ -157,7 +165,7 @@ public partial class EssDbV11Context : DbContext
 
             entity.HasOne(d => d.Curriculum).WithMany(p => p.Banks)
                 .HasForeignKey(d => d.CurriculumId)
-                .HasConstraintName("FK__Bank__curriculum__71D1E811");
+                .HasConstraintName("FK__Bank__curriculum__5FB337D6");
 
             entity.HasOne(d => d.Grade).WithMany(p => p.Banks)
                 .HasForeignKey(d => d.GradeId)
@@ -170,7 +178,9 @@ public partial class EssDbV11Context : DbContext
 
         modelBuilder.Entity<BankAccess>(entity =>
         {
+
             entity.HasKey(e => e.BankaccessId).HasName("PK__BankAcce__311022BBBB0397EE");
+
 
             entity.ToTable("BankAccess");
 
@@ -183,6 +193,12 @@ public partial class EssDbV11Context : DbContext
             entity.Property(e => e.Canview)
                 .HasDefaultValue(false)
                 .HasColumnName("canview");
+
+            entity.Property(e => e.Role)
+                .HasMaxLength(20)
+                .HasColumnName("role");
+
+
 
             entity.HasOne(d => d.Acc).WithMany(p => p.BankAccesses)
                 .HasForeignKey(d => d.Accid)
@@ -197,7 +213,9 @@ public partial class EssDbV11Context : DbContext
 
         modelBuilder.Entity<BankLogger>(entity =>
         {
+
             entity.HasKey(e => e.LogId).HasName("PK__BankLogg__9E2397E04CFFCDBC");
+
 
             entity.ToTable("BankLogger");
 
@@ -217,7 +235,9 @@ public partial class EssDbV11Context : DbContext
 
         modelBuilder.Entity<CorrectAnswer>(entity =>
         {
+
             entity.HasKey(e => e.AnsId).HasName("PK__Correct___24F9FB17A09607A0");
+
 
             entity.ToTable("Correct_Answer");
 
@@ -232,6 +252,7 @@ public partial class EssDbV11Context : DbContext
 
         modelBuilder.Entity<Curriculum>(entity =>
         {
+
             entity.HasKey(e => e.CurriculumId).HasName("PK__Curricul__17583C765B0AF4C3");
 
             entity.ToTable("Curriculum");
@@ -256,8 +277,8 @@ public partial class EssDbV11Context : DbContext
 
         modelBuilder.Entity<DefaultSectionHierarchy>(entity =>
         {
-            entity.HasKey(e => e.DfSectionId).HasName("PK__Default___81C01AEA2239CDA5");
 
+            entity.HasKey(e => e.DfSectionId).HasName("PK__Default___81C01AEA2239CDA5");
             entity.ToTable("Default_Section_Hierarchy");
 
             entity.Property(e => e.DfSectionId).HasColumnName("df_section_id");
@@ -269,12 +290,14 @@ public partial class EssDbV11Context : DbContext
 
             entity.HasOne(d => d.Curriculum).WithMany(p => p.DefaultSectionHierarchies)
                 .HasForeignKey(d => d.CurriculumId)
-                .HasConstraintName("FK__Default_S__curri__7B5B524B");
+                .HasConstraintName("FK__Default_S__curri__693CA210");
         });
 
         modelBuilder.Entity<Exam>(entity =>
         {
+
             entity.HasKey(e => e.ExamId).HasName("PK__Exam__9C8C7BE9D7C905C8");
+
 
             entity.ToTable("Exam");
 
@@ -286,9 +309,11 @@ public partial class EssDbV11Context : DbContext
             entity.Property(e => e.Createdate)
                 .HasColumnType("datetime")
                 .HasColumnName("createdate");
+
             entity.Property(e => e.ExamType)
                 .HasMaxLength(50)
                 .HasColumnName("exam_type");
+
             entity.Property(e => e.Examdata).HasColumnName("examdata");
             entity.Property(e => e.Examname)
                 .HasMaxLength(50)
@@ -307,7 +332,9 @@ public partial class EssDbV11Context : DbContext
 
         modelBuilder.Entity<Grade>(entity =>
         {
+
             entity.HasKey(e => e.GradeId).HasName("PK__Grade__3A8F732C6FFAF895");
+
 
             entity.ToTable("Grade");
 
@@ -320,6 +347,7 @@ public partial class EssDbV11Context : DbContext
 
         modelBuilder.Entity<Level>(entity =>
         {
+
             entity.HasKey(e => e.LevelId).HasName("PK__Level__03461643BD770162");
 
             entity.ToTable("Level");
@@ -332,7 +360,9 @@ public partial class EssDbV11Context : DbContext
 
         modelBuilder.Entity<Permission>(entity =>
         {
+
             entity.HasKey(e => e.PermissionId).HasName("PK__Permissi__E5331AFAA4DE3ABC");
+
 
             entity.ToTable("Permission");
 
@@ -345,7 +375,9 @@ public partial class EssDbV11Context : DbContext
 
         modelBuilder.Entity<Question>(entity =>
         {
+
             entity.HasKey(e => e.Quesid).HasName("PK__Question__8FF5F51D83B4FC13");
+
 
             entity.ToTable("Question");
 
@@ -400,7 +432,9 @@ public partial class EssDbV11Context : DbContext
 
         modelBuilder.Entity<Role>(entity =>
         {
+
             entity.HasKey(e => e.RoleId).HasName("PK__Role__760965CC6BF6A1D7");
+
 
             entity.ToTable("Role");
 
@@ -413,6 +447,7 @@ public partial class EssDbV11Context : DbContext
 
         modelBuilder.Entity<RolePermission>(entity =>
         {
+
             entity.HasKey(e => e.Id).HasName("PK__RolePerm__3213E83F2488B1DC");
 
             entity.ToTable("RolePermission");
@@ -438,7 +473,9 @@ public partial class EssDbV11Context : DbContext
 
         modelBuilder.Entity<Section>(entity =>
         {
+
             entity.HasKey(e => e.Secid).HasName("PK__Section__C25197F038212F33");
+
 
             entity.ToTable("Section");
 
@@ -455,7 +492,9 @@ public partial class EssDbV11Context : DbContext
 
         modelBuilder.Entity<SectionHierarchy>(entity =>
         {
+
             entity.HasKey(e => e.SectionHierarchyId).HasName("PK__SectionH__2983E0FFE91C439B");
+
 
             entity.ToTable("SectionHierarchy");
 
@@ -516,7 +555,9 @@ public partial class EssDbV11Context : DbContext
 
         modelBuilder.Entity<Subject>(entity =>
         {
+
             entity.HasKey(e => e.SubjectId).HasName("PK__Subject__5004F660017919F9");
+
 
             entity.ToTable("Subject");
 
@@ -529,7 +570,9 @@ public partial class EssDbV11Context : DbContext
 
         modelBuilder.Entity<TypeAwswerSheet>(entity =>
         {
+
             entity.HasKey(e => e.TypeAnswerSheetId).HasName("PK__Type_Aws__E7464B653E1C7818");
+
 
             entity.ToTable("Type_Awswer_Sheet");
 
@@ -542,7 +585,9 @@ public partial class EssDbV11Context : DbContext
 
         modelBuilder.Entity<TypeQuestion>(entity =>
         {
+
             entity.HasKey(e => e.TypeId).HasName("PK__Type_Que__2C0005981B4E6A02");
+
 
             entity.ToTable("Type_Question");
 
