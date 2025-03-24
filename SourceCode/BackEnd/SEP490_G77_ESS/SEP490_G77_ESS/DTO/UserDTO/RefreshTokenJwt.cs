@@ -1,6 +1,6 @@
 ﻿namespace SEP490_G77_ESS.DTO.UserDTO
 {
-    public class RefreshToken
+    public class RefreshTokenJwt
     {
         public string Token { get; set; } = string.Empty;
         public DateTime Created { get; set; } = DateTime.Now;

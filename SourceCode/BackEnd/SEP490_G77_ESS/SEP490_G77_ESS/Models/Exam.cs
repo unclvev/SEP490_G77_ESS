@@ -15,5 +15,15 @@ public partial class Exam
 
     public string? Examdata { get; set; }
 
+    public string? Grade { get; set; }
+
+    public string? Subject { get; set; }
+
+    public string? Classname { get; set; }
+
+    public string? ExamType { get; set; }
+
     public virtual Account? Acc { get; set; }
+
+    public virtual ICollection<StudentResult> StudentResults { get; set; } = new List<StudentResult>();
 }
