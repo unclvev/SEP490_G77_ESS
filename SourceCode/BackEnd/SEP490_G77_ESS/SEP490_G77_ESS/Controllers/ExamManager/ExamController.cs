@@ -321,6 +321,19 @@ namespace SEP490_G77_ESS.Controllers.ExamManager
             return Ok(questionCounts);
         }
 
+        [HttpGet("subject-name/{subjectId}")]
+        public async Task<IActionResult> GetSubjectNameById(long subjectId)
+        {
+            var subject = await _context.Subjects.FindAsync(subjectId);
+            if (subject == null)
+            {
+                return NotFound(new { message = "Không tìm thấy môn học với ID đã cho." });
+            }
+            return Ok(new
+            {
+                subjectName = subject.SubjectName
+            });
+        }
     }
 
 }

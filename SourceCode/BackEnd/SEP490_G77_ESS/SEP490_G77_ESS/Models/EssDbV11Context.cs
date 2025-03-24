@@ -193,6 +193,7 @@ public partial class EssDbV11Context : DbContext
             entity.Property(e => e.Canview)
                 .HasDefaultValue(false)
                 .HasColumnName("canview");
+            entity.Property(e => e.Role).HasMaxLength(20);
 
             entity.Property(e => e.Role)
                 .HasMaxLength(20)

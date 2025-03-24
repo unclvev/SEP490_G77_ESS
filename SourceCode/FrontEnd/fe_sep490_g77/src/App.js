@@ -52,7 +52,7 @@ function App() {
           <Route path="/exam/content" element={<MainLayout><ExamDetail /></MainLayout>} />
           <Route path="/exam/matrix" element={<MainLayout><ExamCreation /></MainLayout>} />
           <Route path="/exam/preview" element={<MainLayout><ExamPreview /></MainLayout>} />
-          <Route path="/exam/analysis" element={<MainLayout><Analysis /></MainLayout>} />
+          <Route path="/exam/analysis/:examId" element={<MainLayout><Analysis /></MainLayout>} />
           <Route path="/essay/genqr" element={<MainLayout><GenQRCode></GenQRCode></MainLayout>}/>
           <Route path="/essay/preview-gen-qr" element={<MainLayout><PreviewGenQR></PreviewGenQR></MainLayout>}/>
           <Route path="/essay/import" element={<MainLayout><ImportEssayPage></ImportEssayPage></MainLayout>}/>
