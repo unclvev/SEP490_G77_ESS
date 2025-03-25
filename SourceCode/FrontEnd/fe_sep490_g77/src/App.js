@@ -26,7 +26,8 @@ import PreviewGenQR from "./page/Essay/PreviewGenQr";
 import CreateEssayExam from "./page/Essay/CreateEssayExam";
 import ImportEssayPage from "./page/Essay/ImportEssayPage";
 import Home from "./page/Home/Home";
-
+import EssQuestionBankDetail from "./page/Bank/QuestionBank/EssQuestionBankDetail.js";
+import EssQuestionList from "./page/Bank/QuestionBank/EssQuestionList.js";
 function App() {
   return (
     <Provider store={store}> {/* Thêm Provider */}
@@ -47,6 +48,8 @@ function App() {
           <Route path="/create-question-bank" element={<MainLayout><CreateQuestionBank /></MainLayout>} />
           <Route path="/decentralization" element={<MainLayout><Decentralization /></MainLayout>} />
           <Route path="/question-list/:sectionId" element={<MainLayout><QuestionList /></MainLayout>} />
+          <Route path="/default-bank-detail/:bankId" element={<MainLayout><EssQuestionBankDetail /></MainLayout>} />
+          <Route path="/default-bank/:sectionId/questions" element={<EssQuestionList />} />
 
           <Route path="/exam" element={<MainLayout><ExamManagement /></MainLayout>} />
           <Route path="/exam/content" element={<MainLayout><ExamDetail /></MainLayout>} />

@@ -14,6 +14,8 @@
     {
         public long Secid { get; set; }
         public string Secname { get; set; }
+        public List<SectionDto> Children { get; set; } = new List<SectionDto>();
+
     }
 
 }

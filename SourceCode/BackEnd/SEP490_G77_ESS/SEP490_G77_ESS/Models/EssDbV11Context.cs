@@ -284,15 +284,32 @@ public partial class EssDbV11Context : DbContext
 
             entity.Property(e => e.DfSectionId).HasColumnName("df_section_id");
             entity.Property(e => e.CurriculumId).HasColumnName("curriculum_id");
+            entity.Property(e => e.GradeId).HasColumnName("grade_id");
+            entity.Property(e => e.SubjectId).HasColumnName("subject_id");
             entity.Property(e => e.DfInformation).HasColumnName("df_information");
             entity.Property(e => e.DfSectionName)
                 .HasMaxLength(255)
                 .HasColumnName("df_section_name");
 
+            // ✅ Thêm quan hệ cha - con
+            entity.Property(e => e.AncestorId).HasColumnName("ancestor_id");
+            entity.Property(e => e.DescendantId).HasColumnName("descendant_id");
+            entity.Property(e => e.Depth).HasColumnName("depth");
+
             entity.HasOne(d => d.Curriculum).WithMany(p => p.DefaultSectionHierarchies)
-                .HasForeignKey(d => d.CurriculumId)
-                .HasConstraintName("FK__Default_S__curri__693CA210");
-        });
+        .HasForeignKey(d => d.CurriculumId)
+        .HasConstraintName("FK__Default_S__curri__7B5B524B");
+
+    entity.HasOne(d => d.Grade).WithMany()
+        .HasForeignKey(d => d.GradeId)
+        .HasConstraintName("FK_DefaultSectionHierarchy_Grade");
+
+    entity.HasOne(d => d.Subject).WithMany()
+        .HasForeignKey(d => d.SubjectId)
+        .HasConstraintName("FK_DefaultSectionHierarchy_Subject");
+});
+
+
 
         modelBuilder.Entity<Exam>(entity =>
         {
@@ -389,6 +406,9 @@ public partial class EssDbV11Context : DbContext
             entity.Property(e => e.Secid).HasColumnName("secid");
             entity.Property(e => e.Solution).HasColumnName("solution");
             entity.Property(e => e.TypeId).HasColumnName("type_id");
+            entity.Property(e => e.DfSectionId).HasColumnName("df_section_id"); // ✅ Thêm cột mới
+            entity.Property(e => e.ImageUrl).HasColumnName("ImageUrl");
+
 
             entity.HasOne(d => d.Mode).WithMany(p => p.Questions)
                 .HasForeignKey(d => d.Modeid)
@@ -402,6 +422,10 @@ public partial class EssDbV11Context : DbContext
                 .HasForeignKey(d => d.TypeId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Question_Type");
+            entity.HasOne(d => d.DefaultSection)
+        .WithMany()
+        .HasForeignKey(d => d.DfSectionId)
+        .HasConstraintName("FK_Question_Default_Section_Hierarchy"); // ✅ Thiết lập khóa ngoại
         });
 
         modelBuilder.Entity<RefreshToken>(entity =>

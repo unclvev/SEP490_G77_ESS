@@ -25,5 +25,12 @@ public partial class Question
 
     public virtual Section? Sec { get; set; }
 
+    public long? DfSectionId { get; set; }
+
+    public virtual DefaultSectionHierarchy? DefaultSection { get; set; }
+
+
     public virtual TypeQuestion Type { get; set; } = null!;
+
+    public string? ImageUrl { get; set; } // ✅ Thêm dòng này
 }

@@ -9,6 +9,7 @@ using SEP490_G77_ESS.Services;
 using SEP490_G77_ESS.Utils;
 using Swashbuckle.AspNetCore.Filters;
 using System.Text;
+using Microsoft.Extensions.FileProviders;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -70,9 +71,22 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseCors("AllowAllOrigins");
 
+
+// Add this before app.Run()
+// Update the UseStaticFiles configuration
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(
+        Path.Combine(builder.Environment.WebRootPath, "images")),
+    RequestPath = "/images"
+});
+
+
+app.UseCors("AllowAllOrigins");
+app.UseAuthentication();
 app.UseAuthorization();
+
 
 app.MapControllers();
 
