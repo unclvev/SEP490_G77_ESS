@@ -6,17 +6,42 @@ export const register = (data) => Http.post("/Register", data)
 
 export const login = (data) => Http.post("/Login", data)
 
+export const forgotPassword = (data) =>
+    Http.get("/ForgotPassword/forgot-password", { params: data });
+export const resetPassword = (params) => {
+    return Http.post("/ForgotPassword/reset-password", null, { params });
+  };
+  
+  
+  //profile-api
+  export const getProfile = () => Http.get("/Profile/info");
+
+  export const updateProfile = (data) => Http.put("/Profile/update", data);
+  
+  export const changePassword = (data) => Http.put("/Profile/changePassword", data);
+
 //exam-api
 
 export const createExam = () => Http.get("/")
 
 export const getExams = () => Http.get("/exam")
 
-//export const getExam = () => Http.get("/exam")
+export const getExam = (examid) => Http.get(`/Exam/${examid}`)
 
 export const delExam = (examid) => Http.delete(`/Exam/${examid}`);
 
 export const updateExam = (examid, data) => Http.put(`/Exam/${examid}`, data)
+
+export const loadbExams = () => Http.get(`/Exam/loadbs`);
+
+export const loadbExam = (bankId) => Http.get(`/Exam/loadb/${bankId}`);
+
+export const countQExam = (examid) => Http.get(`/Exam/${examid}/question-counts`);
+
+export const getSubjectNameById = (subjectId) => Http.get(`/Exam/subject-name/${subjectId}`)
+
+//exam-analysis-api
+export const getExamResults = (examid) => Http.get(`/Analysis/${examid}`)
 
 //question-api
 

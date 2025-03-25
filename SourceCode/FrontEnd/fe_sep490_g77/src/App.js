@@ -20,8 +20,11 @@ import ExamDetail from "./page/Exam/ExamContent";
 import ExamManagement from "./page/Exam/ExamManager";
 import ExamCreation from "./page/Exam/ExamMatrix";
 import ExamPreview from "./page/Exam/ExamPreview";
-import GenQRCode from "./page/GenQRCode/CreateQRCode.js"
-import PreviewGenQR from "./page/GenQRCode/PreviewGenQr"
+import MainLayout2 from "./newLayout/MainLayout";
+import GenQRCode from "./page/Essay/CreateQRCode.js";
+import PreviewGenQR from "./page/Essay/PreviewGenQr";
+import CreateEssayExam from "./page/Essay/CreateEssayExam";
+import ImportEssayPage from "./page/Essay/ImportEssayPage";
 import Home from "./page/Home/Home";
 import EssQuestionBankDetail from "./page/Bank/QuestionBank/EssQuestionBankDetail.js";
 import EssQuestionList from "./page/Bank/QuestionBank/EssQuestionList.js";
@@ -30,6 +33,7 @@ function App() {
     <Provider store={store}> {/* Thêm Provider */}
       <Router>
         <Routes>
+          
           {/* Home dùng Sidebar riêng */}
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<LoginPage />} />
@@ -37,6 +41,7 @@ function App() {
           <Route path="/profile" element={<Profile /> } />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/MainLayout2" element={<MainLayout2 />} />
           {/* Các trang khác bọc trong MainLayout */}
           <Route path="/question-bank" element={<MainLayout><QuestionBank /></MainLayout>} />
           <Route path="/question-bank-detail/:bankId" element={<MainLayout><QuestionBankDetail /></MainLayout>} />
@@ -50,9 +55,11 @@ function App() {
           <Route path="/exam/content" element={<MainLayout><ExamDetail /></MainLayout>} />
           <Route path="/exam/matrix" element={<MainLayout><ExamCreation /></MainLayout>} />
           <Route path="/exam/preview" element={<MainLayout><ExamPreview /></MainLayout>} />
-          <Route path="/exam/analysis" element={<MainLayout><Analysis /></MainLayout>} />
-        <Route path="/genqr" element={<MainLayout><GenQRCode></GenQRCode></MainLayout>}/>
-        <Route path="/preview-gen-qr" element={<MainLayout><PreviewGenQR></PreviewGenQR></MainLayout>}/>
+          <Route path="/exam/analysis/:examId" element={<MainLayout><Analysis /></MainLayout>} />
+          <Route path="/essay/genqr" element={<MainLayout><GenQRCode></GenQRCode></MainLayout>}/>
+          <Route path="/essay/preview-gen-qr" element={<MainLayout><PreviewGenQR></PreviewGenQR></MainLayout>}/>
+          <Route path="/essay/import" element={<MainLayout><ImportEssayPage></ImportEssayPage></MainLayout>}/>
+          <Route path="/essay" element={<MainLayout><CreateEssayExam></CreateEssayExam></MainLayout>}/>
         </Routes>
       </Router>
                                                 

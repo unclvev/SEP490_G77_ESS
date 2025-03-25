@@ -14,6 +14,8 @@ public partial class BankAccess
     public bool? Canedit { get; set; }
 
     public bool? Canview { get; set; }
+    public string? Role { get; set; }
+
 
     public string? Role { get; set; }
 
