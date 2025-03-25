@@ -28,6 +28,15 @@ namespace SEP490_G77_ESS.Controllers.Common
         [HttpPost]
         public async Task<IActionResult> Register([FromBody] RegisterDTO registerDto)
         {
+            if (string.IsNullOrWhiteSpace(registerDto.Username) ||
+                string.IsNullOrWhiteSpace(registerDto.Password) ||
+                string.IsNullOrWhiteSpace(registerDto.Email) ||
+                string.IsNullOrWhiteSpace(registerDto.Phone) ||
+                registerDto.Datejoin == null)
+            {
+                return BadRequest(new { message = "Tất cả các trường đều bắt buộc" });
+            }
+
             if (string.IsNullOrWhiteSpace(registerDto.Username) || string.IsNullOrWhiteSpace(registerDto.Password))
             {
                 return BadRequest(new { message = "Username and password are required" });
@@ -38,7 +47,27 @@ namespace SEP490_G77_ESS.Controllers.Common
                 return Conflict(new { message = "Email đã tồn tại" });
             }
 
-            // Tạo tài khoản mới (chưa kích hoạt)
+            if (!System.Text.RegularExpressions.Regex.IsMatch(registerDto.Phone, @"^\d{10}$"))
+            {
+                return BadRequest(new { message = "Số điện thoại phải gồm đúng 10 chữ số" });
+            }
+
+            if (registerDto.Datejoin > DateTime.Now)
+            {
+                return BadRequest(new { message = "Ngày sinh không thể là ngày trong tương lai" });
+            }
+            
+            int age = DateTime.Now.Year - registerDto.Datejoin.Value.Year;
+            if (registerDto.Datejoin > DateTime.Now.AddYears(-age))
+            {
+                age--;
+            }
+            if (age < 16)
+            {
+                return BadRequest(new { message = "Bạn phải đủ 16 tuổi để đăng ký" });
+            }
+
+
             var account = new Account
             {
                 Username = registerDto.Username,
@@ -71,7 +100,6 @@ namespace SEP490_G77_ESS.Controllers.Common
                 return NotFound(new { message = "Người dùng không tồn tại hoặc token không hợp lệ." });
             }
 
-            // Kiểm tra thời gian xác thực: nếu quá 5 phút kể từ thời điểm đăng ký
             if (user.ResetTokenExpires.HasValue && (DateTime.Now - user.ResetTokenExpires.Value).TotalMinutes > 5)
             {
                 _context.Accounts.Remove(user);
@@ -79,7 +107,6 @@ namespace SEP490_G77_ESS.Controllers.Common
                 return BadRequest(new { message = "Thời gian xác thực đã quá 5 phút, vui lòng đăng ký lại." });
             }
 
-            // Nếu trong khoảng thời gian cho phép, kích hoạt tài khoản
             user.IsActive = 1;
             _context.Accounts.Update(user);
             await _context.SaveChangesAsync();

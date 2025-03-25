@@ -14,7 +14,6 @@ namespace SEP490_G77_ESS.Controllers.Common
         private readonly EssDbV11Context _context;
         private readonly JWT _jwt;
         private readonly PasswordHandler _passwordHandler;
-        private static Account user = new Account();
 
         public LoginController(EssDbV11Context context, JWT jwt, PasswordHandler passwordHandler)
         {
@@ -24,46 +23,54 @@ namespace SEP490_G77_ESS.Controllers.Common
         }
 
         [HttpPost]
-        
-        public IActionResult Login([FromBody] LoginDTO user)
+        public IActionResult Login([FromBody] LoginDTO loginDto)
         {
-            var userLogin = _context.Accounts.FirstOrDefault(x => x.Email == user.Username);
-            if (userLogin == null || !_passwordHandler.VerifyPassword(user.Password, userLogin.Userpass))
+            var userLogin = _context.Accounts.FirstOrDefault(x => x.Email == loginDto.Username);
+            if (userLogin == null || !_passwordHandler.VerifyPassword(loginDto.Password, userLogin.Userpass))
             {
-                return Unauthorized(new { message = "Invalid username or password" });
+                return Unauthorized(new { message = "Sai tên đăng nhập hoặc mật khẩu" });
             }
-            var jwt = _jwt.CreateJWTToken(userLogin, 1);
 
+            // Tạo JWT với thông tin user và role (ở đây role truyền vào là 1, có thể thay đổi theo nhu cầu)
+            var jwtToken = _jwt.CreateJWTToken(userLogin, 1);
 
-            //var refreshToken = GenerateRefreshToken();
-            //SetRefreshToken(refreshToken);
+            // Nếu muốn sử dụng refresh token, tạo và thiết lập cho người dùng
+            var refreshToken = GenerateRefreshToken();
+            SaveRefreshToken(userLogin, refreshToken);
 
-            return Ok(jwt);
-            
+            // Lưu các thay đổi vào cơ sở dữ liệu
+            _context.SaveChanges();
+
+            return Ok(new { token = jwtToken, refreshToken = refreshToken.Token });
         }
-        //private RefreshToken GenerateRefreshToken()
-        //{
-        //    var refreshToken = new RefreshToken
-        //    {
-        //        Token = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64)),
-        //        Expires = DateTime.Now.AddDays(7),
-        //        Created = DateTime.Now
-        //    };
 
-        //    return refreshToken;
-        //}
-        //private void SetRefreshToken(RefreshToken newRefreshToken)
-        //{
-        //    var cookieOptions = new CookieOptions
-        //    {
-        //        HttpOnly = true,
-        //        Expires = newRefreshToken.Expires
-        //    };
-        //    Response.Cookies.Append("refreshToken", newRefreshToken.Token, cookieOptions);
+        private RefreshToken GenerateRefreshToken()
+        {
+            var refreshToken = new RefreshToken
+            {
+                Token = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64)),
+                Expires = DateTime.Now.AddDays(7),
+                Created = DateTime.Now
+            };
+            return refreshToken;
+        }
 
-        //    user.re = newRefreshToken.Token;
-        //    user.RefreshTokenCreate = newRefreshToken.Created;
-        //    user.RefreshTokenExpiryTime = newRefreshToken.Expires;
-        //}
+        private void SaveRefreshToken(Models.Account account, RefreshToken newRefreshToken)
+        {
+            // Thiết lập thông tin khóa ngoại
+            newRefreshToken.AccountId = account.AccId;
+
+            // Thêm refresh token vào DbSet
+            _context.RefreshTokens.Add(newRefreshToken);
+
+            // Thiết lập cookie cho refresh token
+            var cookieOptions = new CookieOptions
+            {
+                HttpOnly = true,
+                Expires = newRefreshToken.Expires
+            };
+            Response.Cookies.Append("refreshToken", newRefreshToken.Token, cookieOptions);
+        }
+
     }
 }

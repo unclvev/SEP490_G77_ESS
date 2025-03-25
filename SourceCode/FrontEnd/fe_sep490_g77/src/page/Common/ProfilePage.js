@@ -1,43 +1,89 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { useSelector } from 'react-redux';
+import { jwtDecode } from 'jwt-decode';
 import { Form, Input, Select, Button, Avatar } from 'antd';
 import { UserOutlined } from '@ant-design/icons';
+import { toast } from 'react-toastify';
+import { getProfile, updateProfile, changePassword } from '../../services/api';
 
 const { Option } = Select;
 
 const ProfilePage = () => {
   const [form] = Form.useForm();
   const [passwordForm] = Form.useForm();
-
-  // State lưu URL ảnh đại diện
   const [avatarUrl, setAvatarUrl] = useState('https://via.placeholder.com/150');
-  // Dùng useRef để trỏ đến thẻ input file ẩn
   const fileInputRef = useRef(null);
 
-  const handleUpdateInfo = (values) => {
-    console.log('Thông tin cá nhân:', values);
-    // TODO: Gửi thông tin lên server qua API
+  // ✅ Lấy token từ Redux và decode
+  const token = useSelector((state) => state.token);
+  let accid = null;
+
+  if (token) {
+    try {
+      const decoded = jwtDecode(token);
+      accid = decoded.AccId || null;
+    } catch (error) {
+      console.error('Invalid token', error);
+    }
+  }
+
+  useEffect(() => {
+    getProfile()
+      .then((response) => {
+        const profile = response.data;
+        form.setFieldsValue({
+          accname: profile.accname,
+          phone: profile.phone,
+          gender: profile.gender,
+          address: profile.address,
+          subject: profile.subject,
+          skill: profile.skill,
+          email: profile.email,
+        });
+        if (profile.avatarUrl) {
+          setAvatarUrl(profile.avatarUrl);
+        }
+      })
+      .catch(() => {
+        toast.error('Không thể tải thông tin người dùng!');
+      });
+  }, [form]);
+
+  const handleUpdateInfo = async (values) => {
+    const payload = { ...values, avatarUrl };
+    try {
+      await updateProfile(payload);
+      toast.success('Cập nhật thông tin thành công!');
+    } catch (error) {
+      const errMsg =
+        error.response?.data?.message || 'Cập nhật thông tin thất bại!';
+      toast.error(errMsg);
+    }
   };
 
-  const handleChangePassword = (values) => {
-    console.log('Đổi mật khẩu:', values);
-    // TODO: Gửi mật khẩu cũ/mới lên server để xử lý
+  const handleChangePassword = async (values) => {
+    try {
+      await changePassword(values);
+      toast.success('Đổi mật khẩu thành công!');
+      passwordForm.resetFields();
+    } catch (error) {
+      const errMsg =
+        error.response?.data?.message || 'Đổi mật khẩu thất bại!';
+      toast.error(errMsg);
+    }
   };
 
-  // Khi người dùng nhấn vào Avatar, kích hoạt input file
   const handleAvatarClick = () => {
     if (fileInputRef.current) {
       fileInputRef.current.click();
     }
   };
 
-  // Khi người dùng chọn file, ta đọc file và cập nhật avatarUrl
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
     const reader = new FileReader();
     reader.onload = (event) => {
-      // event.target.result là chuỗi base64 của ảnh
       setAvatarUrl(event.target.result);
     };
     reader.readAsDataURL(file);
@@ -45,18 +91,15 @@ const ProfilePage = () => {
 
   return (
     <div className="max-w-5xl mx-auto my-10">
-      {/* Header - Thông tin người dùng */}
       <div className="flex items-center justify-between bg-gradient-to-r from-blue-200 to-blue-50 p-6 rounded-md shadow-sm">
         <div className="flex items-center">
-          {/* Avatar (nhấn vào để chọn ảnh) */}
           <Avatar
             size={64}
             icon={<UserOutlined />}
-            src={avatarUrl} 
+            src={avatarUrl}
             className="mr-4 cursor-pointer"
             onClick={handleAvatarClick}
           />
-          {/* input file ẩn */}
           <input
             type="file"
             accept="image/*"
@@ -65,8 +108,16 @@ const ProfilePage = () => {
             style={{ display: 'none' }}
           />
           <div>
-            <h2 className="text-xl font-semibold mb-0">Nguyễn Hoàng Việt</h2>
-            <p className="text-sm text-gray-600">nhv298@gmail.com</p>
+            <h2 className="text-xl font-semibold mb-0">
+              {form.getFieldValue('accname') || 'Tên người dùng'}
+            </h2>
+            <p className="text-sm text-gray-600">
+              {form.getFieldValue('email') || 'Email người dùng'}
+            </p>
+            {/* ✅ Hiển thị AccId nếu có */}
+            {accid && (
+              <p className="text-xs text-gray-500">Mã tài khoản: {accid}</p>
+            )}
           </div>
         </div>
         <Button type="primary" className="rounded-full px-6">
@@ -74,7 +125,6 @@ const ProfilePage = () => {
         </Button>
       </div>
 
-      {/* Form cập nhật thông tin cá nhân */}
       <div className="mt-8">
         <Form
           form={form}
@@ -84,10 +134,18 @@ const ProfilePage = () => {
         >
           <Form.Item
             label="Tên đầy đủ"
-            name="fullName"
+            name="accname"
             rules={[{ required: true, message: 'Vui lòng nhập tên đầy đủ' }]}
           >
             <Input placeholder="Tên đầy đủ của bạn" />
+          </Form.Item>
+
+          <Form.Item
+            label="Email"
+            name="email"
+            rules={[{ required: true, message: 'Vui lòng nhập email' }]}
+          >
+            <Input placeholder="Email của bạn" />
           </Form.Item>
 
           <Form.Item
@@ -120,7 +178,7 @@ const ProfilePage = () => {
 
           <Form.Item
             label="Chuyên ngành"
-            name="major"
+            name="subject"
             rules={[{ required: true, message: 'Vui lòng nhập chuyên ngành' }]}
           >
             <Input placeholder="Chuyên ngành của bạn" />
@@ -128,7 +186,7 @@ const ProfilePage = () => {
 
           <Form.Item
             label="Trình độ"
-            name="level"
+            name="skill"
             rules={[{ required: true, message: 'Vui lòng nhập trình độ' }]}
           >
             <Input placeholder="Trình độ chuyên môn của bạn" />
@@ -142,7 +200,6 @@ const ProfilePage = () => {
         </Form>
       </div>
 
-      {/* Form đổi mật khẩu */}
       <div className="mt-10">
         <h3 className="text-xl font-semibold mb-4">Đổi mật khẩu</h3>
         <Form

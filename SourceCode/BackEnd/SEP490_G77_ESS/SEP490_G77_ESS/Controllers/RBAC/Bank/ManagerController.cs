@@ -136,7 +136,7 @@ namespace SEP490_G77_ESS.Controllers.RBAC.Bank
 
             userAccess.Canedit = dto.CanEdit;
             userAccess.Canview = dto.CanEdit || dto.CanView;
-            
+
             await _context.SaveChangesAsync();
             return Ok("Quyền truy cập đã được cập nhật.");
         }
