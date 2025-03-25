@@ -17,7 +17,7 @@ public partial class BankAccess
     public string? Role { get; set; }
 
 
-    public string? Role { get; set; }
+   
 
     public virtual Account Acc { get; set; } = null!;
 
