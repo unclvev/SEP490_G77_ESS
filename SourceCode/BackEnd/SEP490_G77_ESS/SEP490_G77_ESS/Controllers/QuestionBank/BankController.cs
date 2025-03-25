@@ -275,6 +275,7 @@ namespace SEP490_G77_ESS.Controllers
                     q.Modeid,
                     q.Solution,
                     q.AnswerContent,
+                    q.ImageUrl,
                     CorrectAnswers = _context.CorrectAnswers
                         .Where(a => a.Quesid == q.Quesid)
                         .Select(a => a.Content)
@@ -653,52 +654,90 @@ namespace SEP490_G77_ESS.Controllers
         [HttpGet("{bankId}/sections")]
         public async Task<ActionResult<IEnumerable<object>>> GetSectionsByBankId(long bankId)
         {
+            // Find the bank to ensure it exists
+            var bank = await _context.Banks.FindAsync(bankId);
+            if (bank == null)
+            {
+                return NotFound(new { message = "Không tìm thấy ngân hàng câu hỏi" });
+            }
+
+            // Get all sections for this bank
             var sections = await _context.Sections
                 .Where(s => s.BankId == bankId)
-                .ToListAsync();  // ✅ Lấy toàn bộ sections của Bank
+                .ToListAsync();
 
+            // Get section hierarchies for this bank
             var sectionHierarchies = await _context.SectionHierarchies
-                .ToListAsync();  // ✅ Lấy toàn bộ quan hệ cha - con
+                .Where(sh => sections.Select(s => s.Secid).Contains(sh.AncestorId) &&
+                             sections.Select(s => s.Secid).Contains(sh.DescendantId))
+                .ToListAsync();
 
+            // Get question counts for each section
             var questionCounts = await _context.Questions
-    .Where(q => q.Secid != null && sections.Select(s => s.Secid).Contains(q.Secid.Value))
-    .GroupBy(q => q.Secid)
-    .Select(g => new { Key = g.Key ?? 0, Count = g.Count() }) // ✅ Đảm bảo Key không null
-    .ToDictionaryAsync(g => g.Key, g => g.Count);  // ✅ Chuyển thành Dictionary<long, int>
+                .Where(q => q.Secid != null && sections.Select(s => s.Secid).Contains(q.Secid.Value))
+                .GroupBy(q => q.Secid)
+                .Select(g => new {
+                    Key = g.Key ?? 0,
+                    Count = g.Count()
+                })
+                .ToDictionaryAsync(g => g.Key, g => g.Count);
 
-            var sectionTree = sections
-                .Where(s => !sectionHierarchies.Any(sh => sh.DescendantId == s.Secid))  // ✅ Chỉ lấy các section gốc
-                .Select(s => BuildSectionTree(s, sections, sectionHierarchies, questionCounts))
+            var descendantIds = sectionHierarchies
+      .Where(h => h.AncestorId != h.DescendantId)
+      .Select(h => h.DescendantId)
+      .ToHashSet();
+
+            var rootSections = sectionHierarchies
+                .Where(h => h.AncestorId == h.DescendantId && h.Depth == 0 && !descendantIds.Contains(h.DescendantId))
+                .Select(h => h.AncestorId)
+                .Distinct()
+                .Select(id => sections.FirstOrDefault(s => s.Secid == id))
+                .Where(s => s != null)
+                .ToList();
+
+
+            // Build the section tree for root sections
+            var sectionTree = rootSections
+                .Select(s => BuildSectionTreeForResponse(s, sections, sectionHierarchies, questionCounts))
                 .ToList();
 
             return Ok(sectionTree);
         }
 
-        // ✅ Hàm đệ quy xây dựng cây section (CÓ SỐ LƯỢNG CÂU HỎI)
-        // ✅ Hàm đệ quy xây dựng cây section (CÓ CỘNG DỒN SỐ LƯỢNG CÂU HỎI)
-        private object BuildSectionTree(Section section, List<Section> sections, List<SectionHierarchy> sectionHierarchies, Dictionary<long, int> questionCounts)
+        // Modified BuildSectionTreeForResponse to match generation method
+        private object BuildSectionTreeForResponse(
+            Section section,
+            List<Section> allSections,
+            List<SectionHierarchy> sectionHierarchies,
+            Dictionary<long, int> questionCounts)
         {
-            // ✅ Lấy danh sách các section con của section hiện tại
-            var childSections = sectionHierarchies
-                .Where(sh => sh.AncestorId == section.Secid)
-                .Select(sh => sections.FirstOrDefault(s => s.Secid == sh.DescendantId))
-                .Where(s => s != null)
+            // Find child sections
+            var childSectionIds = sectionHierarchies
+                .Where(sh => sh.AncestorId == section.Secid && sh.DescendantId != section.Secid)
+                .Select(sh => sh.DescendantId)
                 .ToList();
 
-            // ✅ Tính tổng số câu hỏi: Câu hỏi của section hiện tại + tất cả các section con
-            int totalQuestions = questionCounts.ContainsKey(section.Secid) ? questionCounts[section.Secid] : 0;
+            var childSections = allSections
+                .Where(s => childSectionIds.Contains(s.Secid))
+                .ToList();
 
-            // ✅ Đệ quy tính tổng số câu hỏi từ các section con
-            var children = childSections.Select(s => BuildSectionTree(s, sections, sectionHierarchies, questionCounts)).ToList();
+            // Recursively build children
+            var children = childSections
+                .Select(s => BuildSectionTreeForResponse(s, allSections, sectionHierarchies, questionCounts))
+                .ToList();
 
-            // ✅ Cộng số câu hỏi của các con vào cha
-            totalQuestions += children.Sum(c => (int)c.GetType().GetProperty("questionCount").GetValue(c, null));
+            // Calculate question count (including child sections)
+            int directQuestionCount = questionCounts.ContainsKey(section.Secid)
+                ? questionCounts[section.Secid]
+                : 0;
+            int totalQuestionCount = directQuestionCount + children.Sum(c =>
+                (int)c.GetType().GetProperty("questionCount").GetValue(c, null));
 
             return new
             {
                 secid = section.Secid,
                 secname = section.Secname,
-                questionCount = totalQuestions, // ✅ Hiển thị tổng số câu hỏi từ cha và con
+                questionCount = totalQuestionCount,
                 children = children
             };
         }
@@ -721,25 +760,58 @@ namespace SEP490_G77_ESS.Controllers
 
 
 
-
-
         [HttpPost("{bankId}/add-section")]
         public async Task<ActionResult<object>> AddSection(long bankId, [FromBody] Section section)
         {
             if (string.IsNullOrWhiteSpace(section.Secname))
                 return BadRequest(new { message = "Tên section không được để trống" });
 
-            var newSection = new Section
+            try
             {
-                Secname = section.Secname,
-                BankId = bankId
-            };
+                var bank = await _context.Banks.FindAsync(bankId);
+                if (bank == null)
+                    return NotFound(new { message = "Ngân hàng không tồn tại" });
 
-            _context.Sections.Add(newSection);
-            await _context.SaveChangesAsync();
+                var newSection = new Section
+                {
+                    Secname = section.Secname,
+                    BankId = bankId
+                };
 
-            return Ok(new { message = "Thêm section thành công", newSection });
+                _context.Sections.Add(newSection);
+                await _context.SaveChangesAsync();
+
+                var selfHierarchy = new SectionHierarchy
+                {
+                    AncestorId = newSection.Secid,
+                    DescendantId = newSection.Secid,
+                    Depth = 0
+                };
+
+                _context.SectionHierarchies.Add(selfHierarchy);
+                await _context.SaveChangesAsync();
+
+                return Ok(new
+                {
+                    message = "Thêm section thành công",
+                    newSection = new
+                    {
+                        newSection.Secid,
+                        newSection.Secname,
+                        newSection.BankId,
+                        questionCount = 0  // Add this for UI consistency
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                // Log the exception details
+                Console.WriteLine($"Error adding section: {ex.Message}");
+                return StatusCode(500, new { message = "Lỗi hệ thống khi thêm section" });
+            }
         }
+
+
         // ✅ API: Thêm Section con cho bất kỳ Section
         [HttpPost("{parentId}/add-subsection")]
         public async Task<ActionResult<object>> AddSubSection(long parentId, [FromBody] Section section)

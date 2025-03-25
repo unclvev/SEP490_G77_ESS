@@ -150,15 +150,15 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
             }
 
             using var workbook = new XLWorkbook();
-
-            // Sheet 1: Dữ liệu câu hỏi
             var worksheet = workbook.Worksheets.Add("Section Questions");
+
             worksheet.Cell(1, 1).Value = "Question Content";
             worksheet.Cell(1, 2).Value = "Type ID";
             worksheet.Cell(1, 3).Value = "Mode ID";
             worksheet.Cell(1, 4).Value = "Solution";
             worksheet.Cell(1, 5).Value = "Answers";
             worksheet.Cell(1, 6).Value = "Correct Answers";
+            worksheet.Cell(1, 7).Value = "Image URL";
 
             int row = 2;
             var correctAnswers = await _context.CorrectAnswers.ToListAsync();
@@ -173,20 +173,20 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
                 worksheet.Cell(row, 6).Value = string.Join(",", correctAnswers
                     .Where(a => a.Quesid == question.Quesid)
                     .Select(a => a.Content));
+                worksheet.Cell(row, 7).Value = question.ImageUrl ?? "";
                 row++;
             }
 
-            // Sheet 2: Hướng dẫn Import với thông tin chính xác
             var guideSheet = workbook.Worksheets.Add("Import Guide");
             guideSheet.Cell(1, 1).Value = "HƯỚNG DẪN IMPORT EXCEL";
-            guideSheet.Cell(2, 1).Value = "1. Cột 'Question Content': Nhập nội dung câu hỏi.";
-            guideSheet.Cell(3, 1).Value = "2. Cột 'Type ID': Loại câu hỏi (1: Trắc nghiệm, 2: True/False, 3: Điền kết quả).";
-            guideSheet.Cell(4, 1).Value = "3. Cột 'Mode ID': Mức độ khó của câu hỏi.";
-            guideSheet.Cell(5, 1).Value = "4. Cột 'Solution': Giải thích (Có thể nhập cho tất cả các TypeID).";
-            guideSheet.Cell(6, 1).Value = "5. Cột 'Answers': Các đáp án (Ngăn cách bằng dấu ',', TypeID 2 luôn là 'True,False', TypeID 3 để trống).";
-            guideSheet.Cell(7, 1).Value = "6. Cột 'Correct Answers': Đáp án đúng (TypeID 1, 2: Nội dung đáp án; TypeID 3: Đáp án 4 ký tự).";
+            guideSheet.Cell(2, 1).Value = "1. Question Content: Nội dung câu hỏi (dùng [MATH:...] cho công thức).";
+            guideSheet.Cell(3, 1).Value = "2. Type ID: Loại câu hỏi (1: Trắc nghiệm, 2: True/False, 3: Điền kết quả).";
+            guideSheet.Cell(4, 1).Value = "3. Mode ID: Mức độ khó.";
+            guideSheet.Cell(5, 1).Value = "4. Solution: Giải thích (cho phép có [MATH:...]).";
+            guideSheet.Cell(6, 1).Value = "5. Answers: Các đáp án (phân tách bằng ',', hỗ trợ [MATH:...]).";
+            guideSheet.Cell(7, 1).Value = "6. Correct Answers: Đáp án đúng (có thể dùng [MATH:...]).";
+            guideSheet.Cell(8, 1).Value = "7. Image URL: Link ảnh đã upload (không bắt buộc).";
 
-            // Làm cho sheet hướng dẫn chỉ đọc
             guideSheet.Protect().AllowElement(XLSheetProtectionElements.SelectLockedCells);
 
             using var stream = new MemoryStream();
@@ -347,11 +347,10 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
 
                     excelQuestions.Add(quesContent);
 
-                    // Sử dụng GetValue để lấy giá trị đúng kiểu dữ liệu
+                    // Xử lý số nguyên an toàn
                     int typeId = 0;
                     int modeId = 0;
 
-                    // Xử lý kiểu dữ liệu số nguyên đúng cách
                     if (worksheet.Cell(row, 2).TryGetValue(out int typeIdValue))
                         typeId = typeIdValue;
                     else if (!int.TryParse(worksheet.Cell(row, 2).GetString(), out typeId))
@@ -370,9 +369,27 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
                         continue;
                     }
 
-                    var solution = worksheet.Cell(row, 4).GetString().Trim();
-                    var answers = worksheet.Cell(row, 5).GetString().Trim();
-                    var correctAnswers = worksheet.Cell(row, 6).GetString().Trim();
+                    // Xử lý formula và trim
+                    var solution = GetCellValueAsString(worksheet.Cell(row, 4));
+                    var answers = GetCellValueAsString(worksheet.Cell(row, 5));
+                    var correctAnswers = GetCellValueAsString(worksheet.Cell(row, 6));
+                    var imageUrl = GetCellValueAsString(worksheet.Cell(row, 7));
+
+                    // Xác thực và chuẩn hóa URL ảnh
+                    if (!string.IsNullOrWhiteSpace(imageUrl))
+                    {
+                        try
+                        {
+                            // Kiểm tra và chuẩn hóa URL
+                            var validatedUrl = ValidateAndNormalizeUrl(imageUrl);
+                            imageUrl = validatedUrl;
+                        }
+                        catch (Exception)
+                        {
+                            errors.Add($"Dòng {row}: Đường dẫn ảnh không hợp lệ");
+                            imageUrl = null;
+                        }
+                    }
 
                     // Kiểm tra TypeID và điều chỉnh dữ liệu phù hợp
                     if (typeId < 1 || typeId > 3)
@@ -411,7 +428,9 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
                         case 2: // True/False
                                 // Đảm bảo answers luôn là "True,False"
                             answers = "True,False";
-                            if (correctAnswers != "True" && correctAnswers != "False")
+
+                            if (!string.Equals(correctAnswers.Trim(), "True", StringComparison.OrdinalIgnoreCase) &&
+                                !string.Equals(correctAnswers.Trim(), "False", StringComparison.OrdinalIgnoreCase))
                             {
                                 errors.Add($"Dòng {row}: Đáp án đúng cho câu hỏi True/False phải là 'True' hoặc 'False'");
                                 row++;
@@ -438,8 +457,9 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
                         existingQuestion.Modeid = modeId;
                         existingQuestion.Solution = solution;
                         existingQuestion.AnswerContent = answers;
+                        existingQuestion.ImageUrl = imageUrl;
+                        _context.CorrectAnswers.RemoveRange(existingQuestion.CorrectAnswers.ToList());
 
-                        _context.CorrectAnswers.RemoveRange(existingQuestion.CorrectAnswers);
 
                         await _context.CorrectAnswers.AddAsync(new CorrectAnswer
                         {
@@ -459,7 +479,8 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
                             TypeId = typeId,
                             Modeid = modeId,
                             Solution = solution,
-                            AnswerContent = answers
+                            AnswerContent = answers,
+                            ImageUrl = imageUrl
                         };
                         _context.Questions.Add(newQuestion);
                         await _context.SaveChangesAsync();
@@ -477,7 +498,13 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
                 }
 
                 // XÓA câu hỏi không còn trong file Excel
-                var questionsToDelete = existingQuestions.Where(q => !excelQuestions.Contains(q.Quescontent)).ToList();
+                var questionsToDelete = existingQuestions
+    .Where(q =>
+        q.Secid == sectionId &&
+        !excelQuestions.Contains(q.Quescontent, StringComparer.OrdinalIgnoreCase)
+    )
+    .ToList();
+
                 int deleteCount = questionsToDelete.Count;
 
                 if (deleteCount > 0)
@@ -504,6 +531,47 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
             {
                 return StatusCode(500, new { message = "❌ Lỗi hệ thống khi xử lý file Excel.", error = ex.Message });
             }
+        }
+
+        // Phương thức hỗ trợ để lấy giá trị ô Excel, hỗ trợ formula
+        private string GetCellValueAsString(IXLCell cell)
+        {
+            try
+            {
+                // Ưu tiên giá trị công thức
+                if (cell.HasFormula)
+                    return cell.Value.ToString().Trim();
+
+                // Nếu không có công thức, lấy giá trị thông thường
+                return cell.GetString().Trim();
+            }
+            catch
+            {
+                // Trả về chuỗi rỗng nếu không thể lấy giá trị
+                return string.Empty;
+            }
+        }
+
+        // Phương thức xác thực và chuẩn hóa URL
+        private string ValidateAndNormalizeUrl(string url)
+        {
+            if (string.IsNullOrWhiteSpace(url))
+                return null;
+
+            // Loại bỏ khoảng trắng thừa
+            url = url.Trim();
+
+            // Kiểm tra định dạng URL
+            if (Uri.TryCreate(url, UriKind.Absolute, out Uri validatedUri))
+            {
+                // Kiểm tra scheme
+                if (validatedUri.Scheme == Uri.UriSchemeHttp || validatedUri.Scheme == Uri.UriSchemeHttps)
+                {
+                    return validatedUri.ToString();
+                }
+            }
+
+            throw new ArgumentException("URL không hợp lệ");
         }
 
 
