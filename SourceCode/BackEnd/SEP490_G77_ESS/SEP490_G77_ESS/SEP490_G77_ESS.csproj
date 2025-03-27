@@ -23,10 +23,14 @@
 </ItemGroup>
 
   <ItemGroup>
-    <Content Update="appsettings.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
+  <!-- Giữ lại thư mục chứa ảnh -->
+  <Folder Include="wwwroot\images\" />
+
+  <!-- Cập nhật cấu hình appsettings.json để luôn sao chép vào thư mục đầu ra -->
+  <Content Update="appsettings.json">
+    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+  </Content>
+</ItemGroup>
 
 
 </Project>
