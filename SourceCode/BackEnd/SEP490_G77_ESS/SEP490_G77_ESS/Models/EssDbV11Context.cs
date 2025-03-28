@@ -21,8 +21,6 @@ public partial class EssDbV11Context : DbContext
 
     public virtual DbSet<Bank> Banks { get; set; }
 
-    public virtual DbSet<BankAccess> BankAccesses { get; set; }
-
     public virtual DbSet<BankLogger> BankLoggers { get; set; }
 
     public virtual DbSet<CorrectAnswer> CorrectAnswers { get; set; }
@@ -37,15 +35,13 @@ public partial class EssDbV11Context : DbContext
 
     public virtual DbSet<Level> Levels { get; set; }
 
-    public virtual DbSet<Permission> Permissions { get; set; }
-
     public virtual DbSet<Question> Questions { get; set; }
 
     public virtual DbSet<RefreshToken> RefreshTokens { get; set; }
 
-    public virtual DbSet<Role> Roles { get; set; }
+    public virtual DbSet<ResourceAccess> ResourceAccesses { get; set; }
 
-    public virtual DbSet<RolePermission> RolePermissions { get; set; }
+    public virtual DbSet<RoleAccess> RoleAccesses { get; set; }
 
     public virtual DbSet<Section> Sections { get; set; }
 
@@ -58,17 +54,9 @@ public partial class EssDbV11Context : DbContext
     public virtual DbSet<TypeQuestion> TypeQuestions { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-    {
-        if (!optionsBuilder.IsConfigured)
-        {
-            var configuration = new ConfigurationBuilder()
-                .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-                .Build();
+#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
+        => optionsBuilder.UseSqlServer("server=DESKTOP-TE5OSUU\\SQLEXPRESS;database=ess_db_v11;uid=sa;pwd=viet2982003;TrustServerCertificate=True;");
 
-            optionsBuilder.UseSqlServer(configuration.GetConnectionString("MyCnn"));
-        }
-    }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Account>(entity =>
@@ -93,7 +81,7 @@ public partial class EssDbV11Context : DbContext
             entity.Property(e => e.PasswordResetToken).HasMaxLength(255);
             entity.Property(e => e.Phone).HasMaxLength(20);
             entity.Property(e => e.ResetTokenExpires).HasColumnType("datetime");
-            entity.Property(e => e.Roleid).HasColumnName("roleid");
+            
             entity.Property(e => e.Skill).HasMaxLength(255);
             entity.Property(e => e.Subject).HasMaxLength(100);
             entity.Property(e => e.Username)
@@ -105,10 +93,6 @@ public partial class EssDbV11Context : DbContext
                 .IsUnicode(false)
                 .HasColumnName("userpass");
             entity.Property(e => e.VerificationToken).HasMaxLength(255);
-
-            entity.HasOne(d => d.Role).WithMany(p => p.Accounts)
-                .HasForeignKey(d => d.Roleid)
-                .HasConstraintName("FK_Account_Role");
         });
 
         modelBuilder.Entity<AuditLog>(entity =>
@@ -172,34 +156,6 @@ public partial class EssDbV11Context : DbContext
             entity.HasOne(d => d.Subject).WithMany(p => p.Banks)
                 .HasForeignKey(d => d.SubjectId)
                 .HasConstraintName("FK_Bank_Subject");
-        });
-
-        modelBuilder.Entity<BankAccess>(entity =>
-        {
-            entity.HasKey(e => e.BankaccessId).HasName("PK__BankAcce__311022BB00E77850");
-
-            entity.ToTable("BankAccess");
-
-            entity.Property(e => e.BankaccessId).HasColumnName("bankaccess_id");
-            entity.Property(e => e.Accid).HasColumnName("accid");
-            entity.Property(e => e.Bankid).HasColumnName("bankid");
-            entity.Property(e => e.Canedit)
-                .HasDefaultValue(false)
-                .HasColumnName("canedit");
-            entity.Property(e => e.Canview)
-                .HasDefaultValue(false)
-                .HasColumnName("canview");
-            entity.Property(e => e.Role).HasMaxLength(100);
-
-            entity.HasOne(d => d.Acc).WithMany(p => p.BankAccesses)
-                .HasForeignKey(d => d.Accid)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_BankAccess_Account");
-
-            entity.HasOne(d => d.Bank).WithMany(p => p.BankAccesses)
-                .HasForeignKey(d => d.Bankid)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_BankAccess_Bank");
         });
 
         modelBuilder.Entity<BankLogger>(entity =>
@@ -324,19 +280,6 @@ public partial class EssDbV11Context : DbContext
                 .HasColumnName("levelname");
         });
 
-        modelBuilder.Entity<Permission>(entity =>
-        {
-            entity.HasKey(e => e.PermissionId).HasName("PK__Permissi__E5331AFA04B63F47");
-
-            entity.ToTable("Permission");
-
-            entity.Property(e => e.PermissionId).HasColumnName("permission_id");
-            entity.Property(e => e.PermissionName)
-                .HasMaxLength(255)
-                .IsUnicode(false)
-                .HasColumnName("permission_name");
-        });
-
         modelBuilder.Entity<Question>(entity =>
         {
             entity.HasKey(e => e.Quesid).HasName("PK__Question__8FF5F51D3221D2D9");
@@ -392,42 +335,42 @@ public partial class EssDbV11Context : DbContext
                 .HasConstraintName("FK_RefreshToken_Account");
         });
 
-        modelBuilder.Entity<Role>(entity =>
+        modelBuilder.Entity<ResourceAccess>(entity =>
         {
-            entity.HasKey(e => e.RoleId).HasName("PK__Role__760965CC2ABEF91A");
+            entity.HasKey(e => e.ResourceAccessId).HasName("PK__Resource__8CD76FA846D3BAA7");
 
-            entity.ToTable("Role");
+            entity.ToTable("ResourceAccess");
 
-            entity.Property(e => e.RoleId).HasColumnName("role_id");
-            entity.Property(e => e.RoleName)
-                .HasMaxLength(255)
-                .IsUnicode(false)
-                .HasColumnName("role_name");
+            entity.Property(e => e.ResourceAccessId).HasColumnName("resource_access_id");
+            entity.Property(e => e.Accid).HasColumnName("accid");
+            entity.Property(e => e.IsOwner).HasColumnName("isOwner");
+            entity.Property(e => e.ResourceId).HasColumnName("resource_id");
+            entity.Property(e => e.ResourceType)
+                .HasMaxLength(50)
+                .HasColumnName("resource_type");
+
+            entity.HasOne(d => d.Acc).WithMany(p => p.ResourceAccesses)
+                .HasForeignKey(d => d.Accid)
+                .HasConstraintName("FK__ResourceA__accid__3D2915A8");
+
+            entity.HasOne(d => d.Role).WithMany(p => p.ResourceAccesses)
+                .HasForeignKey(d => d.RoleId)
+                .HasConstraintName("FK_User_RoleAccess");
         });
 
-        modelBuilder.Entity<RolePermission>(entity =>
+        modelBuilder.Entity<RoleAccess>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__RolePerm__3213E83FB7A569A8");
+            entity.HasKey(e => e.Roleid).HasName("PK__RoleAcce__CD994BF20D2EE60E");
 
-            entity.ToTable("RolePermission");
+            entity.ToTable("RoleAccess");
 
-            entity.Property(e => e.Id).HasColumnName("id");
-            entity.Property(e => e.FunctionName)
-                .HasMaxLength(255)
-                .IsUnicode(false)
-                .HasColumnName("function_name");
-            entity.Property(e => e.PermissionId).HasColumnName("permission_id");
-            entity.Property(e => e.RoleId).HasColumnName("role_id");
-
-            entity.HasOne(d => d.Permission).WithMany(p => p.RolePermissions)
-                .HasForeignKey(d => d.PermissionId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_RolePermission_Permission");
-
-            entity.HasOne(d => d.Role).WithMany(p => p.RolePermissions)
-                .HasForeignKey(d => d.RoleId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_RolePermission_Role");
+            entity.Property(e => e.Roleid).HasColumnName("roleid");
+            entity.Property(e => e.CanDelete).HasColumnName("canDelete");
+            entity.Property(e => e.CanModify).HasColumnName("canModify");
+            entity.Property(e => e.CanRead).HasColumnName("canRead");
+            entity.Property(e => e.RoleName)
+                .HasMaxLength(100)
+                .HasColumnName("roleName");
         });
 
         modelBuilder.Entity<Section>(entity =>

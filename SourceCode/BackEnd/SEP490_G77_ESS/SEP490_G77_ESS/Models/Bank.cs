@@ -25,8 +25,6 @@ public partial class Bank
 
     public virtual Account? Acc { get; set; }
 
-    public virtual ICollection<BankAccess> BankAccesses { get; set; } = new List<BankAccess>();
-
     public virtual ICollection<BankLogger> BankLoggers { get; set; } = new List<BankLogger>();
 
     public virtual Curriculum? Curriculum { get; set; }
