@@ -15,7 +15,7 @@ public partial class BankAccess
 
     public bool? Canview { get; set; }
 
-   
+    public string? Role { get; set; }
 
     public virtual Account Acc { get; set; } = null!;
 
