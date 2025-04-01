@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Input, Button, Card, Pagination, Modal, message, Select } from 'antd';
+import { Input, Button, Card, Pagination, Modal, message, Select, Divider } from 'antd';
 import { SearchOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import axios from 'axios';
 import { toast } from "react-toastify";
@@ -12,6 +12,7 @@ import 'tailwindcss/tailwind.css';
 
 const QuestionBank = () => {
   const navigate = useNavigate();
+  // User banks states
   const [banks, setBanks] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -31,6 +32,13 @@ const QuestionBank = () => {
   const [selectedCurriculum, setSelectedCurriculum] = useState(null);
   const [searchParams] = useSearchParams();
 
+  // Default ESS banks states
+  const [defaultBanks, setDefaultBanks] = useState([]);
+  const [loadingDefaultBanks, setLoadingDefaultBanks] = useState(false);
+  const [currentDefaultPage, setCurrentDefaultPage] = useState(1);
+  const [totalDefaultBanks, setTotalDefaultBanks] = useState(0);
+  const [defaultSearchQuery, setDefaultSearchQuery] = useState("");
+
   const token = useSelector((state) => state.token);
   
   let accid = searchParams.get("accid") || localStorage.getItem("accid");
@@ -49,8 +57,15 @@ const QuestionBank = () => {
     fetchGrades();
     fetchSubjects();
     fetchCurriculums();
-    fetchBanks(); // Initial fetch without filters
+  }, []);
+  
+  useEffect(() => {
+    fetchBanks();
   }, [currentPage]);
+  
+  useEffect(() => {
+    fetchDefaultBanks();
+  }, [currentDefaultPage]);
 
   const fetchBanks = async () => {
     setLoading(true);
@@ -65,11 +80,35 @@ const QuestionBank = () => {
       setBanks(response.data.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage));
       setTotalBanks(response.data.length);
     } catch (error) {
+      console.error("Error fetching banks:", error);
       message.error('❌ Lỗi khi tải dữ liệu ngân hàng câu hỏi!');
     } finally {
       setLoading(false);
     }
   };
+
+  const fetchDefaultBanks = async () => {
+    setLoadingDefaultBanks(true);
+    try {
+      let url = `https://localhost:7052/api/Bank/default-banks?`;
+      if (defaultSearchQuery) url += `query=${defaultSearchQuery}&`;
+      if (selectedGrade) url += `grade=${selectedGrade}&`;
+      if (selectedSubject) url += `subject=${selectedSubject}&`;
+      if (selectedCurriculum) url += `curriculum=${selectedCurriculum}&`;
+  
+      const response = await axios.get(url);
+      const filteredBanks = response.data;
+  
+      setDefaultBanks(filteredBanks.slice((currentDefaultPage - 1) * itemsPerPage, currentDefaultPage * itemsPerPage));
+      setTotalDefaultBanks(filteredBanks.length);
+    } catch (error) {
+      console.error("Error fetching default banks:", error);
+      message.error('❌ Lỗi khi tải dữ liệu ngân hàng đề của ESS!');
+    } finally {
+      setLoadingDefaultBanks(false);
+    }
+  };
+  
 
   const fetchGrades = async () => {
     try {
@@ -103,6 +142,11 @@ const QuestionBank = () => {
     fetchBanks();
   };
 
+  const handleDefaultSearch = () => {
+    setCurrentDefaultPage(1);
+    fetchDefaultBanks();
+  };
+
   const handleCreateBank = () => {
     navigate('/create-question-bank');
   };
@@ -111,8 +155,17 @@ const QuestionBank = () => {
     navigate(`/question-bank-detail/${id}`);
   };
 
+  const handleDefaultCardClick = (id) => {
+    navigate(`/default-bank-detail/${id}`);
+  };
+  
+
   const handlePageChange = (page) => {
     setCurrentPage(page);
+  };
+
+  const handleDefaultPageChange = (page) => {
+    setCurrentDefaultPage(page);
   };
 
   const formatDate = (dateString) => {
@@ -149,6 +202,7 @@ const QuestionBank = () => {
         fetchBanks();
       }, 500);
     } catch (error) {
+      console.error("Error updating bank:", error);
       toast.error("❌ Lỗi khi cập nhật ngân hàng!");
     }
   };
@@ -236,94 +290,210 @@ const QuestionBank = () => {
         >
           Tạo ngân hàng đề thi
         </Button>
+       
       </div>
 
-      {loading ? (
-        <p className="text-center text-gray-600">Đang tải dữ liệu...</p>
-      ) : banks.length === 0 ? (
-        <p className="text-center text-gray-600">Không tìm thấy ngân hàng câu hỏi.</p>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
-          {banks.map((bank) => (
-            <Card
-              key={bank.bankId}
-              className="text-center shadow-lg hover:shadow-xl cursor-pointer p-4 rounded-lg border border-gray-200 flex flex-col justify-between"
-              onClick={() => handleCardClick(bank.bankId)}
-            >
-              <div>
-                <h2 className="font-bold text-lg">{bank.bankname}</h2>
-                <p className="text-gray-600">Ngày tạo: {formatDate(bank.createDate)}</p>
-                <p>{bank.totalquestion || 0} câu hỏi</p>
-                <div className="mt-2 text-sm">
-                  <p className="text-gray-500">Khối: {bank.grade}</p>
-                  <p className="text-gray-500">Môn: {bank.subject}</p>
-                  <p className="text-gray-500">Chương trình: {bank.curriculum}</p>
+      {/* Ngân hàng đề của bạn Section - Now this section comes first */}
+      <div className="mb-8">
+        <h2 className="text-xl font-bold mb-4">Ngân hàng đề của bạn</h2>
+        
+        {loading ? (
+          <p className="text-center text-gray-600">Đang tải dữ liệu...</p>
+        ) : banks.length === 0 ? (
+          <p className="text-center text-gray-600">Bạn chưa có ngân hàng câu hỏi nào.</p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-4">
+            {banks.map((bank) => (
+              <Card
+                key={bank.bankId}
+                className="text-center shadow-lg hover:shadow-xl cursor-pointer p-4 rounded-lg border border-gray-200 flex flex-col justify-between"
+                onClick={() => handleCardClick(bank.bankId)}
+              >
+                <div>
+                  <h2 className="font-bold text-lg">{bank.bankname}</h2>
+                  <p className="text-gray-600">Ngày tạo: {formatDate(bank.createDate)}</p>
+                  <p>{bank.totalquestion || 0} câu hỏi</p>
+                  <div className="mt-2 text-sm">
+                    <p className="text-gray-500">Khối: {bank.grade}</p>
+                    <p className="text-gray-500">Môn: {bank.subject}</p>
+                    <p className="text-gray-500">Chương trình: {bank.curriculum}</p>
+                  </div>
                 </div>
-              </div>
 
-              <div className="mt-auto pt-4 flex justify-between">
-                <Button 
-                  type="primary" 
-                  icon={<EditOutlined />} 
-                  size="small" 
-                  shape="round"
-                  className="bg-green-500 hover:bg-green-600 text-white w-1/2 mr-1"
-                  onClick={(e) => handleEditBank(bank, e)}
-                >
-                  Sửa
-                </Button>
-                <Button 
-                  type="primary" 
-                  danger 
-                  icon={<DeleteOutlined />} 
-                  size="small" 
-                  shape="round"
-                  className="bg-red-500 hover:bg-red-600 text-white w-1/2 ml-1"
-                  onClick={(e) => handleDeleteBank(bank, e)}
-                >
-                  Xóa
-                </Button>
-              </div>
-            </Card>
-          ))}
+                <div className="mt-auto pt-4 flex justify-between">
+                  <Button 
+                    type="primary" 
+                    icon={<EditOutlined />} 
+                    size="small" 
+                    shape="round"
+                    className="bg-green-500 hover:bg-green-600 text-white w-1/2 mr-1"
+                    onClick={(e) => handleEditBank(bank, e)}
+                  >
+                    Sửa
+                  </Button>
+                  <Button 
+                    type="primary" 
+                    danger 
+                    icon={<DeleteOutlined />} 
+                    size="small" 
+                    shape="round"
+                    className="bg-red-500 hover:bg-red-600 text-white w-1/2 ml-1"
+                    onClick={(e) => handleDeleteBank(bank, e)}
+                  >
+                    Xóa
+                  </Button>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        <div className="flex justify-center mt-4">
+          <Pagination
+            current={currentPage}
+            total={totalBanks}
+            pageSize={itemsPerPage}
+            onChange={handlePageChange}
+            showSizeChanger={false}
+          />
         </div>
-      )}
-
-      <div className="flex justify-center mt-6">
-        <Pagination
-          current={currentPage}
-          total={totalBanks}
-          pageSize={itemsPerPage}
-          onChange={handlePageChange}
-          showSizeChanger={false}
-        />
       </div>
 
-      <Modal 
-        title="Chỉnh sửa tên ngân hàng" 
-        open={isEditModalOpen} 
-        onOk={handleUpdateBankName} 
-        onCancel={() => setIsEditModalOpen(false)}
-      >
-        <Input 
-          value={newBankName} 
-          onChange={(e) => setNewBankName(e.target.value)} 
-          placeholder="Nhập tên ngân hàng mới" 
-        />
-      </Modal>
+      {/* Divider between sections */}
+      <Divider />
 
-      <Modal 
-        title="Xác nhận xóa" 
-        open={isDeleteModalOpen} 
-        onOk={confirmDeleteBank} 
-        onCancel={() => setIsDeleteModalOpen(false)} 
-        okText="Xóa" 
-        cancelText="Hủy"
-      >
-        <p>Bạn có chắc chắn muốn xóa ngân hàng này không?</p>
-      </Modal>
+
+{/* Ngân hàng đề của ESS Section */}
+<div className="mb-12">
+  <div className="flex justify-between items-center mb-4">
+    <h2 className="text-xl font-bold">Ngân hàng đề của ESS</h2>
+    <div className="flex items-center gap-2">
+      <Input
+        placeholder="Tìm kiếm ngân hàng ESS..."
+        style={{ width: '250px' }}
+        value={defaultSearchQuery}
+        onChange={(e) => setDefaultSearchQuery(e.target.value)}
+        onPressEnter={handleDefaultSearch}
+      />
+      <Button icon={<SearchOutlined />} onClick={handleDefaultSearch}>
+        Tìm kiếm
+      </Button>
     </div>
+  </div>
+  {/* ✅ Bổ sung bộ lọc ở đây */}
+  <div className="flex flex-wrap gap-2 mb-4">
+    <Select 
+      placeholder="Khối học" 
+      allowClear 
+      onChange={(value) => setSelectedGrade(value)}
+      style={{ width: '150px' }}
+      size="middle"
+    >
+      {grades.map(g => <Select.Option key={g.gradeId} value={g.gradeLevel}>{g.gradeLevel}</Select.Option>)}
+    </Select>
+    
+    <Select 
+      placeholder="Môn học" 
+      allowClear 
+      onChange={(value) => setSelectedSubject(value)}
+      style={{ width: '150px' }}
+      size="middle"
+    >
+      {subjects.map(s => <Select.Option key={s.subjectId} value={s.subjectName}>{s.subjectName}</Select.Option>)}
+    </Select>
+    
+    <Select 
+      placeholder="Chương trình" 
+      allowClear 
+      onChange={(value) => setSelectedCurriculum(value)}
+      style={{ width: '150px' }}
+      size="middle"
+    >
+      {curriculums.map(c => <Select.Option key={c.curriculumId} value={c.curriculumName}>{c.curriculumName}</Select.Option>)}
+    </Select>
+    
+    <Button icon={<SearchOutlined />} onClick={handleDefaultSearch}>
+      Tìm kiếm
+    </Button>
+  </div>
+
+  {loadingDefaultBanks ? (
+<p className="text-center text-gray-600">Đang tải dữ liệu...</p>
+) : defaultBanks.length === 0 ? (
+<p className="text-center text-gray-600">Không tìm thấy ngân hàng câu hỏi từ ESS.</p>
+) : (
+<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-4">
+{defaultBanks.map((bank) => (
+<Card
+  key={bank.bankId}
+  className="text-center shadow-lg hover:shadow-xl cursor-pointer p-4 rounded-lg border border-gray-200 flex flex-col justify-between"
+  onClick={() => handleDefaultCardClick(bank.bankId)}
+>
+  <div>
+    <h2 className="font-bold text-lg">{bank.bankName}</h2>
+    <p>{bank.totalQuestion || 0} câu hỏi</p>
+    <div className="mt-2 text-sm">
+      <p className="text-gray-500">Khối: {bank.grade}</p>
+      <p className="text-gray-500">Môn: {bank.subject}</p>
+      <p className="text-gray-500">Chương trình: {bank.curriculum}</p>
+    </div>
+  </div>
+</Card>
+))}
+</div>
+)}
+
+<div className="flex justify-center mt-4">
+<Pagination
+current={currentDefaultPage}
+total={totalDefaultBanks}
+pageSize={itemsPerPage}
+onChange={handleDefaultPageChange}
+showSizeChanger={false}
+/>
+</div>
+      
+<Modal
+      title="Lỗi tải dữ liệu"
+      open={loadingDefaultBanks && defaultBanks.length === 0}
+      onOk={() => setLoadingDefaultBanks(false)}
+      onCancel={() => setLoadingDefaultBanks(false)}
+      okText="OK"
+      cancelButtonProps={{ style: { display: 'none' } }}
+    >
+      <p>❌ Có lỗi xảy ra khi tải dữ liệu ngân hàng đề của ESS. Vui lòng thử lại.</p>
+    </Modal>
+
+    <Modal
+      title="Xác nhận xóa"
+      open={isDeleteModalOpen}
+      onOk={confirmDeleteBank}
+      onCancel={() => setIsDeleteModalOpen(false)}
+      okText="Xóa"
+      cancelText="Hủy"
+    >
+      <p>Bạn có chắc chắn muốn xóa ngân hàng "{deletingBank?.bankname}" không?</p>
+    </Modal>
+
+    <Modal
+      title="Đổi tên ngân hàng"
+      open={isEditModalOpen}
+      onOk={handleUpdateBankName}
+      onCancel={() => setIsEditModalOpen(false)}
+      okText="Cập nhật"
+      cancelText="Hủy"
+    >
+      <Input 
+        value={newBankName} 
+        onChange={(e) => setNewBankName(e.target.value)} 
+        placeholder="Nhập tên mới cho ngân hàng"
+      />
+    </Modal>
+  </div>
+
+
+
+</div> 
   );
 };
-
 export default QuestionBank;
