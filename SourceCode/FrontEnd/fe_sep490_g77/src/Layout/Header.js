@@ -11,7 +11,7 @@ const Header = ({ collapsed }) => {
   useEffect(() => {
     if (token) {
       try {
-        const decoded = jwtDecode(token);
+        const decoded = jwtDecode(token.token);
         const emailClaim = decoded["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"];
         setEmail(emailClaim || "No Email");
         // Nếu muốn set avatar dựa theo email hoặc AccId có thể thêm logic tại đây

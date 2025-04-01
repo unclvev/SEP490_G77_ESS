@@ -22,7 +22,7 @@ export const resetPassword = (params) => {
 
 //exam-api
 
-export const createExam = () => Http.get("/")
+export const createExam = (data) => Http.post("/ExamData/GenerateExam", data)
 
 export const getExams = () => Http.get("/exam")
 
@@ -35,7 +35,7 @@ export const updateExam = (examid, data) => Http.put(`/Exam/${examid}`, data)
 
 export const loadbExams = () => Http.get(`/Exam/loadbs`);
 
-export const loadbExam = (bankId) => Http.get(`/Exam/loadb/${bankId}`);
+export const loadbExam = (examid) => Http.get(`/Exam/loadb/${examid}`);
 
 export const countQExam = (examid) => Http.get(`/Exam/${examid}/question-counts`);
 

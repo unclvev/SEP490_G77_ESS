@@ -38,7 +38,7 @@ const QuestionBank = () => {
   // Decode token to get AccId if available
   if (token) {
     try {
-      const decoded = jwtDecode(token);
+      const decoded = jwtDecode(token.token);
       accid = decoded.AccId || accid;
     } catch (error) {
       console.error("Invalid token", error);

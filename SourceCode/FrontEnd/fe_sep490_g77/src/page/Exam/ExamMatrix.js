@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Tree, Table, InputNumber, Button, Modal, Select, message } from "antd";
 import { DeleteOutlined, PlusOutlined, ExclamationCircleOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
-import { countQExam, loadbExam, loadbExams } from "../../services/api";
+import { countQExam, createExam, loadbExam, loadbExams } from "../../services/api";
 
 const { TreeNode } = Tree;
 const { Option } = Select;
@@ -51,15 +51,25 @@ const ExamCreation = () => {
     }
   };
 
-  const handleCreateExam = () => {
+  const handleCreateExam = async () => {
+
     const examStructure = selectedTopics.map(topic => ({
-      sectionId: topic.key.replace("section-", ""), // Lấy ID section từ key
-      easy: topic.levels.easy || 0,
-      medium: topic.levels.medium || 0,
-      hard: topic.levels.hard || 0
+        sectionId: topic.key.replace("section-", ""),
+        easy: topic.levels.easy || 0,
+        medium: topic.levels.medium || 0,
+        hard: topic.levels.hard || 0
     }));
-  
-    console.log("Cấu trúc đề thi:", JSON.stringify(examStructure, null, 2));
+
+    try {
+        const response = await createExam(examStructure);
+        if (response && response.data.examId) {
+            navigate(`/exam/preview/${response.data.examId}`);
+        } else {
+            console.error("API không trả về examId hợp lệ:", response);
+        }
+    } catch (error) {
+        console.error("Lỗi khi tạo đề thi:", error);
+    }
   };
   
 
