@@ -26,13 +26,19 @@ import PreviewGenQR from "./page/Essay/PreviewGenQr";
 import CreateEssayExam from "./page/Essay/CreateEssayExam";
 import ImportEssayPage from "./page/Essay/ImportEssayPage";
 import Home from "./page/Home/Home";
+<<<<<<< HEAD
+import TempComponent from "./page/TempComponent/temp.js";
+
+=======
 import EssQuestionBankDetail from "./page/Bank/QuestionBank/EssQuestionBankDetail.js";
 import EssQuestionList from "./page/Bank/QuestionBank/EssQuestionList.js";
+>>>>>>> main
 function App() {
   return (
     <Provider store={store}> {/* Thêm Provider */}
       <Router>
         <Routes>
+          
           
           {/* Home dùng Sidebar riêng */}
           <Route path="/" element={<Home />} />
@@ -54,12 +60,19 @@ function App() {
           <Route path="/exam" element={<MainLayout><ExamManagement /></MainLayout>} />
           <Route path="/exam/content" element={<MainLayout><ExamDetail /></MainLayout>} />
           <Route path="/exam/matrix" element={<MainLayout><ExamCreation /></MainLayout>} />
+<<<<<<< HEAD
+          <Route path="/exam/preview/:examid" element={<MainLayout><ExamPreview /></MainLayout>} />
+          <Route path="/exam/analysis" element={<MainLayout><Analysis /></MainLayout>} />
+=======
           <Route path="/exam/preview" element={<MainLayout><ExamPreview /></MainLayout>} />
           <Route path="/exam/analysis/:examId" element={<MainLayout><Analysis /></MainLayout>} />
+>>>>>>> main
           <Route path="/essay/genqr" element={<MainLayout><GenQRCode></GenQRCode></MainLayout>}/>
           <Route path="/essay/preview-gen-qr" element={<MainLayout><PreviewGenQR></PreviewGenQR></MainLayout>}/>
           <Route path="/essay/import" element={<MainLayout><ImportEssayPage></ImportEssayPage></MainLayout>}/>
           <Route path="/essay" element={<MainLayout><CreateEssayExam></CreateEssayExam></MainLayout>}/>
+
+          <Route path="/temp" element={<TempComponent/>}></Route>
         </Routes>
       </Router>
                                                 
