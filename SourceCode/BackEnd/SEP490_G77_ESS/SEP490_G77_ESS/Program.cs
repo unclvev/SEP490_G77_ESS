@@ -10,6 +10,11 @@ using SEP490_G77_ESS.Utils;
 using Swashbuckle.AspNetCore.Filters;
 using System.Text;
 
+if (File.Exists(".env"))
+{
+    DotNetEnv.Env.Load();
+}
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.

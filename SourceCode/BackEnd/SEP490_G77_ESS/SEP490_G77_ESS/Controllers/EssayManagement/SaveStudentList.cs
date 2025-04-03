@@ -1,19 +1,23 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using SEP490_G77_ESS.Models;
 
 namespace SEP490_G77_ESS.Controllers.EssayManagement
 {
-    [Route("essay/savestudentlist")]
+    [Route("api/essay")]
     [ApiController]
-    public class SaveStudentList : ControllerBase
+    public class EssayExamController : ControllerBase
     {
         private readonly EssDbV11Context _context;
-        public SaveStudentList(EssDbV11Context context)
+
+        public EssayExamController(EssDbV11Context context)
         {
             _context = context;
         }
-        [HttpPost]
+
+        // 🟢 1. Upload Excel danh sách học sinh
+        [HttpPost("savestudentlist")]
         public IActionResult UploadExcel(IFormFile file)
         {
             if (file == null || file.Length == 0)
@@ -21,39 +25,124 @@ namespace SEP490_G77_ESS.Controllers.EssayManagement
                 return BadRequest("Không có file hoặc file rỗng.");
             }
 
-            var studentList = new List<StudentResult>();
-
-            using (var stream = new MemoryStream())
-            {
-                file.CopyTo(stream);
-                using (var workbook = new ClosedXML.Excel.XLWorkbook(stream))
-                {
-                    var worksheet = workbook.Worksheet(1); // Sheet đầu tiên
-                    var rows = worksheet.RangeUsed().RowsUsed().Skip(1); // Bỏ dòng tiêu đề
-
-                    foreach (var row in rows)
-                    {
-                        var student = new StudentResult
-                        {
-                            StudentCode = row.Cell(2).GetValue<string>(), // Số báo danh
-                            StudentName = row.Cell(3).GetValue<string>(), // Họ và tên
-                            Gender = row.Cell(4).GetValue<string>().Trim().ToLower() == "nam", // Giới tính
-                            StudentDob = DateTime.TryParse(row.Cell(5).GetValue<string>(), out var dob) ? dob : null,
-                            CreateDate = DateTime.Now,
-                            ExamId = 1, // Gán ExamId tạm thời hoặc lấy từ request
-                            Rank = 0 // Tạm để 0, sẽ tính sau
-                        };
-
-                        studentList.Add(student);
-                    }
-                }
-            }
-
-            _context.StudentResults.AddRange(studentList);
-            _context.SaveChanges();
-
-            return Ok(new { message = "Import thành công!", count = studentList.Count });
+            // ✅ Tạm thời chưa xử lý nội dung, chỉ trả kết quả thành công
+            return Ok("Import thành công!");
         }
 
+        // 🟢 2. Lấy danh sách đề theo accId + filter grade, subject, classname
+        [HttpGet("by-account/{accId}")]
+        public async Task<IActionResult> GetExamsByAccount(int accId, [FromQuery] string? grade, [FromQuery] string? subject, [FromQuery] string? classname)
+        {
+            var query = _context.Exams
+                .Where(e => e.ExamType
+                == "Essay" && e.AccId == accId);
+
+            if (!string.IsNullOrEmpty(grade))
+                query = query.Where(e => e.Grade == grade);
+
+            if (!string.IsNullOrEmpty(subject))
+                query = query.Where(e => e.Subject == subject);
+
+            if (!string.IsNullOrEmpty(classname))
+                query = query.Where(e => e.Classname == classname);
+
+            var result = await query
+                .OrderByDescending(e => e.Createdate)
+                .Select(e => new
+                {
+                    id = e.ExamId,
+                    title = e.Examname,
+                    createdDate = e.Createdate,
+                    grade = e.Grade,
+                    subject = e.Subject,
+                    nameClass = e.Classname
+                })
+                .ToListAsync();
+
+            return Ok(result);
+        }
+        // Tạo đề mới
+        [HttpPost("create/{accId}")]
+        public async Task<IActionResult> CreateExam(int accId, [FromBody] Exam exam)
+        {
+            exam.AccId = accId;
+            exam.ExamType = "Essay";
+            exam.Createdate = DateTime.Now;
+
+            _context.Exams.Add(exam);
+            await _context.SaveChangesAsync();
+            return Ok(new { message = "Tạo đề thành công", examId = exam.ExamId });
+        }
+
+
+        [HttpPut("update/{id}")]
+        public async Task<IActionResult> UpdateExam(long id, [FromBody] Exam updatedExam)
+        {
+            var exam = await _context.Exams.FindAsync(id);
+            if (exam == null) return NotFound();
+
+            exam.Examname = updatedExam.Examname;
+            exam.Classname = updatedExam.Classname;
+            exam.Grade = updatedExam.Grade;
+            exam.Subject = updatedExam.Subject;
+
+            await _context.SaveChangesAsync();
+            return Ok(new { message = "Cập nhật thành công" });
+        }
+
+
+        // ✅ Xoá đề
+        [HttpDelete("delete/{id}")]
+        public async Task<IActionResult> DeleteExam(long id)
+        {
+            var exam = await _context.Exams.FindAsync(id);
+            if (exam == null) return NotFound();
+
+            _context.Exams.Remove(exam);
+            await _context.SaveChangesAsync();
+            return Ok(new { message = "Xoá thành công" });
+        }
+
+
+        // Lấy danh sách Grade
+        [HttpGet("grades")]
+        public async Task<IActionResult> GetGrades()
+        {
+            var grades = await _context.Grades.Select(g => g.GradeLevel).ToListAsync();
+            return Ok(grades);
+        }
+
+        // Lấy danh sách Subject
+        [HttpGet("subjects")]
+        public async Task<IActionResult> GetSubjects()
+        {
+            var subjects = await _context.Subjects.Select(s => s.SubjectName).ToListAsync();
+            return Ok(subjects);
+        }
+
+
+        // 🟢 3. Search đề theo accId và tên đề
+        [HttpGet("search")]
+        public async Task<IActionResult> SearchExamsByAccount([FromQuery] int accId, [FromQuery] string keyword)
+        {
+            var result = await _context.Exams
+                .Where(e => e.ExamType == "Essay"
+                         && e.AccId == accId
+                         && e.Examname.Contains(keyword))
+                .OrderByDescending(e => e.Createdate)
+                .Select(e => new
+                {
+                    id = e.ExamId,
+                    title = e.Examname,
+                    createdDate = e.Createdate,
+                    grade = e.Grade,
+                    subject = e.Subject,
+                    nameClass = e.Classname
+                })
+                .ToListAsync();
+
+            return Ok(result);
+        }
     }
+
 }
