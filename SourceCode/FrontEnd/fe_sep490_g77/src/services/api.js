@@ -1,4 +1,17 @@
 import Http from "./http"
+//manager-api
+
+export const searchUserToInvite = (query) =>
+  Http.get("/Manager/SearchUserToInvite", { params: { search: query } })
+    .then((response) => response.data);
+
+
+export const inviteUser = async (payload) => Http.post("/Manager/InviteUser", payload)
+  .then((response) => response.data)
+  .catch((error) => {
+    throw new Error(error.response?.data?.message || "Invite user failed");
+  });
+  
 
 //auth-api
 

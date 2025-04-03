@@ -28,10 +28,12 @@ namespace SEP490_G77_ESS.Controllers.RBAC.Bank
             }
 
             var users = await _context.Accounts
-                .Where(u => u.Email.Contains(search) || u.Phone.Contains(search))
+                .Where(u => (u.Email != null && u.Email.Contains(search))
+                        || (u.Phone != null && u.Phone.Contains(search)))
                 .Take(10)
                 .Select(u => new GetUserDTO
                 {
+                    AccId = u.AccId,
                     Name = u.Username,
                     Email = u.Email
                 })
@@ -57,15 +59,7 @@ namespace SEP490_G77_ESS.Controllers.RBAC.Bank
                 return NotFound("Ngân hàng không tồn tại.");
             }
 
-            if (bank.Accid != long.Parse(claimAccId))
-            {
-                return Unauthorized("Bạn không có quyền mời người dùng cho ngân hàng này.");
-            }
-
-            if (bank.Accid == long.Parse(claimAccId))
-            {
-                return BadRequest("Không thể mời chủ ngân hàng.");
-            }
+            
             var existingAccess = await _context.ResourceAccesses
                                                .FirstOrDefaultAsync(r => r.ResourceId == request.Resource.ResourceId 
                                                                                          && r.Accid == request.Resource.Accid);

@@ -9,7 +9,7 @@ const Http = axios.create({
 
 Http.interceptors.request.use(
     async (config) => {
-        const token = store.getState().token;
+        const token = store.getState().token.token;
         if (token) {
             console.log(token);
             config.headers.Authorization = `Bearer ${token}`;

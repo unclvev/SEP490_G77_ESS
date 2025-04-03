@@ -21,14 +21,14 @@ import ExamPreview from "./page/Exam/ExamPreview";
 import LoginPage from "./page/Common/LoginPage";
 import RegistrationPage from "./page/Common/RegisterPage";
 import MainLayout2 from "./newLayout/MainLayout";
-
+import ManagerPage from "./page/Manager/ManagerPage";
 
 function App() {
   return (
     <Provider store={store}> {/* Thêm Provider */}
       <Router>
         <Routes>
-          
+          <Route path = "/manager" element={<ManagerPage />} />
           {/* Home dùng Sidebar riêng */}
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<LoginPage />} />
