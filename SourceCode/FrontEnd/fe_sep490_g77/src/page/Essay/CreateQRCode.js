@@ -143,7 +143,7 @@ const GenQRCode = () => {
           </div>
 
           <div className="flex items-center mb-4">
-            <p className="text-lg font-semibold w-1/3">Tên Khối</p>
+            <p className="text-lg font-semibold w-1/3">Tên Lớp</p>
             <input
               type="text"
               value={className}
@@ -153,7 +153,7 @@ const GenQRCode = () => {
           </div>
 
           <div className="flex items-center mb-4">
-            <p className="text-lg font-semibold w-1/3">Tên Lớp</p>
+            <p className="text-lg font-semibold w-1/3">Tên Khối</p>
             <input
               type="text"
               value={grade}

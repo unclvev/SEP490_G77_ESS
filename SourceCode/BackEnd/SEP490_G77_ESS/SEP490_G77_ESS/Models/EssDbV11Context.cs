@@ -1,4 +1,4 @@
-﻿﻿using System;
+﻿using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 
@@ -60,9 +60,13 @@ public partial class EssDbV11Context : DbContext
     public virtual DbSet<TypeQuestion> TypeQuestions { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
+    {
+        if (!optionsBuilder.IsConfigured)
+        {
+            optionsBuilder.UseSqlServer("server=ADMIN\\SQLEXPRESS;database=ess_db_v11;uid=sa;pwd=123;TrustServerCertificate=True");
+        }
+    }
 
-        => optionsBuilder.UseSqlServer("server=ADMIN\\SQLEXPRESS;database=ess_db_v11;uid=sa;pwd=123;TrustServerCertificate=True");
 
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -297,17 +301,9 @@ public partial class EssDbV11Context : DbContext
             entity.Property(e => e.Depth).HasColumnName("depth");
 
             entity.HasOne(d => d.Curriculum).WithMany(p => p.DefaultSectionHierarchies)
-        .HasForeignKey(d => d.CurriculumId)
-        .HasConstraintName("FK__Default_S__curri__7B5B524B");
-
-    entity.HasOne(d => d.Grade).WithMany()
-        .HasForeignKey(d => d.GradeId)
-        .HasConstraintName("FK_DefaultSectionHierarchy_Grade");
-
-    entity.HasOne(d => d.Subject).WithMany()
-        .HasForeignKey(d => d.SubjectId)
-        .HasConstraintName("FK_DefaultSectionHierarchy_Subject");
-});
+                .HasForeignKey(d => d.CurriculumId)
+                .HasConstraintName("FK__Default_S__curri__7B5B524B");
+        });
 
 
 
