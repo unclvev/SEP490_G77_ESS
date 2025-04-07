@@ -26,6 +26,7 @@ import PreviewGenQR from "./page/Essay/PreviewGenQr";
 import CreateEssayExam from "./page/Essay/CreateEssayExam";
 import ImportEssayPage from "./page/Essay/ImportEssayPage";
 import Home from "./page/Home/Home";
+import CreateNewEssayPage from "./page/Essay/CreateNewEssayPage.js";
 
 function App() {
   return (
@@ -57,6 +58,7 @@ function App() {
           <Route path="/essay/preview-gen-qr" element={<MainLayout><PreviewGenQR></PreviewGenQR></MainLayout>}/>
           <Route path="/essay/import" element={<MainLayout><ImportEssayPage></ImportEssayPage></MainLayout>}/>
           <Route path="/essay" element={<MainLayout><CreateEssayExam></CreateEssayExam></MainLayout>}/>
+          <Route path="/essay/create" element={<MainLayout><CreateNewEssayPage /></MainLayout>} />
         </Routes>
       </Router>
                                                 

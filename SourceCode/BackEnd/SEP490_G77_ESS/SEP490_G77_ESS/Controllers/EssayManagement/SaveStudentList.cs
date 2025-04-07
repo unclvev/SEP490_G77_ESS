@@ -16,7 +16,6 @@ namespace SEP490_G77_ESS.Controllers.EssayManagement
             _context = context;
         }
 
-        // 🟢 1. Upload Excel danh sách học sinh
         [HttpPost("savestudentlist")]
         public IActionResult UploadExcel(IFormFile file)
         {
@@ -25,11 +24,9 @@ namespace SEP490_G77_ESS.Controllers.EssayManagement
                 return BadRequest("Không có file hoặc file rỗng.");
             }
 
-            // ✅ Tạm thời chưa xử lý nội dung, chỉ trả kết quả thành công
             return Ok("Import thành công!");
         }
 
-        // 🟢 2. Lấy danh sách đề theo accId + filter grade, subject, classname
         [HttpGet("by-account/{accId}")]
         public async Task<IActionResult> GetExamsByAccount(int accId, [FromQuery] string? grade, [FromQuery] string? subject, [FromQuery] string? classname)
         {
@@ -61,7 +58,6 @@ namespace SEP490_G77_ESS.Controllers.EssayManagement
 
             return Ok(result);
         }
-        // Tạo đề mới
         [HttpPost("create/{accId}")]
         public async Task<IActionResult> CreateExam(int accId, [FromBody] Exam exam)
         {
@@ -90,8 +86,6 @@ namespace SEP490_G77_ESS.Controllers.EssayManagement
             return Ok(new { message = "Cập nhật thành công" });
         }
 
-
-        // ✅ Xoá đề
         [HttpDelete("delete/{id}")]
         public async Task<IActionResult> DeleteExam(long id)
         {
@@ -103,8 +97,6 @@ namespace SEP490_G77_ESS.Controllers.EssayManagement
             return Ok(new { message = "Xoá thành công" });
         }
 
-
-        // Lấy danh sách Grade
         [HttpGet("grades")]
         public async Task<IActionResult> GetGrades()
         {
@@ -112,7 +104,6 @@ namespace SEP490_G77_ESS.Controllers.EssayManagement
             return Ok(grades);
         }
 
-        // Lấy danh sách Subject
         [HttpGet("subjects")]
         public async Task<IActionResult> GetSubjects()
         {
@@ -120,8 +111,6 @@ namespace SEP490_G77_ESS.Controllers.EssayManagement
             return Ok(subjects);
         }
 
-
-        // 🟢 3. Search đề theo accId và tên đề
         [HttpGet("search")]
         public async Task<IActionResult> SearchExamsByAccount([FromQuery] int accId, [FromQuery] string keyword)
         {
@@ -144,5 +133,4 @@ namespace SEP490_G77_ESS.Controllers.EssayManagement
             return Ok(result);
         }
     }
-
 }
