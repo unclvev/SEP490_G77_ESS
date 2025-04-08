@@ -64,7 +64,7 @@ const isMountedRef = useRef(true);
       setNewQuestion(prev => ({
         ...prev,
         answers: ["True", "False"],
-        correctAnswers: prev.correctAnswers.length ? [prev.correctAnswers[0]] : ["True"]
+        correctAnswers: prev.correctAnswers.length === 4 ? prev.correctAnswers : ["True", "True", "True", "True"]
       }));
     } else if (newQuestion.typeId === 3) {
       // Điền kết quả: không cần answers, chỉ cần correctAnswers
@@ -159,10 +159,11 @@ const isMountedRef = useRef(true);
 
   const handleEdit = (question = null) => {
     setIsEditing(true);
+  
     if (question) {
       setCurrentQuestion(question);
   
-      // 🔁 Làm sạch như trong useEffect (để lấy đúng công thức LaTeX)
+      // 🔁 Làm sạch công thức LaTeX
       const rawHTML = question.quescontent || "";
   
       const cleanHTML = rawHTML
@@ -199,26 +200,41 @@ const isMountedRef = useRef(true);
   
       setEditorState(EditorState.createWithContent(newContent));
   
-      // Các dữ liệu khác
-      let updatedAnswers = [];
-      let correctAnswer = question.correctAnswers.length > 0 ? question.correctAnswers[0] : "";
-  
+      // ✅ Tùy loại câu hỏi
       if (question.typeId === 1) {
-        updatedAnswers = [...(question.answers || []), "", "", "", ""].slice(0, 4);
+        setNewQuestion({
+          quescontent: question.quescontent || "",
+          typeId: question.typeId || null,
+          modeid: question.modeid || null,
+          secid: sectionId,
+          solution: question.solution || "",
+          answers: [...(question.answers || []), "", "", "", ""].slice(0, 4),
+          correctAnswers: [question.correctAnswers[0] || ""],
+          imageUrl: question.imageUrl || "",
+        });
       } else if (question.typeId === 2) {
-        updatedAnswers = ["True", "False"];
+        setNewQuestion({
+          quescontent: question.quescontent || "",
+          typeId: question.typeId || null,
+          modeid: question.modeid || null,
+          secid: sectionId,
+          solution: question.solution || "",
+          answers: ["True", "False"],
+          correctAnswers: [...question.correctAnswers], // ✅ fix ở đây
+          imageUrl: question.imageUrl || "",
+        });
+      } else if (question.typeId === 3) {
+        setNewQuestion({
+          quescontent: question.quescontent || "",
+          typeId: question.typeId || null,
+          modeid: question.modeid || null,
+          secid: sectionId,
+          solution: question.solution || "",
+          answers: [],
+          correctAnswers: [question.correctAnswers[0] || ""],
+          imageUrl: question.imageUrl || "",
+        });
       }
-  
-      setNewQuestion({
-        quescontent: question.quescontent || "",
-        typeId: question.typeId || null,
-        modeid: question.modeid || null,
-        secid: sectionId,
-        solution: question.solution || "",
-        answers: updatedAnswers,
-        correctAnswers: [correctAnswer],
-        imageUrl: question.imageUrl || "",
-      });
     } else {
       // reset
       setCurrentQuestion(null);
@@ -235,6 +251,7 @@ const isMountedRef = useRef(true);
       });
     }
   };
+  
   
   
   
@@ -423,13 +440,20 @@ const saveEditedFormula = () => {
         toast.warning("⚠️ Vui lòng chọn đáp án đúng!");
         return;
       }
-      // Kiểm tra xem có ít nhất 2 đáp án khác nhau không trống
       const nonEmptyAnswers = newQuestion.answers.filter(a => a.trim() !== "");
       if (nonEmptyAnswers.length < 2) {
         toast.warning("⚠️ Câu hỏi trắc nghiệm cần ít nhất 2 đáp án!");
         return;
       }
-    } else if (newQuestion.typeId === 3) {
+    } 
+    else if (newQuestion.typeId === 2) {
+      // ✅ True/False với 4 ý
+      if (newQuestion.correctAnswers.length !== 4) {
+        toast.warning("⚠️ Câu hỏi True/False phải có đủ 4 ý!");
+        return;
+      }
+    } 
+    else if (newQuestion.typeId === 3) {
       // Điền kết quả
       if (!newQuestion.correctAnswers[0] || newQuestion.correctAnswers[0].length !== 4) {
         toast.warning("⚠️ Đáp án điền kết quả phải có đúng 4 ký tự!");
@@ -445,7 +469,9 @@ const saveEditedFormula = () => {
         secid: parseInt(sectionId),
         solution: newQuestion.solution,
         answers: newQuestion.typeId === 1 ? newQuestion.answers : [],
-        correctAnswers: [newQuestion.correctAnswers[0]],
+        correctAnswers: newQuestion.typeId === 2
+    ? newQuestion.correctAnswers
+    : [newQuestion.correctAnswers[0]],
         imageUrl: newQuestion.imageUrl,
       };
 
@@ -576,22 +602,30 @@ const renderQuestionFields = () => {
       );
       
       case 2: // True/False
-        return (
-          <div className="mb-4">
-            <label className="font-semibold block mb-2">Đáp án đúng</label>
-            <Radio.Group 
-              options={[
-                { label: 'True', value: 'True' },
-                { label: 'False', value: 'False' }
-              ]}
-              value={newQuestion.correctAnswers[0]}
-              onChange={(e) => setNewQuestion({ ...newQuestion, correctAnswers: [e.target.value] })}
-              optionType="button"
-              buttonStyle="solid"
-              className="w-full"
-            />
-          </div>
-        );
+  return (
+    <div className="mb-4">
+      <label className="font-semibold block mb-2">Chọn True/False cho từng ý (a–d):</label>
+      {["a", "b", "c", "d"].map((label, index) => (
+        <div key={index} className="mb-2">
+         <span className="mr-2">ý {label}:</span>
+          <Radio.Group
+            value={newQuestion.correctAnswers[index]}
+            onChange={(e) => {
+              const updated = [...newQuestion.correctAnswers];
+              updated[index] = e.target.value;
+              setNewQuestion({ ...newQuestion, correctAnswers: updated });
+            }}
+            optionType="button"
+            buttonStyle="solid"
+          >
+            <Radio.Button value="True">True</Radio.Button>
+            <Radio.Button value="False">False</Radio.Button>
+          </Radio.Group>
+        </div>
+      ))}
+    </div>
+  );
+
       
       case 3: // Điền kết quả
         return (
@@ -668,21 +702,25 @@ const renderQuestionFields = () => {
           </>
         );
 
-    case 2: // True/False
-      return (
-        <>
-         
-          <p><strong>Loại câu hỏi:</strong> True/False</p>
-          {question.correctAnswers && question.correctAnswers.length === 1 ? (
-            <p><strong>Đáp án đúng:</strong> {question.correctAnswers[0]}</p>
-          ) : (
-            <p className="text-red-500">⚠️ Lỗi: Phải có một đáp án đúng là "True" hoặc "False"!</p>
-          )}
-          {question.solution && (
-            <p><strong>Giải thích:</strong> {question.solution}</p>
-          )}
-        </>
-      );
+        case 2: // True/False
+        return (
+          <>
+            <p><strong>Loại câu hỏi:</strong> True/False</p>
+            {question.correctAnswers && question.correctAnswers.length === 4 ? (
+              <div>
+                {["A", "B", "C", "D"].map((label, index) => (
+                  <p key={index}><strong>Ý {label}:</strong> {question.correctAnswers[index]}</p>
+                ))}
+              </div>
+            ) : (
+              <p className="text-red-500">⚠️ Lỗi: Phải có đủ 4 đáp án True/False tương ứng với các ý!</p>
+            )}
+            {question.solution && (
+              <p><strong>Giải thích:</strong> {question.solution}</p>
+            )}
+          </>
+        );
+      
 
     case 3: // Điền kết quả
       return (

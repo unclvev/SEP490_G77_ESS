@@ -8,27 +8,30 @@ const PreviewGenQR = () => {
   const printRef = useRef();
   const frontImageRef = useRef();
   const backImageRef = useRef();
+  const { qrList, frontImage, backImage } = location.state || {};
   const [isPrintReady, setIsPrintReady] = useState(false);
   const [qrImages, setQrImages] = useState({});
   const [qrPositions, setQrPositions] = useState([]);
-  const { qrList, frontImage, backImage, qrPosition } = location.state || {};
 
   useEffect(() => {
-    const timer = setTimeout(handleImageLoad, 200);
-    return () => clearTimeout(timer);
-  }, []);
+    // Calculate QR positions once frontImageRef is available
+    if (frontImageRef.current) {
+      handleImageLoad();
+    }
+  }, [frontImageRef.current]);
 
   useEffect(() => {
+    // Auto-print when all QR images are ready
     if (Object.keys(qrImages).length === qrList?.length && qrList.length > 0 && isPrintReady) {
+      console.log("✅ Tất cả ảnh QR đã sẵn sàng, tiến hành in...");
       printNow();
-      setIsPrintReady(false);
+      setIsPrintReady(false); // Reset after printing
     }
   }, [qrImages, isPrintReady]);
-
-  if (!qrList || qrList.length !== parseInt(location.state?.printCount)) {
-    return <p className="text-center text-red-500">Dữ liệu QR không đầy đủ hoặc sai số lượng bản in!</p>;
+  
+  if (!qrList || qrList.length === 0) {
+    return <p className="text-center text-red-500">Không có dữ liệu để hiển thị!</p>;
   }
-
 
   const handleImageLoad = () => {
     const frontImg = frontImageRef.current;
@@ -100,66 +103,69 @@ const PreviewGenQR = () => {
   };
   
   const printNow = () => {
+    // Verify all QR codes have been converted to images
     const allQrReady = qrList.every(qr => qrImages[qr.id]);
     if (!allQrReady) {
-      alert("Một số mã QR chưa được tải xong, vui lòng thử lại!");
-      return;
+      console.error("❌ Một số QR chưa được tạo thành ảnh, thử lại...");
+      return alert("Một số mã QR chưa được tải xong, vui lòng thử lại!");
     }
-
+  
+    console.log("✅ Tất cả ảnh QR đã sẵn sàng, tiến hành in...");
+    console.log("📊 QR Images:", qrImages);
+    console.log("📋 QR List:", qrList.map(qr => qr.id));
+  
     const printWindow = window.open("", "_blank");
     printWindow.document.open();
-
+  
     printWindow.document.write(`
       <html>
         <head>
-          <title>In Mã QR</title>
+          <title>Print QR Codes</title>
           <style>
-            body { margin: 0; padding: 0; }
-            .page { position: relative; page-break-after: always; }
+            body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
+            .page { position: relative; page-break-after: always; margin-bottom: 20px; }
             .page:last-child { page-break-after: avoid; }
             img.base-image { width: 100%; display: block; }
-            img.qr-img { 
-              position: absolute; 
-              width: 50px; 
-              height: 50px; 
-            }
+            img.qr-img { width: 50px; height: 50px; position: absolute; }
           </style>
         </head>
         <body>
     `);
-
+  
+    // Generate each page separately with its own QR code
     qrList.forEach((qr, index) => {
       const qrImageUrl = qrImages[qr.id];
-      const currentQRPosition = qrPosition; // Sử dụng vị trí QR được truyền từ trang trước
-
+      
       printWindow.document.write(`
         <div class="page">
+          <!-- Front page with QR codes -->
           <div style="position: relative; margin-bottom: 20px;">
-            <img src="${frontImage}" class="base-image" alt="Mặt trước" />
-            <img src="${qrImageUrl}" class="qr-img" style="top: ${currentQRPosition.leftQR.top}; left: ${currentQRPosition.leftQR.right}" />
-            <img src="${qrImageUrl}" class="qr-img" style="top: ${currentQRPosition.rightQR.top}; left: ${currentQRPosition.rightQR.right}" />
+            <img src="${frontImage}" class="base-image" alt="Front page" />
+            <img src="${qrImageUrl}" class="qr-img" style="top: 22%; left: 88%;" alt="QR Code Left ${qr.id}" />
+            <img src="${qrImageUrl}" class="qr-img" style="top: 10%; left: 88%;" alt="QR Code Right ${qr.id}" />
           </div>
+          
+          <!-- Back page -->
           <div style="position: relative;">
-            <img src="${backImage}" class="base-image" alt="Mặt sau" />
+            <img src="${backImage}" class="base-image" alt="Back page" />
           </div>
         </div>
       `);
     });
-
+  
     printWindow.document.write(`
         </body>
       </html>
     `);
-
+  
     printWindow.document.close();
     printWindow.focus();
-
+  
     setTimeout(() => {
       printWindow.print();
       printWindow.close();
     }, 1000);
   };
-  
   
   return (
     <div className="flex flex-col items-center min-h-screen bg-gray-200 p-6">

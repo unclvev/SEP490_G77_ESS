@@ -28,7 +28,7 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
             var questions = await _context.Questions
                 .Where(q => q.Secid == sectionId)
                 .Include(q => q.Type)
-                .Include(q => q.Mode) // 🔹 Lấy tên Level dựa trên modeid
+                .Include(q => q.Mode)
                 .ToListAsync();
 
             var result = questions.Select(q => new QuestionDto
@@ -40,12 +40,10 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
                 Solution = q.Solution,
                 Modeid = q.Modeid ?? 0,
                 ImageUrl = q.ImageUrl,
-
-                // ✅ Nếu là TypeId = 3 (Điền kết quả), không cần `Answers`
                 Answers = (q.TypeId == 3) ? new List<string>() : q.AnswerContent?.Split(",").ToList() ?? new List<string>(),
-
                 CorrectAnswers = _context.CorrectAnswers
                     .Where(a => a.Quesid == q.Quesid)
+                    .OrderBy(a => a.AnsId) // giữ đúng thứ tự cho True/False
                     .Select(a => a.Content)
                     .ToList(),
             }).ToList();
@@ -73,7 +71,6 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
 
             return Ok(types);
         }
-
         [HttpPost("questions")]
         public async Task<IActionResult> CreateQuestion([FromBody] QuestionDto questionDto)
         {
@@ -97,38 +94,41 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
                 Modeid = questionDto.Modeid,
                 Solution = questionDto.Solution,
                 ImageUrl = questionDto.ImageUrl
-
-                // ✅ TypeId = 2 (True/False) giờ có thể lưu `Solution`
             };
 
-            // ✅ Xử lý từng TypeId
-            if (questionDto.TypeId == 1) // Single choice
+            if (questionDto.TypeId == 1)
             {
                 if (questionDto.CorrectAnswers.Count != 1)
                     return BadRequest(new { message = "Câu hỏi trắc nghiệm chỉ được có một đáp án đúng!" });
 
                 question.AnswerContent = string.Join(",", questionDto.Answers);
             }
-            else if (questionDto.TypeId == 2) // True/False
+            else if (questionDto.TypeId == 2)
             {
-                question.AnswerContent = "True,False"; // ✅ Mặc định luôn là "True,False"
+                if (questionDto.CorrectAnswers.Count != 4)
+                    return BadRequest(new { message = "Câu hỏi Đúng/Sai phải có đúng 4 đáp án tương ứng với 4 ý!" });
+
+                question.AnswerContent = "True,False";
             }
-            else if (questionDto.TypeId == 3) // Điền kết quả
+            else if (questionDto.TypeId == 3)
             {
                 if (questionDto.CorrectAnswers.Count != 1 || questionDto.CorrectAnswers[0].Length != 4)
                     return BadRequest(new { message = "Câu hỏi điền kết quả phải có một đáp án đúng và đúng 4 ký tự!" });
 
-                question.AnswerContent = null; // ✅ Không cần AnswerContent khi TypeId = 3
+                question.AnswerContent = null;
             }
 
             _context.Questions.Add(question);
             await _context.SaveChangesAsync();
 
-            _context.CorrectAnswers.Add(new CorrectAnswer
+            foreach (var answer in questionDto.CorrectAnswers)
             {
-                Content = questionDto.CorrectAnswers[0],
-                Quesid = question.Quesid
-            });
+                _context.CorrectAnswers.Add(new CorrectAnswer
+                {
+                    Content = answer,
+                    Quesid = question.Quesid
+                });
+            }
 
             await _context.SaveChangesAsync();
             return Ok(new { message = "Câu hỏi đã được thêm!", questionId = question.Quesid });
@@ -581,51 +581,54 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
         {
             var question = await _context.Questions.FindAsync(id);
             if (question == null)
-            {
                 return NotFound(new { message = "Không tìm thấy câu hỏi!" });
-            }
 
             question.Quescontent = questionDto.Quescontent;
             question.Secid = questionDto.Secid;
             question.TypeId = questionDto.TypeId;
             question.Modeid = questionDto.Modeid;
             question.Solution = questionDto.Solution;
-            question.ImageUrl = questionDto.ImageUrl; // ✅ NEW
-
-            // ✅ TypeId = 2 (True/False) giờ có thể có Solution
+            question.ImageUrl = questionDto.ImageUrl;
 
             _context.CorrectAnswers.RemoveRange(_context.CorrectAnswers.Where(a => a.Quesid == id));
 
-            if (questionDto.TypeId == 1) // Single choice
+            if (questionDto.TypeId == 1)
             {
                 if (questionDto.CorrectAnswers.Count != 1)
                     return BadRequest(new { message = "Câu hỏi trắc nghiệm chỉ được có một đáp án đúng!" });
 
                 question.AnswerContent = string.Join(",", questionDto.Answers);
             }
-            else if (questionDto.TypeId == 2) // True/False
+            else if (questionDto.TypeId == 2)
             {
-                question.AnswerContent = "True,False"; // ✅ Giữ nguyên "True,False"
+                if (questionDto.CorrectAnswers.Count != 4)
+                    return BadRequest(new { message = "Câu hỏi Đúng/Sai phải có đúng 4 đáp án tương ứng với 4 ý!" });
+
+                question.AnswerContent = "True,False";
             }
-            else if (questionDto.TypeId == 3) // Điền kết quả
+            else if (questionDto.TypeId == 3)
             {
                 if (questionDto.CorrectAnswers.Count != 1 || questionDto.CorrectAnswers[0].Length != 4)
                     return BadRequest(new { message = "Câu hỏi điền kết quả phải có một đáp án đúng và đúng 4 ký tự!" });
 
-                question.AnswerContent = null; // ✅ Không cần AnswerContent khi TypeId = 3
+                question.AnswerContent = null;
             }
 
-            _context.CorrectAnswers.Add(new CorrectAnswer
+            foreach (var answer in questionDto.CorrectAnswers)
             {
-                Content = questionDto.CorrectAnswers[0],
-                Quesid = id
-            });
+                _context.CorrectAnswers.Add(new CorrectAnswer
+                {
+                    Content = answer,
+                    Quesid = id
+                });
+            }
 
             _context.Questions.Update(question);
             await _context.SaveChangesAsync();
 
             return Ok(new { message = "Câu hỏi đã được cập nhật!" });
         }
+    
 
         [HttpPost("upload-image-base64")]
         public IActionResult UploadBase64Image([FromBody] Base64ImageDto dto)
