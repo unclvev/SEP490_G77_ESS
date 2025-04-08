@@ -14,17 +14,17 @@ const ImportEssayPage = () => {
 
     const isExcel = selectedFile.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
     if (!isExcel) {
-      message.error("❌ Chỉ chấp nhận file Excel (.xlsx)");
+      message.error("Chỉ chấp nhận file Excel (.xlsx)");
       return;
     }
 
     setFile(selectedFile);
-    message.success(`📄 Đã chọn file: ${selectedFile.name}`);
+    message.success(`Đã chọn file: ${selectedFile.name}`);
   };
 
   const handleUpload = async () => {
     if (!file) {
-      message.warning("⚠️ Vui lòng chọn file trước khi lưu danh sách học sinh");
+      message.warning("Vui lòng chọn file trước khi lưu danh sách học sinh");
       return;
     }
 
@@ -32,18 +32,18 @@ const ImportEssayPage = () => {
     formData.append("file", file);
 
     try {
-      const response = await axios.post("https://localhost:7052/essay/savestudentlist", formData, {
+      const response = await axios.post("https://localhost:7052/api/essay/savestudentlist", formData, {
         headers: { "Content-Type": "multipart/form-data" }
       });
 
-      message.success("✅ Tải lên thành công!");
-      setImportResult(response.data); // Có thể là "Import thành công!" hoặc kèm tổng số
+      message.success("Tải lên thành công!");
+      setImportResult(response.data);
       setFile(null);
       inputRef.current.value = "";
     } catch (error) {
       console.error(error);
       const msg = error.response?.data || "Tải lên thất bại!";
-      message.error(`❌ ${msg}`);
+      message.error(`${msg}`);
     }
   };
 

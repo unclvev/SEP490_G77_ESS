@@ -131,6 +131,27 @@ def extract_qr_codes(image_path):
 
 @app.route("/analyze", methods=["POST"])
 def analyze_image():
+    """
+    Phân tích ảnh để trích xuất SBD, điểm và QR code
+    ---
+    consumes:
+      - multipart/form-data
+    parameters:
+      - name: image
+        in: formData
+        type: file
+        required: true
+        description: Ảnh cần phân tích (JPG, PNG)
+    responses:
+      200:
+        description: Kết quả phân tích
+        examples:
+          application/json: {
+            "student_code": "student_code",
+            "score": "student_score",
+            "qr_content": ["QR Student"]
+          }
+    """
     if 'image' not in request.files:
         return jsonify({"error": "No image part in request"}), 400
 
