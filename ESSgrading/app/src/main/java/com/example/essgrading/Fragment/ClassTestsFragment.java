@@ -21,7 +21,7 @@ import java.util.List;
 
 public class ClassTestsFragment extends Fragment {
 
-    private String classCode;
+    private String id, classCode;
     private RecyclerView recyclerView;
     private TestAdapter testAdapter;
     private List<TestModel> testList;
@@ -39,6 +39,7 @@ public class ClassTestsFragment extends Fragment {
         super.onCreate(savedInstanceState);
         if (getArguments() != null) {
             classCode = getArguments().getString("classCode");
+            id = getArguments().getString("id");
         }
     }
 
@@ -52,7 +53,7 @@ public class ClassTestsFragment extends Fragment {
         // Dữ liệu giả lập
         List<String> exCodes = Arrays.asList("001", "002", "003");
         testList = new ArrayList<>();
-        testList.add(new TestModel("Toán khối 2", classCode, "40 câu hỏi", "05/02/2025", exCodes));
+        testList.add(new TestModel(id, "Toán khối 2", classCode, "Trắc nghiệm", "05/02/2025", exCodes));
 
         testAdapter = new TestAdapter(getContext(), testList, selectedTest -> {
             // Chuyển sang SelectExCodeActivity khi chọn bài kiểm tra

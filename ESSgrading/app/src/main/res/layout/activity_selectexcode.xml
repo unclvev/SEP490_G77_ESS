@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <androidx.drawerlayout.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/drawerLayout"
@@ -11,23 +12,47 @@
         android:orientation="vertical"
         android:background="@color/light_gray">
 
-        <!-- Include Header -->
+        <!-- Header -->
         <include layout="@layout/header" />
 
-        <!-- Hiển thị tiêu đề -->
-        <Button
-            android:id="@+id/btnHeader"
-            android:layout_width="250dp"
+        <!-- Thông tin kiểm tra -->
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Mã đề"
+            android:orientation="horizontal"
+            android:padding="12dp"
+            android:background="@android:color/darker_gray">
+
+            <TextView
+                android:id="@+id/txtTestTitle"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:text="Tên bài kiểm tra"
+                android:textStyle="bold"
+                android:textColor="@android:color/black"
+                android:textSize="16sp" />
+
+            <TextView
+                android:id="@+id/txtClassCode"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Lớp"
+                android:textColor="@android:color/black"
+                android:textSize="16sp" />
+        </LinearLayout>
+
+        <!-- Tiêu đề chọn mã đề -->
+        <TextView
+            android:id="@+id/txtHeader"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Chọn mã đề để xem đáp án"
             android:textSize="16sp"
             android:textStyle="bold"
-            android:backgroundTint="@color/deepblue"
-            android:textColor="@android:color/white"
-            android:gravity="center"
-            android:padding="10dp"
             android:layout_gravity="center_horizontal"
-            android:layout_margin="16dp"/>
+            android:layout_marginTop="16dp"
+            android:textColor="@android:color/black" />
 
         <!-- Danh sách mã đề -->
         <androidx.recyclerview.widget.RecyclerView
@@ -35,9 +60,9 @@
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
-            android:padding="8dp"/>
+            android:padding="8dp" />
 
-        <!-- Include Footer -->
+        <!-- Footer -->
         <include layout="@layout/footer" />
     </LinearLayout>
 
@@ -48,6 +73,5 @@
         android:layout_height="match_parent"
         android:layout_gravity="start"
         app:headerLayout="@layout/nav_header"
-        app:menu="@menu/drawer_menu"/>
-
+        app:menu="@menu/drawer_menu" />
 </androidx.drawerlayout.widget.DrawerLayout>

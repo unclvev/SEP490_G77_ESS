@@ -1,22 +1,33 @@
 package com.example.essgrading.Model;
 
+import com.google.gson.annotations.SerializedName;
+
 import java.util.List;
 
 public class TestModel {
+    @SerializedName("examId")
+    private String id;
+    @SerializedName("examname")
     private String title;
+    @SerializedName("classname")
     private String classCode; // Đổi tên từ "code" thành "classCode"
-    private String questionCount;
+    private String testType;
+    @SerializedName("createdate")
     private String date;
     private List<String> exCodes; // Thêm danh sách mã đề
 
-    public TestModel(String title, String classCode, String questionCount, String date, List<String> exCodes) {
+    public TestModel(String id,String title, String classCode, String testType, String date, List<String> exCodes) {
+        this.id = id;
         this.title = title;
         this.classCode = classCode;
-        this.questionCount = questionCount;
+        this.testType = testType;
         this.date = date;
         this.exCodes = exCodes;
     }
 
+    public String getId() {
+        return id;
+    }
     public String getTitle() {
         return title;
     }
@@ -25,8 +36,8 @@ public class TestModel {
         return classCode;
     }
 
-    public String getQuestionCount() {
-        return questionCount;
+    public String getTestType() {
+        return testType;
     }
 
     public String getDate() {
