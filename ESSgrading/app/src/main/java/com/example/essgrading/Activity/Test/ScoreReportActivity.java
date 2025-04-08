@@ -41,7 +41,7 @@ public class ScoreReportActivity extends BaseActivity {
 
         // Nhận dữ liệu từ TestOptionActivity
         Intent intent = getIntent();
-        String selectedExCode = intent.getStringExtra("selectedExCode");
+        int testId = Integer.parseInt(intent.getStringExtra("testId"));
 
         // Ánh xạ View
         txtMaxScore = findViewById(R.id.txtMaxScore);
@@ -62,9 +62,8 @@ public class ScoreReportActivity extends BaseActivity {
                 .baseUrl(ApiConfig.BASE_URL)
                 .addConverterFactory(GsonConverterFactory.create())
                 .build();
-
         ApiService apiService = retrofit.create(ApiService.class);
-        Call<List<ScoreModel>> call = apiService.getScoreReport(1);
+        Call<List<ScoreModel>> call = apiService.getScoreReport(testId);
 
         call.enqueue(new Callback<List<ScoreModel>>() {
             @Override
@@ -78,7 +77,7 @@ public class ScoreReportActivity extends BaseActivity {
                     double total = 0;
 
                     for (ScoreModel score : responseList) {
-                        scoreList.add(score); // vì API trả đúng ScoreModel rồi
+                        scoreList.add(score);
                         max = Math.max(max, score.getScore());
                         min = Math.min(min, score.getScore());
                         total += score.getScore();

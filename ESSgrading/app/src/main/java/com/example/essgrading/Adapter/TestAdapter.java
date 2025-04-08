@@ -39,7 +39,7 @@ public class TestAdapter extends RecyclerView.Adapter<TestAdapter.TestViewHolder
         TestModel test = testList.get(position);
         holder.txtTestTitle.setText(test.getTitle());
         holder.txtClassCode.setText(test.getClassCode());
-        holder.txtTestQuestionCount.setText(test.getQuestionCount());
+        holder.txtTestType.setText(test.getTestType());
         holder.txtTestDate.setText(test.getDate());
 
         // Sự kiện click vào bài kiểm tra
@@ -56,13 +56,13 @@ public class TestAdapter extends RecyclerView.Adapter<TestAdapter.TestViewHolder
     }
 
     public static class TestViewHolder extends RecyclerView.ViewHolder {
-        TextView txtTestTitle, txtClassCode, txtTestQuestionCount, txtTestDate;
+        TextView txtTestTitle, txtClassCode, txtTestType, txtTestDate;
 
         public TestViewHolder(@NonNull View itemView) {
             super(itemView);
             txtTestTitle = itemView.findViewById(R.id.txtTestTitle);
             txtClassCode = itemView.findViewById(R.id.txtTestCode);
-            txtTestQuestionCount = itemView.findViewById(R.id.txtTestQuestionCount);
+            txtTestType = itemView.findViewById(R.id.txtTestType);
             txtTestDate = itemView.findViewById(R.id.txtTestDate);
         }
     }
