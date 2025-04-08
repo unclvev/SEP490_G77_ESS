@@ -129,7 +129,7 @@ def extract_qr_codes(image_path):
     
     return results
 
-@app.route("/analyze", methods=["POST"])
+@app.route("/scan-essay", methods=["POST"])
 def analyze_image():
     """
     Phân tích ảnh để trích xuất SBD, điểm và QR code
