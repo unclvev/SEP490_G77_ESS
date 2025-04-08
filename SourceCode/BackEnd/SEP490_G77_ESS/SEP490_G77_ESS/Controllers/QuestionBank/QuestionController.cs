@@ -425,14 +425,13 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
                             }
                             break;
 
-                        case 2: // True/False
-                                // Đảm bảo answers luôn là "True,False"
+                        case 2: // True/False với 4 ý
                             answers = "True,False";
 
-                            if (!string.Equals(correctAnswers.Trim(), "True", StringComparison.OrdinalIgnoreCase) &&
-                                !string.Equals(correctAnswers.Trim(), "False", StringComparison.OrdinalIgnoreCase))
+                            var tfAnswers = correctAnswers.Split(',').Select(x => x.Trim()).ToList();
+                            if (tfAnswers.Count != 4 || tfAnswers.Any(a => a != "True" && a != "False"))
                             {
-                                errors.Add($"Dòng {row}: Đáp án đúng cho câu hỏi True/False phải là 'True' hoặc 'False'");
+                                errors.Add($"Dòng {row}: Đáp án cho câu hỏi True/False phải có đúng 4 giá trị 'True' hoặc 'False'");
                                 row++;
                                 continue;
                             }
@@ -460,12 +459,14 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
                         existingQuestion.ImageUrl = imageUrl;
                         _context.CorrectAnswers.RemoveRange(existingQuestion.CorrectAnswers.ToList());
 
-
-                        await _context.CorrectAnswers.AddAsync(new CorrectAnswer
+                        foreach (var ans in correctAnswers.Split(',').Select(a => a.Trim()))
                         {
-                            Quesid = existingQuestion.Quesid,
-                            Content = correctAnswers.Trim()
-                        });
+                            await _context.CorrectAnswers.AddAsync(new CorrectAnswer
+                            {
+                                Quesid = existingQuestion.Quesid,
+                                Content = ans
+                            });
+                        }
 
                         updateCount++;
                     }
@@ -484,12 +485,14 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
                         };
                         _context.Questions.Add(newQuestion);
                         await _context.SaveChangesAsync();
-
-                        await _context.CorrectAnswers.AddAsync(new CorrectAnswer
+                        foreach (var ans in correctAnswers.Split(',').Select(a => a.Trim()))
                         {
-                            Quesid = newQuestion.Quesid,
-                            Content = correctAnswers.Trim()
-                        });
+                            await _context.CorrectAnswers.AddAsync(new CorrectAnswer
+                            {
+                                Quesid = existingQuestion?.Quesid ?? newQuestion.Quesid,
+                                Content = ans
+                            });
+                        }
 
                         importCount++;
                     }
