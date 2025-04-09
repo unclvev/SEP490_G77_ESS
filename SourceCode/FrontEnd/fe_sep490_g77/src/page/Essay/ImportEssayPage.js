@@ -2,8 +2,11 @@ import { Button, message } from "antd";
 import { UploadOutlined } from "@ant-design/icons";
 import axios from "axios";
 import { useState, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 
 const ImportEssayPage = () => {
+  const [searchParams] = useSearchParams();
+  const examid = searchParams.get("examid");
   const [file, setFile] = useState(null);
   const inputRef = useRef();
   const [importResult, setImportResult] = useState("");
@@ -30,7 +33,7 @@ const ImportEssayPage = () => {
 
     const formData = new FormData();
     formData.append("file", file);
-
+    formData.append("examId", examid);
     try {
       const response = await axios.post("https://localhost:7052/api/essay/savestudentlist", formData, {
         headers: { "Content-Type": "multipart/form-data" }

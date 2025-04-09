@@ -194,7 +194,7 @@ const CreateEssayExam = () => {
                   size="small"
                   onClick={(e) => {
                     e.stopPropagation();
-                    navigate("/essay/import");
+                    navigate(`/essay/import/${item.id}`);
                   }}
                 >
                   Import

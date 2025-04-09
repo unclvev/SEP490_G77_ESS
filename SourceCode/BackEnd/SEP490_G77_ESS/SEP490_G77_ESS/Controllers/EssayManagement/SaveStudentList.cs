@@ -1,7 +1,11 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using DocumentFormat.OpenXml.InkML;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SEP490_G77_ESS.Models;
+using System.IO;
+using System.Threading.Tasks;
+using NPOI.XSSF.UserModel;
 
 namespace SEP490_G77_ESS.Controllers.EssayManagement
 {
@@ -17,15 +21,50 @@ namespace SEP490_G77_ESS.Controllers.EssayManagement
         }
 
         [HttpPost("savestudentlist")]
-        public IActionResult UploadExcel(IFormFile file)
+        public async Task<IActionResult> UploadExcel(IFormFile file, [FromForm] long examId)
         {
-            if (file == null || file.Length == 0)
+            var examExists = await _context.Exams.AnyAsync(e => e.ExamId == examId);
+            if (!examExists)
             {
-                return BadRequest("Không có file hoặc file rỗng.");
+                return BadRequest($"Kỳ thi với ID {examId} không tồn tại.");
             }
+            if (file == null || file.Length == 0)
+                return BadRequest("Không có file hoặc file rỗng.");
+
+            var studentResults = new List<StudentResult>();
+
+            using (var stream = file.OpenReadStream())
+            {
+                var workbook = new XSSFWorkbook(stream);
+                var sheet = workbook.GetSheetAt(0);
+
+                // Bắt đầu từ dòng 1 (bỏ dòng header, dòng 0)
+                for (int row = 1; row <= sheet.LastRowNum; row++)
+                {
+                    var currentRow = sheet.GetRow(row);
+                    if (currentRow == null) continue;
+
+                    var student = new StudentResult
+                    {
+                        ExamId = examId,
+                        StudentCode = currentRow.GetCell(1)?.ToString()?.Trim(),   
+                        StudentName = currentRow.GetCell(2)?.ToString()?.Trim(),  
+                        Gender = currentRow.GetCell(3)?.ToString()?.ToLower() == "nam", 
+                        StudentDob = DateTime.TryParse(currentRow.GetCell(4)?.ToString(), out var dob) ? dob : null,
+                        CreateDate = DateTime.Now
+                    };
+
+                    studentResults.Add(student);
+                }
+            }
+
+            _context.StudentResults.AddRange(studentResults);
+            await _context.SaveChangesAsync();
 
             return Ok("Import thành công!");
         }
+
+
 
         [HttpGet("by-account/{accId}")]
         public async Task<IActionResult> GetExamsByAccount(int accId, [FromQuery] string? grade, [FromQuery] string? subject, [FromQuery] string? classname)

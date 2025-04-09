@@ -21,12 +21,12 @@ import ExamManagement from "./page/Exam/ExamManager";
 import ExamCreation from "./page/Exam/ExamMatrix";
 import ExamPreview from "./page/Exam/ExamPreview";
 import MainLayout2 from "./newLayout/MainLayout";
-import GenQRCode from "./page/Essay/CreateQRCode.js";
+import GenQRCode from "./page/Essay/CreateQRCode";
 import PreviewGenQR from "./page/Essay/PreviewGenQr";
 import CreateEssayExam from "./page/Essay/CreateEssayExam";
 import ImportEssayPage from "./page/Essay/ImportEssayPage";
 import Home from "./page/Home/Home";
-import CreateNewEssayPage from "./page/Essay/CreateNewEssayPage.js";
+import CreateNewEssayPage from "./page/Essay/CreateNewEssayPage";
 
 function App() {
   return (
@@ -56,7 +56,7 @@ function App() {
           <Route path="/exam/analysis" element={<MainLayout><Analysis /></MainLayout>} />
           <Route path="/essay/genqr" element={<MainLayout><GenQRCode></GenQRCode></MainLayout>}/>
           <Route path="/essay/preview-gen-qr" element={<MainLayout><PreviewGenQR></PreviewGenQR></MainLayout>}/>
-          <Route path="/essay/import" element={<MainLayout><ImportEssayPage></ImportEssayPage></MainLayout>}/>
+          <Route path="/essay/import/:examid" element={<MainLayout><ImportEssayPage></ImportEssayPage></MainLayout>}/>
           <Route path="/essay" element={<MainLayout><CreateEssayExam></CreateEssayExam></MainLayout>}/>
           <Route path="/essay/create" element={<MainLayout><CreateNewEssayPage /></MainLayout>} />
         </Routes>
