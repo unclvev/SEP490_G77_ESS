@@ -28,8 +28,6 @@ import ExamManagement from "./page/Exam/ExamManager";
 import ExamCreation from "./page/Exam/ExamMatrix";
 import ExamPreview from "./page/Exam/ExamPreview";
 import Home from "./page/Home/Home";
-import EssQuestionBankDetail from "./page/Bank/QuestionBank/EssQuestionBankDetail.js";
-import EssQuestionList from "./page/Bank/QuestionBank/EssQuestionList.js";
 import CreateNewEssayPage from "./page/Essay/CreateNewEssayPage.js";
 import TempComponent from "./page/TempComponent/temp.js";
 import ExamSelect from "./page/Exam/ExamSelect.js";
