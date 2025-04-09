@@ -5,8 +5,11 @@ import { ToastContainer } from "react-toastify";
 import store from "./redux-setup/store";
 
 import MainLayout from "./Layout/MainLayout";
+import MainLayout2 from "./newLayout/MainLayout";
 import CreateQuestionBank from "./page/Bank/QuestionBank/CreateQuestionBank";
 import Decentralization from "./page/Bank/QuestionBank/Decentralization";
+import EssQuestionBankDetail from "./page/Bank/QuestionBank/EssQuestionBankDetail.js";
+import EssQuestionList from "./page/Bank/QuestionBank/EssQuestionList.js";
 import QuestionBank from "./page/Bank/QuestionBank/Questionbank";
 import QuestionBankDetail from "./page/Bank/QuestionBank/QuestionBankDetail";
 import QuestionList from "./page/Bank/QuestionBank/QuestionList";
@@ -15,19 +18,19 @@ import LoginPage from "./page/Common/LoginPage";
 import Profile from "./page/Common/ProfilePage";
 import RegistrationPage from "./page/Common/RegisterPage";
 import ResetPassword from "./page/Common/ResetPasswordPage";
+import CreateEssayExam from "./page/Essay/CreateEssayExam";
+import GenQRCode from "./page/Essay/CreateQRCode.js";
+import ImportEssayPage from "./page/Essay/ImportEssayPage";
+import PreviewGenQR from "./page/Essay/PreviewGenQr";
 import Analysis from "./page/Exam/Analysis";
 import ExamDetail from "./page/Exam/ExamContent";
 import ExamManagement from "./page/Exam/ExamManager";
 import ExamCreation from "./page/Exam/ExamMatrix";
 import ExamPreview from "./page/Exam/ExamPreview";
-import MainLayout2 from "./newLayout/MainLayout";
-import GenQRCode from "./page/Essay/CreateQRCode.js";
-import PreviewGenQR from "./page/Essay/PreviewGenQr";
-import CreateEssayExam from "./page/Essay/CreateEssayExam";
-import ImportEssayPage from "./page/Essay/ImportEssayPage";
 import Home from "./page/Home/Home";
 import EssQuestionBankDetail from "./page/Bank/QuestionBank/EssQuestionBankDetail.js";
 import EssQuestionList from "./page/Bank/QuestionBank/EssQuestionList.js";
+import CreateNewEssayPage from "./page/Essay/CreateNewEssayPage.js";
 import TempComponent from "./page/TempComponent/temp.js";
 import ExamSelect from "./page/Exam/ExamSelect.js";
 import ExamCreation3T from "./page/Exam/ExamMCQ3tMatrix.js";
@@ -55,12 +58,15 @@ function App() {
           <Route path="/question-list/:sectionId" element={<MainLayout><QuestionList /></MainLayout>} />
           <Route path="/default-bank-detail/:bankId" element={<MainLayout><EssQuestionBankDetail /></MainLayout>} />
           <Route path="/default-bank/:sectionId/questions" element={<EssQuestionList />} />
+          <Route path="/essay/create" element={<MainLayout><CreateNewEssayPage /></MainLayout>} />
 
           <Route path="/exam" element={<MainLayout><ExamManagement /></MainLayout>} />
           <Route path="/exam/content" element={<MainLayout><ExamDetail /></MainLayout>} />
           <Route path="/exam/matrix" element={<MainLayout><ExamCreation /></MainLayout>} />
+
           <Route path="/exam/preview/:examid" element={<MainLayout><ExamPreview /></MainLayout>} />
           <Route path="/exam/analysis/:examId" element={<MainLayout><Analysis /></MainLayout>} />
+
           <Route path="/essay/genqr" element={<MainLayout><GenQRCode></GenQRCode></MainLayout>}/>
           <Route path="/essay/preview-gen-qr" element={<MainLayout><PreviewGenQR></PreviewGenQR></MainLayout>}/>
           <Route path="/essay/import" element={<MainLayout><ImportEssayPage></ImportEssayPage></MainLayout>}/>

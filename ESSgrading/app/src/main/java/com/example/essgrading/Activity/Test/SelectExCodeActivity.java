@@ -2,7 +2,7 @@ package com.example.essgrading.Activity.Test;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.widget.Button;
+import android.widget.TextView;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -15,7 +15,7 @@ import java.util.List;
 public class SelectExCodeActivity extends BaseActivity {
 
     private RecyclerView recyclerViewExCodes;
-    private Button btnHeader;
+    private TextView txtTestTitle, txtClassCode, txtHeader;
     private List<String> exCodeList;
     private String testTitle, classCode;
 
@@ -24,32 +24,34 @@ public class SelectExCodeActivity extends BaseActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_selectexcode);
         setupDrawer();
-        setHeaderTitle("Trắc nghiệm");
+        setHeaderTitle("Bài kiểm tra");
 
-        // Nhận dữ liệu từ TestListActivity
+        // Nhận dữ liệu
         Intent intent = getIntent();
         testTitle = intent.getStringExtra("testTitle");
         classCode = intent.getStringExtra("classCode");
         exCodeList = intent.getStringArrayListExtra("exCodes");
 
-        // Ánh xạ View
+        // Ánh xạ view
+        txtTestTitle = findViewById(R.id.txtTestTitle);
+        txtClassCode = findViewById(R.id.txtClassCode);
+        txtHeader = findViewById(R.id.txtHeader);
         recyclerViewExCodes = findViewById(R.id.recyclerViewExCodes);
-        btnHeader = findViewById(R.id.btnHeader);
 
-        // Đặt tiêu đề mã đề
-        btnHeader.setText("Mã đề");
+        // Set thông tin
+        txtTestTitle.setText(testTitle);
+        txtClassCode.setText(classCode);
 
-        // Hiển thị danh sách mã đề
+        // Gán danh sách mã đề
         if (exCodeList != null) {
             ExCodeAdapter adapter = new ExCodeAdapter(exCodeList, selectedExCode -> {
-                // Khi chọn mã đề -> chuyển sang TestOptionActivity
-                Intent optionIntent = new Intent(SelectExCodeActivity.this, TestOptionActivity.class);
-                optionIntent.putExtra("testTitle", testTitle);
-                optionIntent.putExtra("classCode", classCode);
-                optionIntent.putExtra("selectedExCode", selectedExCode);
-                startActivity(optionIntent);
+                Intent answerIntent = new Intent(SelectExCodeActivity.this, ListAnswerActivity.class);
+                answerIntent.putExtra("testTitle", testTitle);
+                answerIntent.putExtra("classCode", classCode);
+                answerIntent.putExtra("selectedExCode", selectedExCode);
+                startActivity(answerIntent);
             });
-            recyclerViewExCodes.setLayoutManager(new GridLayoutManager(this, 2)); // Hiển thị 2 cột
+            recyclerViewExCodes.setLayoutManager(new GridLayoutManager(this, 2));
             recyclerViewExCodes.setAdapter(adapter);
         }
     }
