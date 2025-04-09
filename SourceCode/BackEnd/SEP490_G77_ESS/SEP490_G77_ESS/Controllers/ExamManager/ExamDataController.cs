@@ -63,6 +63,7 @@ namespace SEP490_G77_ESS.Controllers.ExamManager
             return Ok(new { message = "Exam data added successfully!" });
         }
 
+
         //Demo Data
         [HttpPost("AddExamDataDemo")]
         public async Task<IActionResult> AddExamDataDemo([FromQuery] int examid)
@@ -119,6 +120,95 @@ namespace SEP490_G77_ESS.Controllers.ExamManager
 
             return Ok(new { message = "Exam data added successfully!", data = examData });
         }
+
+        //create exam from data
+        //example data:
+        /*Cấu trúc đề thi: [
+            {
+                "sectionId": "10004",
+                "easy": 2,
+                "medium": 0,
+                "hard": 0
+            },
+            {
+                "sectionId": "10002",
+                "easy": 0,
+                "medium": 0,
+                "hard": 0
+            }
+        ]*/
+
+        [HttpPost("GenerateExam")]
+        public async Task<IActionResult> GenerateExam([FromBody] List<ExamSectionRequest> examSections)
+        {
+            if (examSections == null || examSections.Count == 0)
+            {
+                return BadRequest("Invalid exam structure.");
+            }
+
+            var selectedQuestions = new List<QuestionDTO>();
+
+            foreach (var section in examSections)
+            {
+                var questions = await _context.Questions
+                    .Where(q => q.Secid == section.SectionId &&
+                                (q.Modeid == 1 && section.Easy > 0 ||
+                                 q.Modeid == 2 && section.Medium > 0 ||
+                                 q.Modeid == 3 && section.Hard > 0))
+                    .OrderBy(r => Guid.NewGuid())
+                    .Take(section.Easy + section.Medium + section.Hard)
+                    .Select(q => new QuestionDTO
+                    {
+                        QuestionId = q.Quesid,
+                        Content = q.Quescontent,
+                        Type = q.Type.TypeName,
+                        Answers = _context.CorrectAnswers
+                            .Where(a => a.Quesid == q.Quesid)
+                            .Select(a => new AnswerDTO
+                            {
+                                AnswerId = a.AnsId,
+                                Content = a.Content,
+                                IsCorrect = true,
+                            })
+                            .ToList()
+                    })
+                    .ToListAsync();
+
+                selectedQuestions.AddRange(questions);
+            }
+
+            //long? accId = await GetAccIdFromToken();
+            long? accId = 15;
+
+            var examData = new ExamDataDTO
+            {
+                ExamId = 0,
+                ExamName = "Generated Exam",
+                Questions = selectedQuestions
+            };
+
+            var exam = new Exam
+            {
+                Examdata = JsonConvert.SerializeObject(examData),
+                Examname = "Generated Exam",
+                Createdate = DateTime.UtcNow,
+                AccId = accId
+            };
+
+            _context.Exams.Add(exam);
+            await _context.SaveChangesAsync();
+
+            examData.ExamId = exam.ExamId;
+            exam.Examdata = JsonConvert.SerializeObject(examData);
+            _context.Exams.Update(exam);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { exam.ExamId, exam.Examdata });
+        }
+
+
+        //generate muti-examcode 
+
 
     }
 }

@@ -1,4 +1,4 @@
-import Http from "./http"
+import Http from "./http";
 
 //auth-api
 
@@ -13,16 +13,16 @@ export const resetPassword = (params) => {
   };
   
   
-  //profile-api
-  export const getProfile = () => Http.get("/Profile/info");
+//profile-api
+export const getProfile = () => Http.get("/Profile/info");
 
-  export const updateProfile = (data) => Http.put("/Profile/update", data);
+export const updateProfile = (data) => Http.put("/Profile/update", data);
   
-  export const changePassword = (data) => Http.put("/Profile/changePassword", data);
+export const changePassword = (data) => Http.put("/Profile/changePassword", data);
 
 //exam-api
 
-export const createExam = () => Http.get("/")
+export const createExam = (data) => Http.post("/ExamData/GenerateExam", data)
 
 export const getExams = () => Http.get("/exam")
 
@@ -34,14 +34,17 @@ export const updateExam = (examid, data) => Http.put(`/Exam/${examid}`, data)
 
 export const loadbExams = () => Http.get(`/Exam/loadbs`);
 
-export const loadbExam = (bankId) => Http.get(`/Exam/loadb/${bankId}`);
+export const loadbExam = (examid) => Http.get(`/Exam/loadb/${examid}`);
 
 export const countQExam = (examid) => Http.get(`/Exam/${examid}/question-counts`);
 
 export const getSubjectNameById = (subjectId) => Http.get(`/Exam/subject-name/${subjectId}`)
 
 //exam-analysis-api
+
 export const getExamResults = (examid) => Http.get(`/Analysis/${examid}`)
+
+export const exportExcel = (examid) => Http.get(`/Analysis/export/${examid}`, { responseType: 'blob' })
 
 //question-api
 

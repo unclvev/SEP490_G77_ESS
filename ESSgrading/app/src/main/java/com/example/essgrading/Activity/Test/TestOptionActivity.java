@@ -10,56 +10,70 @@ import com.example.essgrading.Activity.Test.GradingActivity;
 import com.example.essgrading.Activity.Test.ListAnswerActivity;
 import com.example.essgrading.R;
 
+import java.util.ArrayList;
+
 public class TestOptionActivity extends BaseActivity {
 
-    private Button btnCorrectAnswers, btnGrading;
-    private TextView txtExCode;
+    private Button btnCorrectAnswers, btnGrading, btnScoreReport;
+    private TextView txtTitle, txtClass, txtType, txtDate;
+
+    private String testTitle, classCode, testType, testDate, id;
+    private ArrayList<String> exCodes;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_testoption);
         setupDrawer();
-        setHeaderTitle("Trắc nghiệm");
+        setHeaderTitle("Bài kiểm tra");
 
-        // Nhận dữ liệu từ SelectExCodeActivity
+        // Nhận từ TestListActivity
         Intent intent = getIntent();
-        String testTitle = intent.getStringExtra("testTitle");
-        String classCode = intent.getStringExtra("classCode");
-        String selectedExCode = intent.getStringExtra("selectedExCode");
+        id = intent.getStringExtra("testId");
+        testTitle = intent.getStringExtra("testTitle");
+        classCode = intent.getStringExtra("classCode");
+        testType = intent.getStringExtra("testType");
+        testDate = intent.getStringExtra("testDate");
+        exCodes = intent.getStringArrayListExtra("exCodes");
 
-        // Ánh xạ View
-        txtExCode = findViewById(R.id.txtExCode);
+        // Ánh xạ view
+        txtTitle = findViewById(R.id.txtTitle);
+        txtClass = findViewById(R.id.txtClass);
+        txtType = findViewById(R.id.txtType);
+        txtDate = findViewById(R.id.txtDate);
+
+        txtTitle.setText(testTitle);
+        txtClass.setText(classCode);
+        txtType.setText(testType);
+        txtDate.setText(testDate);
+
         btnCorrectAnswers = findViewById(R.id.btnCorrectAnswers);
         btnGrading = findViewById(R.id.btnGrading);
+        btnScoreReport = findViewById(R.id.btnScoreReport);
 
-        // Hiển thị mã đề
-        txtExCode.setText("Mã đề " + selectedExCode);
-
-        // 🔹 Xử lý sự kiện khi nhấn "Đáp án đúng"
         btnCorrectAnswers.setOnClickListener(v -> {
-            Intent answerIntent = new Intent(TestOptionActivity.this, ListAnswerActivity.class);
-            answerIntent.putExtra("testTitle", testTitle);
-            answerIntent.putExtra("classCode", classCode);
-            answerIntent.putExtra("selectedExCode", selectedExCode);
-            startActivity(answerIntent);
+            Intent intent1 = new Intent(TestOptionActivity.this, SelectExCodeActivity.class);
+            intent1.putExtra("testId", id);
+            intent1.putExtra("testTitle", testTitle);
+            intent1.putExtra("classCode", classCode);
+            intent1.putStringArrayListExtra("exCodes", exCodes);
+            startActivity(intent1);
         });
 
-        // 🔹 Xử lý sự kiện khi nhấn "Chấm bài kiểm tra"
         btnGrading.setOnClickListener(v -> {
-            Intent gradingIntent = new Intent(TestOptionActivity.this, GradingActivity.class);
-            gradingIntent.putExtra("testTitle", testTitle);
-            gradingIntent.putExtra("classCode", classCode);
-            gradingIntent.putExtra("selectedExCode", selectedExCode);
-            startActivity(gradingIntent);
+            Intent intent2 = new Intent(TestOptionActivity.this, GradingActivity.class);
+            intent2.putExtra("testId", id);
+            intent2.putExtra("testTitle", testTitle);
+            intent2.putExtra("classCode", classCode);
+            startActivity(intent2);
         });
 
-        Button btnScoreReport = findViewById(R.id.btnScoreReport);
         btnScoreReport.setOnClickListener(v -> {
-            Intent reportIntent = new Intent(TestOptionActivity.this, ScoreReportActivity.class);
-            reportIntent.putExtra("selectedExCode", selectedExCode);
-            startActivity(reportIntent);
+            Intent intent3 = new Intent(TestOptionActivity.this, ScoreReportActivity.class);
+            intent3.putExtra("testId", id);
+            intent3.putExtra("testTitle", testTitle);
+            intent3.putExtra("classCode", classCode);
+            startActivity(intent3);
         });
-
     }
 }

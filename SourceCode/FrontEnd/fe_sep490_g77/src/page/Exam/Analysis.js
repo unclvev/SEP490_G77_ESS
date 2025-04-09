@@ -19,7 +19,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { getExamResults, getSubjectNameById } from "../../services/api";
+import { exportExcel, getExamResults, getSubjectNameById } from "../../services/api";
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#DC143C"];
 const columns = [
@@ -133,7 +133,32 @@ const Analysis = () => {
     
       fetchData();
     }, []);    
-
+  
+    const handleExportExcel = async () => {
+      try {
+        // Gọi hàm exportExcel từ api.js để lấy file Excel
+        const response = await exportExcel(examId);
+  
+        // Nếu response trả về status OK
+        if (response.status === 200) {
+          // Tạo blob từ response data
+          const blob = new Blob([response.data], {
+            type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          });
+          
+          // Tạo link tải file và tự động click vào để tải
+          const link = document.createElement("a");
+          link.href = URL.createObjectURL(blob);
+          link.download = "BangDiem.xlsx";  // Đặt tên cho file tải xuống
+          link.click();
+        } else {
+          toast.error("Không thể tải file Excel");
+        }
+      } catch (error) {
+        console.error("Error exporting Excel:", error);
+        toast.error("Lỗi khi xuất file Excel");
+      }
+    };
   // Sắp xếp theo điểm từ cao xuống thấp để xếp hạng
   const rankedData = [...scoreData].sort((a, b) => b.score - a.score).map((student, index) => ({
     ...student,
@@ -170,12 +195,13 @@ const Analysis = () => {
         <Card>
           <h3 className="font-semibold mb-2">Xuất dữ liệu</h3>
           <div className="flex flex-col gap-2">
+            <Checkbox checked>Phân tích cơ bản</Checkbox>
             <Checkbox checked>Bảng điểm</Checkbox>
-            <Checkbox checked>Phổ điểm</Checkbox>
-            <Checkbox checked>Tỉ lệ đúng/sai theo câu hỏi</Checkbox>
+            <Checkbox checked>Biểu đồ</Checkbox>
+            {/* <Checkbox checked>Tỉ lệ đúng/sai theo câu hỏi</Checkbox> */}
           </div>
-          <Button type="primary" className="mt-4 w-full">
-            Xuất thành excel
+          <Button type="primary" className="mt-4 w-full" onClick={() => handleExportExcel(examId)}>
+            Xuất ra excel
           </Button>
         </Card>
       </div>

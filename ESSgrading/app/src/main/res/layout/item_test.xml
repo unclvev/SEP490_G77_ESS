@@ -39,7 +39,7 @@
         </LinearLayout>
 
         <TextView
-            android:id="@+id/txtTestQuestionCount"
+            android:id="@+id/txtTestType"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="40 câu hỏi"
