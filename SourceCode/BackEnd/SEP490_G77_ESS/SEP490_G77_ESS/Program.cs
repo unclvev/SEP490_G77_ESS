@@ -16,11 +16,11 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.WebHost.ConfigureKestrel(serverOptions =>
 {
-    serverOptions.ListenAnyIP(7052);
-    //serverOptions.ListenAnyIP(7053, listenOptions =>
-    //{
-    //    listenOptions.UseHttps();
-    //});
+    //serverOptions.ListenAnyIP(7052);
+    serverOptions.ListenAnyIP(7052, listenOptions =>
+    {
+        listenOptions.UseHttps();
+    });
 });
 
 

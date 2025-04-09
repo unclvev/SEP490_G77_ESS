@@ -28,12 +28,10 @@ import ExamManagement from "./page/Exam/ExamManager";
 import ExamCreation from "./page/Exam/ExamMatrix";
 import ExamPreview from "./page/Exam/ExamPreview";
 import Home from "./page/Home/Home";
-
-import EssQuestionBankDetail from "./page/Bank/QuestionBank/EssQuestionBankDetail.js";
-import EssQuestionList from "./page/Bank/QuestionBank/EssQuestionList.js";
 import CreateNewEssayPage from "./page/Essay/CreateNewEssayPage.js";
-
 import TempComponent from "./page/TempComponent/temp.js";
+import ExamSelect from "./page/Exam/ExamSelect.js";
+import ExamCreation3T from "./page/Exam/ExamMCQ3tMatrix.js";
 
 function App() {
   return (
@@ -71,8 +69,11 @@ function App() {
           <Route path="/essay/preview-gen-qr" element={<MainLayout><PreviewGenQR></PreviewGenQR></MainLayout>}/>
           <Route path="/essay/import" element={<MainLayout><ImportEssayPage></ImportEssayPage></MainLayout>}/>
           <Route path="/essay" element={<MainLayout><CreateEssayExam></CreateEssayExam></MainLayout>}/>
+          <Route path="/exam/matrix3t" element={<MainLayout><ExamCreation3T/></MainLayout>}></Route>
+          <Route path="/exam/select" element={<MainLayout><ExamSelect/></MainLayout>}></Route>
 
           <Route path="/temp" element={<TempComponent/>}></Route>
+          
         </Routes>
       </Router>
                                                 

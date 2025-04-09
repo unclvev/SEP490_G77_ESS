@@ -10,7 +10,7 @@ namespace SEP490_G77_ESS.Models
         public byte? Bankstatus { get; set; }
         public long? Totalquestion { get; set; }
 
-        [JsonIgnore] // ✅ Ẩn `Accid` khi serialize JSON
+        [JsonIgnore] // ✅ Ẩn Accid khi serialize JSON
         public long? Accid { get; set; }
 
         public long? GradeId { get; set; }
@@ -28,3 +28,4 @@ namespace SEP490_G77_ESS.Models
         [JsonIgnore] public virtual Subject? Subject { get; set; }
     }
 }
+        

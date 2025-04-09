@@ -57,7 +57,6 @@ const TempComponent = () => {
       <Space style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
         <Space>
           <Text strong>Câu 2.</Text>
-          <Button size="small">Nhập điểm</Button>
           <Button size="small">Trắc nghiệm</Button>
           <Button size="small">NB</Button>
         </Space>

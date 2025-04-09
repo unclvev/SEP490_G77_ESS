@@ -24,6 +24,8 @@ export const changePassword = (data) => Http.put("/Profile/changePassword", data
 
 export const createExam = (data) => Http.post("/ExamData/GenerateExam", data)
 
+export const createExam3T = (data) => Http.post("/ExamData/GenerateExamByCriteria", data)
+
 export const getExams = () => Http.get("/exam")
 
 export const getExam = (examid) => Http.get(`/Exam/${examid}`)
@@ -36,9 +38,13 @@ export const loadbExams = () => Http.get(`/Exam/loadbs`);
 
 export const loadbExam = (examid) => Http.get(`/Exam/loadb/${examid}`);
 
-export const countQExam = (examid) => Http.get(`/Exam/${examid}/question-counts`);
+export const countQExam = (examid, qtype) => Http.get(`/Exam/${examid}/question-counts`, { params: { qtype } });
 
-export const getSubjectNameById = (subjectId) => Http.get(`/Exam/subject-name/${subjectId}`)
+
+export const getSubjectNameById = (subjectId) => Http.get(`/Exam/subject-name/${subjectId}`);
+
+export const updateExamData = (examid, data) => Http.put(`/ExamData/UpdateExamData?examid=${examid}`, data);
+
 
 //exam-analysis-api
 

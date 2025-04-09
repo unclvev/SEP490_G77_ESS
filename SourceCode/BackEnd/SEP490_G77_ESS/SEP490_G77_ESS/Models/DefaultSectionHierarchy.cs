@@ -17,7 +17,7 @@ namespace SEP490_G77_ESS.Models
 
         public long? AncestorId { get; set; }  // ✅ Thêm quan hệ cha
         public long? DescendantId { get; set; }  // ✅ Thêm quan hệ con
-        public int? Depth { get; set; }  // ✅ Độ sâu của section
+        public long? Depth { get; set; }  // ✅ Độ sâu của section
 
         public virtual Curriculum? Curriculum { get; set; }
         public virtual Grade? Grade { get; set; }
