@@ -541,7 +541,10 @@ const renderQuestionFields = () => {
     case 1: // Trắc nghiệm
       return (
         <div className="mb-4">
-          <label className="font-semibold block mb-2">Đáp án</label>
+         <label className="font-semibold block mb-2">
+  Đáp án <span className="text-red-500">*</span>
+</label>
+
           <Radio.Group 
             value={newQuestion.correctAnswers[0]}
             onChange={(e) => setNewQuestion({ ...newQuestion, correctAnswers: [e.target.value] })}
@@ -604,7 +607,10 @@ const renderQuestionFields = () => {
       case 2: // True/False
   return (
     <div className="mb-4">
-      <label className="font-semibold block mb-2">Chọn True/False cho từng ý (a–d):</label>
+     <label className="font-semibold block mb-2">
+  Chọn True/False cho từng ý (a–d) <span className="text-red-500">*</span>
+</label>
+
       {["a", "b", "c", "d"].map((label, index) => (
         <div key={index} className="mb-2">
          <span className="mr-2">ý {label}:</span>
@@ -630,7 +636,10 @@ const renderQuestionFields = () => {
       case 3: // Điền kết quả
         return (
           <div className="mb-4">
-            <label className="font-semibold block mb-2">Đáp án đúng (4 ký tự)</label>
+           <label className="font-semibold block mb-2">
+  Đáp án đúng (4 ký tự) <span className="text-red-500">*</span>
+</label>
+
             <Input
               placeholder="Nhập đáp án (ví dụ: 1234, -123, 0.12, ...)"
               value={newQuestion.correctAnswers[0]}
@@ -868,7 +877,10 @@ const renderMathInput = () => {
         <div className="bg-white p-6 shadow-md rounded">
           <h2 className="text-2xl font-bold mb-4">{currentQuestion ? "Chỉnh Sửa Câu Hỏi" : "Thêm Câu Hỏi"}</h2>
 
-          <label className="font-semibold">Loại câu hỏi</label>
+          <label className="font-semibold">
+  Loại câu hỏi <span className="text-red-500">*</span>
+</label>
+
           <Select
             className="w-full mb-4"
             placeholder="Chọn loại câu hỏi"
@@ -888,7 +900,10 @@ const renderMathInput = () => {
             ))}
           </Select>
 
-          <label className="font-semibold">Độ khó</label>
+          <label className="font-semibold">
+  Độ khó <span className="text-red-500">*</span>
+</label>
+
           <Select
             className="w-full mb-4"
             placeholder="Chọn độ khó"
@@ -903,7 +918,10 @@ const renderMathInput = () => {
           </Select>
 
           
-<label className="font-semibold">Nội dung câu hỏi</label>
+          <label className="font-semibold">
+  Nội dung câu hỏi <span className="text-red-500">*</span>
+</label>
+
 <div className="mb-2">
   <Button 
     type="primary" 
