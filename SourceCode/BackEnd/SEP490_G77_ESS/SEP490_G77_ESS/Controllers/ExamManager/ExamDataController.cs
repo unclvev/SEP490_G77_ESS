@@ -63,6 +63,7 @@ namespace SEP490_G77_ESS.Controllers.ExamManager
             return Ok(new { message = "Exam data added successfully!" });
         }
 
+
         //Demo Data
         [HttpPost("AddExamDataDemo")]
         public async Task<IActionResult> AddExamDataDemo([FromQuery] int examid)
@@ -119,6 +120,273 @@ namespace SEP490_G77_ESS.Controllers.ExamManager
 
             return Ok(new { message = "Exam data added successfully!", data = examData });
         }
+
+        //create exam from data
+        //example data:
+        /*Cấu trúc đề thi: [
+            {
+                "sectionId": "10004",
+                "easy": 2,
+                "medium": 0,
+                "hard": 0
+            },
+            {
+                "sectionId": "10002",
+                "easy": 0,
+                "medium": 0,
+                "hard": 0
+            }
+        ]*/
+
+        [HttpPost("GenerateExam")]
+        public async Task<IActionResult> GenerateExam([FromBody] List<ExamSectionRequest> examSections)
+        {
+            if (examSections == null || examSections.Count == 0)
+            {
+                return BadRequest("Invalid exam structure.");
+            }
+
+            var selectedQuestions = new List<QuestionDTO>();
+
+            foreach (var section in examSections)
+            {
+                var questions = await _context.Questions
+                    .Where(q => q.Secid == section.SectionId &&
+                                (q.Modeid == 1 && section.Easy > 0 ||
+                                 q.Modeid == 2 && section.Medium > 0 ||
+                                 q.Modeid == 3 && section.Hard > 0))
+                    .OrderBy(r => Guid.NewGuid())
+                    .Take(section.Easy + section.Medium + section.Hard)
+                    .Select(q => new QuestionDTO
+                    {
+                        QuestionId = q.Quesid,
+                        Content = q.Quescontent,
+                        Type = q.Type.TypeName,
+                        Answers = _context.CorrectAnswers
+                            .Where(a => a.Quesid == q.Quesid)
+                            .Select(a => new AnswerDTO
+                            {
+                                AnswerId = a.AnsId,
+                                Content = a.Content,
+                                IsCorrect = true,
+                            })
+                            .ToList()
+                    })
+                    .ToListAsync();
+
+                selectedQuestions.AddRange(questions);
+            }
+
+            //long? accId = await GetAccIdFromToken();
+            long? accId = 15;
+
+            var examData = new ExamDataDTO
+            {
+                ExamId = 0,
+                ExamName = "Generated Exam",
+                Questions = selectedQuestions
+            };
+
+            var exam = new Exam
+            {
+                Examdata = JsonConvert.SerializeObject(examData),
+                Examname = "Generated Exam",
+                Createdate = DateTime.UtcNow,
+                AccId = accId
+            };
+
+            _context.Exams.Add(exam);
+            await _context.SaveChangesAsync();
+
+            examData.ExamId = exam.ExamId;
+            exam.Examdata = JsonConvert.SerializeObject(examData);
+            _context.Exams.Update(exam);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { exam.ExamId, exam.Examdata });
+        }
+
+        //update exam data in exam preview
+        [HttpPut("UpdateExamData")]
+        public async Task<IActionResult> UpdateExamData([FromQuery] int examid, [FromBody] ExamUpdateDTO examUpdate)
+        {
+            // Tìm kiếm exam theo examid
+            var exam = await _context.Exams.FirstOrDefaultAsync(e => e.ExamId == examid);
+            if (exam == null)
+            {
+                return NotFound(new { message = $"Exam với examId {examid} không tồn tại." });
+            }
+
+            // Cập nhật tên đề thi từ phần Exam của DTO
+            if (examUpdate.Exam != null)
+            {
+                exam.Examname = examUpdate.Exam.ExamName;
+            }
+
+            // Tạo đối tượng chứa toàn bộ dữ liệu: exam info và examdata (Questions)
+            var fullExamData = new
+            {
+                exam = examUpdate.Exam,       // chứa ExamName, Grade, Subject
+                examdata = examUpdate.Examdata  // chứa danh sách câu hỏi
+            };
+
+            // Serialize đối tượng fullExamData thành chuỗi JSON
+            string jsonData = JsonConvert.SerializeObject(fullExamData);
+            exam.Examdata = jsonData;
+
+            // Cập nhật vào database
+            _context.Exams.Update(exam);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Exam data updated successfully!", exam.ExamId, exam.Examdata });
+        }
+
+        [HttpPost("GenerateExamByCriteria")]
+        public async Task<IActionResult> GenerateExamByCriteria([FromBody] List<ExamSection3TDTO> examSections)
+        {
+            if (examSections == null || examSections.Count == 0)
+            {
+                return BadRequest("Cấu trúc đề thi không hợp lệ.");
+            }
+
+            // Danh sách lưu trữ tất cả câu hỏi được chọn từ các section
+            var selectedQuestions = new List<QuestionDTO>();
+
+            // Lặp qua từng mục examSectionCriteria được gửi từ client.
+            // Với mỗi mục, API sẽ thực hiện 3 bước:
+            // 1 - Chọn ngẫu nhiên các câu hỏi Easy (Modeid = 1) có TypeId = examSection.Qtype
+            // 2 - Chọn ngẫu nhiên các câu hỏi Medium (Modeid = 2) có TypeId = examSection.Qtype
+            // 3 - Chọn ngẫu nhiên các câu hỏi Hard (Modeid = 3) có TypeId = examSection.Qtype
+            foreach (var section in examSections)
+            {
+                // --- Bước 1: Lấy các câu hỏi Easy (Modeid = 1) ---
+                if (section.Counts.Easy > 0)
+                {
+                    var easyQuestions = await _context.Questions
+                        .Where(q => q.Secid == section.SectionId
+                                    && q.Modeid == 1
+                                    && q.TypeId == section.TypeId)
+                        .OrderBy(q => Guid.NewGuid()) // Sắp xếp ngẫu nhiên
+                        .Take(section.Counts.Easy)
+                        .Select(q => new QuestionDTO
+                        {
+                            QuestionId = q.Quesid,
+                            Content = q.Quescontent,
+                            Type = q.Type.TypeName,
+                            Answers = _context.CorrectAnswers
+                                      .Where(a => a.Quesid == q.Quesid)
+                                      .Select(a => new AnswerDTO
+                                      {
+                                          AnswerId = a.AnsId,
+                                          Content = a.Content,
+                                          IsCorrect = true
+                                      })
+                                      .ToList()
+                        })
+                        .ToListAsync();
+
+                    selectedQuestions.AddRange(easyQuestions);
+                }
+
+                // --- Bước 2: Lấy các câu hỏi Medium (Modeid = 2) ---
+                if (section.Counts.Medium > 0)
+                {
+                    var mediumQuestions = await _context.Questions
+                        .Where(q => q.Secid == section.SectionId
+                                    && q.Modeid == 2
+                                    && q.TypeId == section.TypeId)
+                        .OrderBy(q => Guid.NewGuid())
+                        .Take(section.Counts.Medium)
+                        .Select(q => new QuestionDTO
+                        {
+                            QuestionId = q.Quesid,
+                            Content = q.Quescontent,
+                            Type = q.Type.TypeName,
+                            Answers = _context.CorrectAnswers
+                                      .Where(a => a.Quesid == q.Quesid)
+                                      .Select(a => new AnswerDTO
+                                      {
+                                          AnswerId = a.AnsId,
+                                          Content = a.Content,
+                                          IsCorrect = true
+                                      })
+                                      .ToList()
+                        })
+                        .ToListAsync();
+
+                    selectedQuestions.AddRange(mediumQuestions);
+                }
+
+                // --- Bước 3: Lấy các câu hỏi Hard (Modeid = 3) ---
+                if (section.Counts.Hard > 0)
+                {
+                    var hardQuestions = await _context.Questions
+                        .Where(q => q.Secid == section.SectionId
+                                    && q.Modeid == 3
+                                    && q.TypeId == section.TypeId)
+                        .OrderBy(q => Guid.NewGuid())
+                        .Take(section.Counts.Hard)
+                        .Select(q => new QuestionDTO
+                        {
+                            QuestionId = q.Quesid,
+                            Content = q.Quescontent,
+                            Type = q.Type.TypeName,
+                            Answers = _context.CorrectAnswers
+                                      .Where(a => a.Quesid == q.Quesid)
+                                      .Select(a => new AnswerDTO
+                                      {
+                                          AnswerId = a.AnsId,
+                                          Content = a.Content,
+                                          IsCorrect = true
+                                      })
+                                      .ToList()
+                        })
+                        .ToListAsync();
+
+                    selectedQuestions.AddRange(hardQuestions);
+                }
+            }
+
+            // Sau khi lấy đủ các câu hỏi (từ cả 3 nhóm: TypeId = 1, 2 và 3),
+            // ta xây dựng examData bằng cách gộp tất cả các câu hỏi lại.
+            var examData = new ExamDataDTO
+            {
+                ExamId = 0,
+                ExamName = "Generated Exam",
+                Questions = selectedQuestions
+            };
+
+            // Ví dụ sử dụng accId cố định (15). Ở thực tế, có thể lấy từ token hoặc theo logic nghiệp vụ khác.
+            long? accId = 15;
+            var exam = new Exam
+            {
+                Examdata = JsonConvert.SerializeObject(examData),
+                Examname = "Generated Exam",
+                Createdate = DateTime.UtcNow,
+                AccId = accId
+            };
+
+            _context.Exams.Add(exam);
+            await _context.SaveChangesAsync();
+
+            // Cập nhật ExamData.ExamId với Exam.ExamId mới tạo, lưu lại vào trường Examdata của Exam
+            examData.ExamId = exam.ExamId;
+            exam.Examdata = JsonConvert.SerializeObject(examData);
+            _context.Exams.Update(exam);
+            await _context.SaveChangesAsync();
+
+            // Trả về dữ liệu JSON của exam, đồng thời Examdata đã lưu được cập nhật với danh sách câu hỏi
+            return Ok(new { exam.ExamId, exam.Examdata });
+        }
+
+
+
+
+
+
+
+        //generate muti-examcode 
+
 
     }
 }

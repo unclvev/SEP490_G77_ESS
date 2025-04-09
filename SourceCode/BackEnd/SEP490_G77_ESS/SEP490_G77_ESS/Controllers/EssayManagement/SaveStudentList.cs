@@ -1,11 +1,11 @@
-﻿using DocumentFormat.OpenXml.InkML;
-using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SEP490_G77_ESS.Models;
 using System.IO;
 using System.Threading.Tasks;
 using NPOI.XSSF.UserModel;
+
 
 namespace SEP490_G77_ESS.Controllers.EssayManagement
 {
@@ -47,9 +47,9 @@ namespace SEP490_G77_ESS.Controllers.EssayManagement
                     var student = new StudentResult
                     {
                         ExamId = examId,
-                        StudentCode = currentRow.GetCell(1)?.ToString()?.Trim(),   
-                        StudentName = currentRow.GetCell(2)?.ToString()?.Trim(),  
-                        Gender = currentRow.GetCell(3)?.ToString()?.ToLower() == "nam", 
+                        StudentCode = currentRow.GetCell(1)?.ToString()?.Trim(),
+                        StudentName = currentRow.GetCell(2)?.ToString()?.Trim(),
+                        Gender = currentRow.GetCell(3)?.ToString()?.ToLower() == "nam",
                         StudentDob = DateTime.TryParse(currentRow.GetCell(4)?.ToString(), out var dob) ? dob : null,
                         CreateDate = DateTime.Now
                     };

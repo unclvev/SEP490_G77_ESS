@@ -21,10 +21,9 @@ const { Search } = Input;
 const { Option } = Select;
 
 const CreateEssayExam = () => {
+  const [data, setData] = useState([]);
   const [searchParams] = useSearchParams();
   const accId = searchParams.get("accid");
-
-  const [data, setData] = useState([]);
   const [searchText, setSearchText] = useState("");
   const [selectedGrade, setSelectedGrade] = useState("");
   const [selectedSubject, setSelectedSubject] = useState("");
@@ -113,7 +112,6 @@ const CreateEssayExam = () => {
   }, [accId]);
 
   const paginatedData = data.slice((currentPage - 1) * pageSize, currentPage * pageSize);
-
   return (
     <div className="p-6">
       <div className="flex flex-wrap gap-4 mb-6">
@@ -144,7 +142,7 @@ const CreateEssayExam = () => {
           Tạo đề
         </Button>
       </div>
-
+  
       <Row gutter={[16, 16]}>
         {paginatedData.map((item) => (
           <Col key={item.id} xs={24} sm={12} md={6}>
@@ -183,9 +181,7 @@ const CreateEssayExam = () => {
               className="rounded-xl shadow-md cursor-pointer hover:border-blue-500"
               onClick={() => navigate(`/exam/analysis/${item.id}`)}
             >
-              <p>
-                {item.grade} - {item.subject}
-              </p>
+              <p>{item.grade} - {item.subject}</p>
               <p className="text-sm text-gray-500">Ngày tạo {item.createdDate}</p>
               <p className="text-sm text-gray-500">Lớp {item.nameClass}</p>
               <div className="mt-4 flex justify-between">
@@ -221,7 +217,7 @@ const CreateEssayExam = () => {
           </Col>
         ))}
       </Row>
-
+  
       <div className="mt-6 text-center">
         <Pagination
           current={currentPage}
@@ -230,7 +226,7 @@ const CreateEssayExam = () => {
           onChange={(page) => setCurrentPage(page)}
         />
       </div>
-
+  
       <Modal
         open={editModalOpen}
         onCancel={() => setEditModalOpen(false)}
@@ -247,15 +243,15 @@ const CreateEssayExam = () => {
           >
             <Input placeholder="VD: Đề kiểm tra 15p Toán" />
           </Form.Item>
-
+  
           <Form.Item
-  name="nameClass"
-  label="Lớp"
-  rules={[{ required: true, message: "Vui lòng nhập lớp" }]}
->
-  <Input placeholder="VD: 11A2" />
-</Form.Item>
-
+            name="nameClass"
+            label="Lớp"
+            rules={[{ required: true, message: "Vui lòng nhập lớp" }]}
+          >
+            <Input placeholder="VD: 11A2" />
+          </Form.Item>
+  
           <Form.Item
             name="grade"
             label="Khối"
@@ -269,7 +265,7 @@ const CreateEssayExam = () => {
               ))}
             </Select>
           </Form.Item>
-
+  
           <Form.Item
             name="subject"
             label="Môn học"
@@ -288,5 +284,4 @@ const CreateEssayExam = () => {
     </div>
   );
 };
-
 export default CreateEssayExam;

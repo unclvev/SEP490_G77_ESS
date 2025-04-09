@@ -38,9 +38,6 @@ public class GradingActivity extends BaseActivity implements SurfaceHolder.Callb
         txtExCode = findViewById(R.id.txtExCode);
         btnStatus = findViewById(R.id.btnStatus);
 
-        // Hiển thị mã đề
-        txtExCode.setText(selectedExCode);
-
         // Khởi tạo SurfaceHolder
         surfaceHolder = cameraView.getHolder();
         surfaceHolder.addCallback(this);

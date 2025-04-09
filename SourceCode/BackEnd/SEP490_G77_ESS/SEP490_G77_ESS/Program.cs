@@ -9,9 +9,20 @@ using SEP490_G77_ESS.Services;
 using SEP490_G77_ESS.Utils;
 using Swashbuckle.AspNetCore.Filters;
 using System.Text;
+using Microsoft.Extensions.FileProviders;
 
 var builder = WebApplication.CreateBuilder(args);
+
 // Add services to the container.
+builder.WebHost.ConfigureKestrel(serverOptions =>
+{
+    //serverOptions.ListenAnyIP(7052);
+    serverOptions.ListenAnyIP(7052, listenOptions =>
+    {
+        listenOptions.UseHttps();
+    });
+});
+
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
@@ -27,7 +38,7 @@ builder.Services.AddSwaggerGen(options =>
 
     options.OperationFilter<SecurityRequirementsOperationFilter>();
 });
-builder.Services.AddHostedService<AccountCleanupService>();
+//builder.Services.AddHostedService<AccountCleanupService>();
 
 // Add services to the container.
 builder.Services.AddCors(options =>
@@ -69,9 +80,22 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseCors("AllowAllOrigins");
 
+
+// Add this before app.Run()
+// Update the UseStaticFiles configuration
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(
+        Path.Combine(builder.Environment.WebRootPath, "images")),
+    RequestPath = "/images"
+});
+
+
+app.UseCors("AllowAllOrigins");
+app.UseAuthentication();
 app.UseAuthorization();
+
 
 app.MapControllers();
 

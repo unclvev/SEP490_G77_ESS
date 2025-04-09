@@ -14,29 +14,6 @@
         <!-- Include Header -->
         <include layout="@layout/header" />
 
-        <!-- Dòng hiển thị mã đề -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center"
-            android:layout_margin="8dp"
-            android:padding="8dp">
-
-            <TextView
-                android:id="@+id/txtExCode"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="001"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:gravity="center"
-                android:padding="10dp"
-                android:background="@color/deepblue"
-                android:textColor="@android:color/white"
-                android:elevation="2dp"/>
-        </LinearLayout>
-
         <!-- Camera Preview -->
         <SurfaceView
             android:id="@+id/cameraPreview"

@@ -35,13 +35,13 @@ namespace SEP490_G77_ESS.Controllers.Common
             var jwtToken = _jwt.CreateJWTToken(userLogin, 1);
 
             // Nếu muốn sử dụng refresh token, tạo và thiết lập cho người dùng
-            var refreshToken = GenerateRefreshToken();
-            SaveRefreshToken(userLogin, refreshToken);
+            //var refreshToken = GenerateRefreshToken();
+            //SaveRefreshToken(userLogin, refreshToken);
 
             // Lưu các thay đổi vào cơ sở dữ liệu
             _context.SaveChanges();
 
-            return Ok(new { token = jwtToken, refreshToken = refreshToken.Token });
+            return Ok(new { token = jwtToken});
         }
 
         private RefreshToken GenerateRefreshToken()

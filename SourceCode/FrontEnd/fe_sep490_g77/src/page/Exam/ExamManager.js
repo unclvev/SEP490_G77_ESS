@@ -9,11 +9,13 @@ import "react-toastify/dist/ReactToastify.css";
 const ExamManagement = () => {
   const navigate = useNavigate();
   const [exams, setExams] = useState([]);
+  const [allExams, setAllExams] = useState([]); // Lưu toàn bộ đề thi để sau khi tìm kiếm có thể reset lại
   const [loading, setLoading] = useState(true);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [examid, setExamid] = useState(null);
   const [newName, setNewExamName] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -21,6 +23,7 @@ const ExamManagement = () => {
         const response = await getExams();
         setLoading(false);
         setExams(response.data);
+        setAllExams(response.data);
       } catch (error) {
         toast.error("Lỗi khi lấy danh sách đề thi!");
         console.error("Error fetching exams:", error);
@@ -30,22 +33,35 @@ const ExamManagement = () => {
     fetchData();
   }, []);
 
+  // Hàm thực hiện tìm kiếm đề thi dựa vào từ khóa nhập vào
+  const handleSearch = (value) => {
+    setSearchTerm(value);
+    if (value.trim() === "") {
+      setExams(allExams);
+    } else {
+      const filteredExams = allExams.filter((exam) =>
+        exam.examname.toLowerCase().includes(value.toLowerCase())
+      );
+      setExams(filteredExams);
+    }
+  };
+
   const deleteExamById = async () => {
     try {
-        const response = await delExam(examid);
-        toast.success("Xóa đề thi thành công!");
-        setExams((prevExams) => prevExams.filter((exam) => exam.examId !== examid));
-        setDeleteModalVisible(false);
+      const response = await delExam(examid);
+      toast.success("Xóa đề thi thành công!");
+      setExams((prevExams) => prevExams.filter((exam) => exam.examId !== examid));
+      setAllExams((prevExams) => prevExams.filter((exam) => exam.examId !== examid));
+      setDeleteModalVisible(false);
     } catch (error) {
-        if (error.response && error.response.status === 404) {
-            toast.error("Không tìm thấy bài kiểm tra hoặc bạn không có quyền xóa.");
-        } else {
-            toast.error("Xóa đề thi thất bại!");
-        }
-        console.error("Can not delete the exam:", error);
+      if (error.response && error.response.status === 404) {
+        toast.error("Không tìm thấy bài kiểm tra hoặc bạn không có quyền xóa.");
+      } else {
+        toast.error("Xóa đề thi thất bại!");
+      }
+      console.error("Can not delete the exam:", error);
     }
-};
-
+  };
 
   const showDeleteModal = (examId) => {
     setExamid(examId);
@@ -63,38 +79,43 @@ const ExamManagement = () => {
       toast.warning("Tên đề thi không được để trống!");
       return;
     }
-  
+
     try {
-      await updateExam(examid, { newName }); 
-  
+      await updateExam(examid, { newName });
       toast.success("Cập nhật tên đề thi thành công!");
-  
       setExams((prevExams) =>
         prevExams.map((exam) =>
           exam.examId === examid ? { ...exam, examname: newName } : exam
         )
       );
-  
+      setAllExams((prevExams) =>
+        prevExams.map((exam) =>
+          exam.examId === examid ? { ...exam, examname: newName } : exam
+        )
+      );
       setEditModalVisible(false);
-  
     } catch (error) {
       toast.error("Cập nhật tên đề thi thất bại!");
       console.error("Can not update the exam:", error);
     }
   };
-  
 
   return (
     <div style={{ padding: 20, backgroundColor: "#f5f5f5", minHeight: "100vh" }}>
       <h2 style={{ textAlign: "center" }}>QUẢN LÍ ĐỀ THI</h2>
 
       <div style={{ display: "flex", justifyContent: "center", marginBottom: 20 }}>
-        <Input.Search placeholder="Tìm kiếm đề thi..." style={{ width: 300 }} />
+        <Input.Search
+          placeholder="Tìm kiếm đề thi..."
+          style={{ width: 300 }}
+          value={searchTerm}
+          onChange={(e) => handleSearch(e.target.value)}
+        />
       </div>
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <h3>ĐỀ CỦA BẠN</h3>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate("/exam/matrix")}>
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate("/exam/select")}>
           Tạo đề thi
         </Button>
       </div>

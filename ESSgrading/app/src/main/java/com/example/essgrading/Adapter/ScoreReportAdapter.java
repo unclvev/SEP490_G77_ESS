@@ -29,7 +29,8 @@ public class ScoreReportAdapter extends RecyclerView.Adapter<ScoreReportAdapter.
     public void onBindViewHolder(@NonNull ScoreViewHolder holder, int position) {
         ScoreModel score = scoreList.get(position);
         holder.txtStudentName.setText(score.getStudentName());
-        holder.txtStudentId.setText(score.getStudentId());
+        holder.txtStudentId.setText("MSSV: "+score.getStudentId());
+        holder.txtClass.setText("Lớp: " + score.getClassName());
         holder.txtStudentScore.setText(String.valueOf(score.getScore()));
     }
 
@@ -39,12 +40,13 @@ public class ScoreReportAdapter extends RecyclerView.Adapter<ScoreReportAdapter.
     }
 
     public static class ScoreViewHolder extends RecyclerView.ViewHolder {
-        TextView txtStudentName, txtStudentId, txtStudentScore;
+        TextView txtStudentName, txtStudentId, txtClass, txtStudentScore;
 
         public ScoreViewHolder(@NonNull View itemView) {
             super(itemView);
             txtStudentName = itemView.findViewById(R.id.txtStudentName);
             txtStudentId = itemView.findViewById(R.id.txtStudentId);
+            txtClass = itemView.findViewById(R.id.txtClass);
             txtStudentScore = itemView.findViewById(R.id.txtStudentScore);
         }
     }

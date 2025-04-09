@@ -28,7 +28,6 @@ namespace SEP490_G77_ESS.Controllers.ExamManager
         }
 
         [HttpGet("{examId}")]
-
         public async Task<IActionResult> GetExamById(int examId)
         {
             //var accId = await GetAccIdFromToken();
@@ -299,12 +298,17 @@ namespace SEP490_G77_ESS.Controllers.ExamManager
         }
 
         [HttpGet("{secid}/question-counts")]
-        public async Task<IActionResult> GetQuestionCounts(long secid)
+        public async Task<IActionResult> GetQuestionCounts(long secid, [FromQuery] int qtype)
         {
+            // Lấy danh sách Level từ database
             var levels = await _context.Levels.ToListAsync();
+
+            // Load section theo secid, bao gồm Questions với quan hệ với Mode và Type
             var section = await _context.Sections
                 .Include(s => s.Questions)
-                .ThenInclude(q => q.Mode)
+                    .ThenInclude(q => q.Mode)
+                .Include(s => s.Questions)
+                    .ThenInclude(q => q.Type)
                 .FirstOrDefaultAsync(s => s.Secid == secid);
 
             if (section == null)
@@ -312,15 +316,44 @@ namespace SEP490_G77_ESS.Controllers.ExamManager
                 return NotFound(new { message = "Section not found" });
             }
 
+            // Đếm các câu hỏi cho từng Level dựa theo:
+            // - Mode của câu hỏi không null và Level của Mode khớp với level hiện tại
+            // - Type của câu hỏi không null và TypeId khớp với tham số qtype truyền vào
             var questionCounts = levels.Select(level => new
             {
                 Level = level.Levelname,
-                Count = section.Questions.Count(q => q.Mode != null && q.Mode.LevelId == level.LevelId)
+                Count = section.Questions.Count(q =>
+                    q.Mode != null && q.Mode.LevelId == level.LevelId &&
+                    q.Type != null && q.Type.TypeId == qtype)
             }).ToList();
 
             return Ok(questionCounts);
         }
 
+
+
+        [HttpGet("subject-name/{subjectId}")]
+        public async Task<IActionResult> GetSubjectNameById(long subjectId)
+        {
+            var subject = await _context.Subjects.FindAsync(subjectId);
+            if (subject == null)
+            {
+                return NotFound(new { message = "Không tìm thấy môn học với ID đã cho." });
+            }
+            return Ok(new
+            {
+                subjectName = subject.SubjectName
+            });
+        }
+        //get all exam
+        [HttpGet("allexam")]
+        public async Task<IActionResult> GetAllExam()
+        {
+            var results = await _context.Exams
+                .ToListAsync();
+
+            return Ok(results);
+        }
     }
 
 }

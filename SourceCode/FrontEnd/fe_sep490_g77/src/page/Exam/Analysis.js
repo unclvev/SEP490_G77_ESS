@@ -1,6 +1,9 @@
 import { LeftOutlined } from "@ant-design/icons";
 import { Button, Card, Checkbox, Table, Tabs } from "antd";
-import { React, useState } from "react";
+import { React, useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
+import { toast } from "react-toastify";
+
 import {
   Bar,
   BarChart,
@@ -16,10 +19,9 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { exportExcel, getExamResults, getSubjectNameById } from "../../services/api";
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#DC143C"];
-
-// Cột bảng điểm đầy đủ
 const columns = [
   { title: "STT", dataIndex: "order", key: "order", width: 60, render: (_, __, index) => index + 1 },
   { title: "SBD", dataIndex: "studentId", key: "studentId" },
@@ -30,8 +32,6 @@ const columns = [
   { title: "Điểm số", dataIndex: "score", key: "score" },
   { title: "Xếp hạng", dataIndex: "rank", key: "rank" },
 ];
-
-// Cột bảng Top 5
 const top5Columns = [
   { title: "Họ và tên", dataIndex: "name", key: "name" },
   { title: "Mã đề", dataIndex: "examCode", key: "examCode" },
@@ -41,42 +41,129 @@ const top5Columns = [
 
 const Analysis = () => {
 
-  const [scoreData, setScoreData] = useState([
-    { key: "1", studentId: "021", name: "Phạm Hồng Long", class: "12A1", examCode: "M01", time: "10:56 19-2-2025", score: 10 },
-    { key: "2", studentId: "015", name: "Phọng Hoàng Lam", class: "12A3", examCode: "M02", time: "10:58 19-2-2025", score: 9 },
-    { key: "3", studentId: "032", name: "Nguyễn Ngọc Việt", class: "12A1", examCode: "M03", time: "10:50 19-2-2025", score: 8 },
-    { key: "4", studentId: "007", name: "Lê Quang Trung", class: "12K", examCode: "M02", time: "10:45 19-2-2025", score: 7 },
-  ]);
+    const [loading, setLoading] = useState(true);
+    const [scoreData, setScoreData] = useState([]);
+    const [chartData, setChartData] = useState([]);
+    const [lineChartData, setLineChartData] = useState([]);
+    const [pieChartData, setPieChartData] = useState([]);
+    const [examName, setExamName] = useState("");
+    const [subjectName, setSubjectName] = useState("");
+    const [createdate, setCreatedate] = useState("");
+    const [basicStats, setBasicStats] = useState({});
+    const { examId } = useParams();
 
+    useEffect(() => {
+      const fetchData = async () => {
+        try {
+          const response = await getExamResults(examId);
+          const data = response.data || [];
+          const rsubject = await getSubjectNameById(data[0].subject);
+
+          setScoreData(data);
+          setLoading(false);
+          setExamName(data[0].examName);
+          setSubjectName(rsubject.data.subjectName);
+          setCreatedate(data[0].examCreatedDate);
+
+          // ==== Tính biểu đồ cột (chartData) ====
+          const ranges = ["0-3", "3-6", "6-7", "7-8", "8-10"];
+          const chartCount = [0, 0, 0, 0, 0];
+          data.forEach(s => {
+            const score = s.score;
+            if (score < 3) chartCount[0]++;
+            else if (score < 6) chartCount[1]++;
+            else if (score < 7) chartCount[2]++;
+            else if (score < 8) chartCount[3]++;
+            else if (score <= 10) chartCount[4]++;
+          });
+          const newChartData = ranges.map((r, i) => ({ range: r, count: chartCount[i] }));
+          setChartData(newChartData);
+    
+          // ==== Tính biểu đồ đường (lineChartData): điểm làm tròn ====
+          const scoreMap = {};
+          data.forEach(s => {
+            const rounded = Math.round(s.score);
+            scoreMap[rounded] = (scoreMap[rounded] || 0) + 1;
+          });
+          const lineData = Object.entries(scoreMap)
+            .map(([score, count]) => ({ score: parseInt(score), students: count }))
+            .sort((a, b) => a.score - b.score);
+          setLineChartData(lineData);
+    
+          // ==== Tính biểu đồ tròn (pieChartData) ====
+          const pieStat = {
+            "Xuất sắc (>9)": 0,
+            "Giỏi (8 - 9)": 0,
+            "Khá (6.5 - 8)": 0,
+            "Trung bình (5 - 6.5)": 0,
+            "Dưới trung bình (<5)": 0,
+          };
+          data.forEach(s => {
+            const score = s.score;
+            if (score > 9) pieStat["Xuất sắc (>9)"]++;
+            else if (score >= 8) pieStat["Giỏi (8 - 9)"]++;
+            else if (score >= 6.5) pieStat["Khá (6.5 - 8)"]++;
+            else if (score >= 5) pieStat["Trung bình (5 - 6.5)"]++;
+            else pieStat["Dưới trung bình (<5)"]++;
+          });
+          const pieData = Object.entries(pieStat).map(([name, value]) => ({ name, value }));
+          setPieChartData(pieData);
+
+          // ==== Tính thông tin cơ bản ====
+          const scores = data.map((s) => s.score);
+          const total = scores.length;
+          const avg = total > 0 ? (scores.reduce((a, b) => a + b, 0) / total).toFixed(2) : 0;
+          const max = total > 0 ? Math.max(...scores) : 0;
+          const min = total > 0 ? Math.min(...scores) : 0;
+          const over5 = total > 0 ? ((scores.filter(s => s > 5).length / total) * 100).toFixed(2) : 0;
+          const over8 = total > 0 ? ((scores.filter(s => s > 8).length / total) * 100).toFixed(2) : 0;
+          setBasicStats({
+            total,
+            avg,
+            max,
+            min,
+            over5,
+            over8
+          });
+        } catch (error) {
+          toast.error("Lỗi khi lấy danh sách đề thi!");
+          console.error("Error fetching exams:", error);
+        }
+      };
+    
+      fetchData();
+    }, []);    
+  
+    const handleExportExcel = async () => {
+      try {
+        // Gọi hàm exportExcel từ api.js để lấy file Excel
+        const response = await exportExcel(examId);
+  
+        // Nếu response trả về status OK
+        if (response.status === 200) {
+          // Tạo blob từ response data
+          const blob = new Blob([response.data], {
+            type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          });
+          
+          // Tạo link tải file và tự động click vào để tải
+          const link = document.createElement("a");
+          link.href = URL.createObjectURL(blob);
+          link.download = "BangDiem.xlsx";  // Đặt tên cho file tải xuống
+          link.click();
+        } else {
+          toast.error("Không thể tải file Excel");
+        }
+      } catch (error) {
+        console.error("Error exporting Excel:", error);
+        toast.error("Lỗi khi xuất file Excel");
+      }
+    };
   // Sắp xếp theo điểm từ cao xuống thấp để xếp hạng
   const rankedData = [...scoreData].sort((a, b) => b.score - a.score).map((student, index) => ({
     ...student,
     rank: index + 1,
   }));
-
-  const [chartData, setChartData] = useState([
-    { range: "<3", count: 0 },
-    { range: "<6", count: 2 },
-    { range: "<7", count: 0 },
-    { range: "<8", count: 0 },
-    { range: "<10", count: 1 },
-  ]);
-
-  const [lineChartData, setLineChartData] = useState([
-    { score: 6, students: 3 },
-    { score: 7, students: 8 },
-    { score: 8, students: 12 },
-    { score: 9, students: 6 },
-    { score: 10, students: 4 },
-  ]);
-
-  const [pieChartData, setPieChartData] = useState([
-    { name: "Xuất sắc (>9)", value: 10 },
-    { name: "Giỏi (8 - 9)", value: 20 },
-    { name: "Khá (6.5 - 8)", value: 30 },
-    { name: "Trung bình (5 - 6.5)", value: 25 },
-    { name: "Dưới trung bình (<5)", value: 15 },
-  ]);
 
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
@@ -88,32 +175,33 @@ const Analysis = () => {
 
       {/* Thông tin cơ bản */}
       <div className="grid grid-cols-3 gap-4">
-        <Card className="col-span-2">
-          <h3 className="font-semibold mb-2">Cơ bản</h3>
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <p><strong>Tên bài thi:</strong></p>
-            <p><strong>Điểm trung bình:</strong> 6</p>
-            <p><strong>Môn:</strong></p>
-            <p><strong>Cao nhất:</strong> 8</p>
-            <p><strong>Ngày tạo:</strong></p>
-            <p><strong>Thấp nhất:</strong> 4</p>
-            <p><strong>Số bài làm:</strong> 4</p>
-            <p><strong>Tỉ lệ trên 5:</strong> 66.66%</p>
-            <p></p>
-            <p><strong>Tỉ lệ trên 8:</strong> 33.33%</p>
-          </div>
-        </Card>
+      <Card className="col-span-2">
+        <h3 className="font-semibold mb-2">Cơ bản</h3>
+        <div className="grid grid-cols-2 gap-4 text-sm">
+          <p><strong>Tên bài thi:</strong> {examName}</p>
+          <p><strong>Điểm trung bình:</strong> {basicStats.avg}</p>
+          <p><strong>Môn:</strong> {subjectName}</p>
+          <p><strong>Cao nhất:</strong> {basicStats.max}</p>
+          <p><strong>Ngày tạo:</strong> {createdate}</p>
+          <p><strong>Thấp nhất:</strong> {basicStats.min}</p>
+          <p><strong>Số bài làm:</strong> {basicStats.total}</p>
+          <p><strong>Tỉ lệ trên 5:</strong> {basicStats.over5}%</p>
+          <p></p>
+          <p><strong>Tỉ lệ trên 8:</strong> {basicStats.over8}%</p>
+        </div>
+      </Card>
 
         {/* Xuất dữ liệu */}
         <Card>
           <h3 className="font-semibold mb-2">Xuất dữ liệu</h3>
           <div className="flex flex-col gap-2">
+            <Checkbox checked>Phân tích cơ bản</Checkbox>
             <Checkbox checked>Bảng điểm</Checkbox>
-            <Checkbox checked>Phổ điểm</Checkbox>
-            <Checkbox checked>Tỉ lệ đúng/sai theo câu hỏi</Checkbox>
+            <Checkbox checked>Biểu đồ</Checkbox>
+            {/* <Checkbox checked>Tỉ lệ đúng/sai theo câu hỏi</Checkbox> */}
           </div>
-          <Button type="primary" className="mt-4 w-full">
-            Xuất thành excel
+          <Button type="primary" className="mt-4 w-full" onClick={() => handleExportExcel(examId)}>
+            Xuất ra excel
           </Button>
         </Card>
       </div>
@@ -121,21 +209,6 @@ const Analysis = () => {
       {/* Tabs Biểu đồ & Bảng điểm */}
       <div className="mt-6 bg-white p-4 rounded-lg shadow">
         <Tabs defaultActiveKey="1">
-          {/* Tab Biểu đồ */}
-          <Tabs.TabPane tab="Biểu đồ" key="1">
-            <div className="p-4">
-              <ResponsiveContainer width="100%" height={250}>
-                <BarChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="range" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="count" fill="#1890ff" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </Tabs.TabPane>
-
           {/* Tab Bảng điểm */}
           <Tabs.TabPane tab="Bảng điểm" key="2">
             <div className="p-4">
@@ -143,24 +216,56 @@ const Analysis = () => {
             </div>
           </Tabs.TabPane>
 
-          {/* Tab Biểu đồ Đường */}
-          <Tabs.TabPane tab="Biểu đồ Đường" key="3">
+          {/* Tab Biểu đồ */}
+          <Tabs.TabPane tab="Thống kê" key="1">
+            {/*biểu đồ cột*/}
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <p><strong>1. BIỂU ĐỒ CỘT THỂ HIỆN SỐ HỌC SINH THEO CÁC KHUNG ĐIỂM</strong></p>
+            </div>
+            <div className="p-4">
+              <ResponsiveContainer width="100%" height={250}>
+                <BarChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="range" />
+                  <YAxis
+                    allowDecimals={false}
+                    tickFormatter={(value) => Number.isInteger(value) ? value : null}
+                    label={{ value: "Số học sinh", angle: -90, position: "insideLeft" }} 
+                  />
+                  <Tooltip />
+                  <Bar dataKey="count" fill="#1890ff" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/*biểu đồ đường*/}
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <p><strong>2. BIỂU ĐỒ ĐƯỜNG THỐNG KÊ SỐ HỌC SINH THEO ĐIỂM SỐ CỤ THỂ</strong></p>
+            </div>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <p>(có làm tròn)</p>
+            </div>
             <div className="p-4">
               <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={lineChartData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="score" label={{ value: "Điểm", position: "insideBottom", dy: 10 }} />
-                  <YAxis label={{ value: "Số học sinh", angle: -90, position: "insideLeft" }} />
+                  <YAxis 
+                    allowDecimals={false}
+                    tickFormatter={(value) => Number.isInteger(value) ? value : null}
+                    label={{ value: "Số học sinh", angle: -90, position: "insideLeft" }} 
+                  />
                   <Tooltip />
                   <Legend />
                   <Line type="monotone" dataKey="students" stroke="#1890ff" activeDot={{ r: 8 }} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
-          </Tabs.TabPane>
 
-          {/* Tab Biểu đồ Tròn */}
-          <Tabs.TabPane tab="Biểu đồ Tròn" key="4">
+            {/*biểu đồ tròn*/}
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <p><strong>3. BIỂU ĐỒ TRÒN ĐÁNH GIÁ TỈ LỆ HỌC SINH THEO HỌC LỰC QUA BÀI KIỂM TRA</strong></p>
+            </div>
             <div className="p-4 flex justify-center">
               <ResponsiveContainer width={400} height={300}>
                 <PieChart>
@@ -174,14 +279,16 @@ const Analysis = () => {
                 </PieChart>
               </ResponsiveContainer>
             </div>
-          </Tabs.TabPane>
 
-          {/* Tab Bảng Top 5 */}
-          <Tabs.TabPane tab="Bảng Top 5" key="5">
+            {/* Top 5 */}
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <p><strong>4. TOP 5 HỌC SINH CAO ĐIỂM NHẤT</strong></p>
+            </div>
             <div className="p-4">
               <Table columns={top5Columns} dataSource={rankedData.slice(0, 5)} pagination={false} />
             </div>
           </Tabs.TabPane>
+
         </Tabs>
       </div>
     </div>
