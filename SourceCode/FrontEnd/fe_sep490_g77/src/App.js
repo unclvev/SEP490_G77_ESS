@@ -67,13 +67,14 @@ function App() {
 
           <Route path="/essay/genqr" element={<MainLayout><GenQRCode></GenQRCode></MainLayout>}/>
           <Route path="/essay/preview-gen-qr" element={<MainLayout><PreviewGenQR></PreviewGenQR></MainLayout>}/>
-          <Route path="/essay/import" element={<MainLayout><ImportEssayPage></ImportEssayPage></MainLayout>}/>
+          <Route path="/essay/import/:examid" element={<MainLayout><ImportEssayPage></ImportEssayPage></MainLayout>}/>
           <Route path="/essay" element={<MainLayout><CreateEssayExam></CreateEssayExam></MainLayout>}/>
           <Route path="/exam/matrix3t" element={<MainLayout><ExamCreation3T/></MainLayout>}></Route>
           <Route path="/exam/select" element={<MainLayout><ExamSelect/></MainLayout>}></Route>
 
           <Route path="/temp" element={<TempComponent/>}></Route>
           
+          <Route path="/essay/create" element={<MainLayout><CreateNewEssayPage /></MainLayout>} />
         </Routes>
       </Router>
                                                 

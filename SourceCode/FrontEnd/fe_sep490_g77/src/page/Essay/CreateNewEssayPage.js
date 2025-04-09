@@ -11,7 +11,8 @@ const CreateNewEssayPage = () => {
   const [grades, setGrades] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [searchParams] = useSearchParams();
-  const accId = searchParams.get("accid");
+  const accId = 7;
+  //const accId = searchParams.get("accid");
   const navigate = useNavigate();
 
   const fetchGradesSubjects = async () => {

@@ -38,7 +38,7 @@ builder.Services.AddSwaggerGen(options =>
 
     options.OperationFilter<SecurityRequirementsOperationFilter>();
 });
-builder.Services.AddHostedService<AccountCleanupService>();
+//builder.Services.AddHostedService<AccountCleanupService>();
 
 // Add services to the container.
 builder.Services.AddCors(options =>
