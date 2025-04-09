@@ -144,11 +144,23 @@ const EssQuestionList = () => {
                       </p>
                     )}
 
-                    {question.correctAnswers && question.correctAnswers.length > 0 && (
-                      <p>
-                        <strong>Đáp án đúng:</strong> {renderMathList(question.correctAnswers)}
-                      </p>
-                    )}
+{question.correctAnswers && question.correctAnswers.length > 0 && (
+  <>
+    {question.typeId === 2 ? (
+      <div>
+        {["a", "b", "c", "d"].map((label, idx) => (
+          <p key={idx}>
+            <strong>ý {label}:</strong> {question.correctAnswers[idx]}
+          </p>
+        ))}
+      </div>
+    ) : (
+      <p>
+        <strong>Đáp án đúng:</strong> {renderMathList(question.correctAnswers)}
+      </p>
+    )}
+  </>
+)}
 
                     {question.solution && (
                       <p>
