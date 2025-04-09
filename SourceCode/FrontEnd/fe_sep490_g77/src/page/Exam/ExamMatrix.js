@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Tree, Table, InputNumber, Button, Modal, Select, message } from "antd";
 import { DeleteOutlined, PlusOutlined, ExclamationCircleOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
-import { countQExam, loadbExam, loadbExams } from "../../services/api";
+import { countQExam, createExam, loadbExam, loadbExams } from "../../services/api";
 
 const { TreeNode } = Tree;
 const { Option } = Select;
@@ -50,6 +50,28 @@ const ExamCreation = () => {
       message.error("Không thể tải dữ liệu ngân hàng.");
     }
   };
+
+  const handleCreateExam = async () => {
+
+    const examStructure = selectedTopics.map(topic => ({
+        sectionId: topic.key.replace("section-", ""),
+        easy: topic.levels.easy || 0,
+        medium: topic.levels.medium || 0,
+        hard: topic.levels.hard || 0
+    }));
+
+    try {
+        const response = await createExam(examStructure);
+        if (response && response.data.examId) {
+            navigate(`/exam/preview/${response.data.examId}`);
+        } else {
+            console.error("API không trả về examId hợp lệ:", response);
+        }
+    } catch (error) {
+        console.error("Lỗi khi tạo đề thi:", error);
+    }
+  };
+  
 
   const handleBankSelect = (value) => {
     setSelectedBank(value);
@@ -105,7 +127,8 @@ const ExamCreation = () => {
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", padding: 20, background: "#f5f5f5" }}>
       <div style={{ width: "100%", display: "flex", justifyContent: "flex-end", marginBottom: 10 }}>
-        <Button type="primary">Khởi tạo</Button>
+       <Button type="primary" onClick={handleCreateExam}>Khởi tạo</Button>
+
       </div>
       <div style={{ display: "flex", flex: 1 }}>
         <div style={{ width: "25%", background: "#fff", padding: 10, borderRight: "1px solid #ddd", overflowY: "auto" }}>

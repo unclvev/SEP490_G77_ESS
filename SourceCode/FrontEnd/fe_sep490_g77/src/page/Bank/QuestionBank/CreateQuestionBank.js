@@ -18,7 +18,7 @@ const CreateQuestionBank = () => {
     // Nếu token tồn tại, giải mã để lấy AccId
     if (token) {
         try {
-            const decoded = jwtDecode(token);
+            const decoded = jwtDecode(token.token);
             accid = decoded.AccId || accid; // Ưu tiên lấy từ token nếu có
         } catch (error) {
             console.error("Invalid token", error);

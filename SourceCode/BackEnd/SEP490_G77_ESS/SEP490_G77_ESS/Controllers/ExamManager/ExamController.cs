@@ -334,6 +334,15 @@ namespace SEP490_G77_ESS.Controllers.ExamManager
                 subjectName = subject.SubjectName
             });
         }
+        //get all exam
+        [HttpGet("allexam")]
+        public async Task<IActionResult> GetAllExam()
+        {
+            var results = await _context.Exams
+                .ToListAsync();
+
+            return Ok(results);
+        }
     }
 
 }
