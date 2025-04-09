@@ -46,17 +46,15 @@ const EssQuestionBankDetail = () => {
         key={section.secid}
         header={
           <div className="flex justify-between items-center w-full">
-            <span className="font-semibold">
-              {section.secname} 
-              <span
-                className="text-blue-600 text-sm ml-2 cursor-pointer hover:underline"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  navigate(`/default-bank/${section.secid}/questions`);
-                }}
-              >
-                ({section.questionCount} câu hỏi)
-              </span>
+            <span className="font-semibold">{section.secname}</span>
+            <span
+              className="text-blue-600 text-sm ml-2 cursor-pointer hover:underline"
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(`/default-bank/${section.secid}/questions`);
+              }}
+            >
+              ({section.questionCount} câu hỏi)
             </span>
           </div>
         }
@@ -69,7 +67,7 @@ const EssQuestionBankDetail = () => {
       </Panel>
     ));
   };
-
+  
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
       {/* ✅ Hiển thị thông tin ngân hàng câu hỏi */}

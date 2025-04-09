@@ -59,18 +59,19 @@ public partial class EssDbV11Context : DbContext
 
     public virtual DbSet<TypeQuestion> TypeQuestions { get; set; }
 
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+   protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+{
+    if (!optionsBuilder.IsConfigured)
     {
-        if (!optionsBuilder.IsConfigured)
-        {
-            var configuration = new ConfigurationBuilder()
-                .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-                .Build();
+        var configuration = new ConfigurationBuilder()
+            .SetBasePath(Directory.GetCurrentDirectory())
+            .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+            .Build();
 
-            optionsBuilder.UseSqlServer(configuration.GetConnectionString("MyCnn"));
-        }
+        optionsBuilder.UseSqlServer(configuration.GetConnectionString("MyCnn"));
     }
+}
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Account>(entity =>
@@ -285,6 +286,7 @@ public partial class EssDbV11Context : DbContext
                 .HasForeignKey(d => d.CurriculumId)
                 .HasConstraintName("FK__Default_S__curri__7B5B524B");
         });
+
 
         modelBuilder.Entity<Exam>(entity =>
         {
