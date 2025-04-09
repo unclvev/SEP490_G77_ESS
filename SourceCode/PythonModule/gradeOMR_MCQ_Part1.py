@@ -3,6 +3,7 @@ import imutils
 from scipy.spatial import distance as dist
 import cv2
 import numpy as np
+from click_markers import remove_black_squares
 
 # PHẦN I: Đáp án đúng mẫu (A=0, B=1, C=2, D=3)
 answer_key_part1 = [
@@ -182,7 +183,9 @@ def grade_part3(thresh):
 
 
 def grade_omr(image_path):
-    warped, msg = find_corners_and_warp(image_path)
+    cleaned = remove_black_squares(image_path)
+    cv2.imwrite("cleaned_temp.jpg", cleaned)
+    warped, msg = find_corners_and_warp("cleaned_temp.jpg")
     if warped is None:
         print("❌", msg)
         return

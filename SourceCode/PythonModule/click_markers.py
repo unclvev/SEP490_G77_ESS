@@ -1,29 +1,34 @@
+from PIL import Image
 import cv2
 import numpy as np
 
-img = cv2.imread('StudentInfo/scanbanchuan.jpg')
+def remove_black_squares(image_path):
+    # Đọc ảnh màu và chuyển sang grayscale
+    img = Image.open(image_path)
+    bw_img = img.convert('L')
+    bw_img_np = np.array(bw_img)
 
-pts_src = np.array([
-    [193, 140],    # góc trái trên
-    [1720, 103],   # góc phải trên
-    [1773, 2383],  # góc phải dưới
-    [233, 2406]    # góc trái dưới
-], dtype='float32')
+    # Chuyển sang ảnh nhị phân trắng/đen
+    _, thresh = cv2.threshold(bw_img_np, 50, 255, cv2.THRESH_BINARY)
 
-pts_dst = np.array([
-    [0, 0],
-    [800, 0],
-    [800, 1120],
-    [0, 1120]
-], dtype='float32')
+    # Tìm contours
+    contours, _ = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-M = cv2.getPerspectiveTransform(pts_src, pts_dst)
-warped = cv2.warpPerspective(img, M, (800, 1120))
+    height, width = thresh.shape
 
-# Lưu lại ảnh đã căn chỉnh
-cv2.imwrite("StudentInfo/warped_scanbanchuan.jpg", warped)
+    for c in contours:
+        area = cv2.contourArea(c)
+        x, y, w, h = cv2.boundingRect(c)
+        cx, cy = x + w // 2, y + h // 2  # Tâm contour
 
-# Hiển thị ảnh kiểm tra
-cv2.imshow("Warped OMR", warped)
-cv2.waitKey(0)
-cv2.destroyAllWindows()
+        # Chỉ xóa nếu là hình vuông đen nhỏ và nằm gần góc
+        if 400 < area < 10000 and abs(w - h) < 10:
+            if (
+                (cx < width * 0.2 and cy < height * 0.2) or  # Góc trên trái
+                (cx > width * 0.8 and cy < height * 0.2) or  # Góc trên phải
+                (cx < width * 0.2 and cy > height * 0.8) or  # Góc dưới trái
+                (cx > width * 0.8 and cy > height * 0.8)     # Góc dưới phải
+            ):
+                cv2.drawContours(thresh, [c], -1, 255, -1)  # Tô trắng
+
+    return thresh
