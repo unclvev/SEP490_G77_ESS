@@ -2,6 +2,10 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SEP490_G77_ESS.Models;
+using System.IO;
+using System.Threading.Tasks;
+using NPOI.XSSF.UserModel;
+
 
 namespace SEP490_G77_ESS.Controllers.EssayManagement
 {
@@ -16,20 +20,52 @@ namespace SEP490_G77_ESS.Controllers.EssayManagement
             _context = context;
         }
 
-        // 🟢 1. Upload Excel danh sách học sinh
         [HttpPost("savestudentlist")]
-        public IActionResult UploadExcel(IFormFile file)
+        public async Task<IActionResult> UploadExcel(IFormFile file, [FromForm] long examId)
         {
-            if (file == null || file.Length == 0)
+            var examExists = await _context.Exams.AnyAsync(e => e.ExamId == examId);
+            if (!examExists)
             {
+                return BadRequest($"Kỳ thi với ID {examId} không tồn tại.");
+            }
+            if (file == null || file.Length == 0)
                 return BadRequest("Không có file hoặc file rỗng.");
+
+            var studentResults = new List<StudentResult>();
+
+            using (var stream = file.OpenReadStream())
+            {
+                var workbook = new XSSFWorkbook(stream);
+                var sheet = workbook.GetSheetAt(0);
+
+                // Bắt đầu từ dòng 1 (bỏ dòng header, dòng 0)
+                for (int row = 1; row <= sheet.LastRowNum; row++)
+                {
+                    var currentRow = sheet.GetRow(row);
+                    if (currentRow == null) continue;
+
+                    var student = new StudentResult
+                    {
+                        ExamId = examId,
+                        StudentCode = currentRow.GetCell(1)?.ToString()?.Trim(),
+                        StudentName = currentRow.GetCell(2)?.ToString()?.Trim(),
+                        Gender = currentRow.GetCell(3)?.ToString()?.ToLower() == "nam",
+                        StudentDob = DateTime.TryParse(currentRow.GetCell(4)?.ToString(), out var dob) ? dob : null,
+                        CreateDate = DateTime.Now
+                    };
+
+                    studentResults.Add(student);
+                }
             }
 
-            // ✅ Tạm thời chưa xử lý nội dung, chỉ trả kết quả thành công
+            _context.StudentResults.AddRange(studentResults);
+            await _context.SaveChangesAsync();
+
             return Ok("Import thành công!");
         }
 
-        // 🟢 2. Lấy danh sách đề theo accId + filter grade, subject, classname
+
+
         [HttpGet("by-account/{accId}")]
         public async Task<IActionResult> GetExamsByAccount(int accId, [FromQuery] string? grade, [FromQuery] string? subject, [FromQuery] string? classname)
         {
@@ -61,7 +97,6 @@ namespace SEP490_G77_ESS.Controllers.EssayManagement
 
             return Ok(result);
         }
-        // Tạo đề mới
         [HttpPost("create/{accId}")]
         public async Task<IActionResult> CreateExam(int accId, [FromBody] Exam exam)
         {
@@ -90,8 +125,6 @@ namespace SEP490_G77_ESS.Controllers.EssayManagement
             return Ok(new { message = "Cập nhật thành công" });
         }
 
-
-        // ✅ Xoá đề
         [HttpDelete("delete/{id}")]
         public async Task<IActionResult> DeleteExam(long id)
         {
@@ -103,8 +136,6 @@ namespace SEP490_G77_ESS.Controllers.EssayManagement
             return Ok(new { message = "Xoá thành công" });
         }
 
-
-        // Lấy danh sách Grade
         [HttpGet("grades")]
         public async Task<IActionResult> GetGrades()
         {
@@ -112,7 +143,6 @@ namespace SEP490_G77_ESS.Controllers.EssayManagement
             return Ok(grades);
         }
 
-        // Lấy danh sách Subject
         [HttpGet("subjects")]
         public async Task<IActionResult> GetSubjects()
         {
@@ -120,8 +150,6 @@ namespace SEP490_G77_ESS.Controllers.EssayManagement
             return Ok(subjects);
         }
 
-
-        // 🟢 3. Search đề theo accId và tên đề
         [HttpGet("search")]
         public async Task<IActionResult> SearchExamsByAccount([FromQuery] int accId, [FromQuery] string keyword)
         {
@@ -144,5 +172,4 @@ namespace SEP490_G77_ESS.Controllers.EssayManagement
             return Ok(result);
         }
     }
-
 }
