@@ -152,13 +152,17 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
             using var workbook = new XLWorkbook();
             var worksheet = workbook.Worksheets.Add("Section Questions");
 
+            // ✅ Header
             worksheet.Cell(1, 1).Value = "Question Content";
             worksheet.Cell(1, 2).Value = "Type ID";
             worksheet.Cell(1, 3).Value = "Mode ID";
             worksheet.Cell(1, 4).Value = "Solution";
-            worksheet.Cell(1, 5).Value = "Answers";
-            worksheet.Cell(1, 6).Value = "Correct Answers";
-            worksheet.Cell(1, 7).Value = "Image URL";
+            worksheet.Cell(1, 5).Value = "Answer 1";
+            worksheet.Cell(1, 6).Value = "Answer 2";
+            worksheet.Cell(1, 7).Value = "Answer 3";
+            worksheet.Cell(1, 8).Value = "Answer 4";
+            worksheet.Cell(1, 9).Value = "Correct Answers";
+            worksheet.Cell(1, 10).Value = "Image URL";
 
             int row = 2;
             var correctAnswers = await _context.CorrectAnswers.ToListAsync();
@@ -169,23 +173,38 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
                 worksheet.Cell(row, 2).Value = question.TypeId;
                 worksheet.Cell(row, 3).Value = question.Modeid;
                 worksheet.Cell(row, 4).Value = question.Solution ?? "";
-                worksheet.Cell(row, 5).Value = question.AnswerContent ?? "";
-                worksheet.Cell(row, 6).Value = string.Join(",", correctAnswers
-                    .Where(a => a.Quesid == question.Quesid)
-                    .Select(a => a.Content));
-                worksheet.Cell(row, 7).Value = question.ImageUrl ?? "";
+
+                // ✅ Tách đáp án ra từng cột riêng (tối đa 4)
+                var answerList = (question.AnswerContent ?? "").Split(',').ToList();
+                for (int i = 0; i < 4; i++)
+                {
+                    worksheet.Cell(row, 5 + i).Value = (i < answerList.Count) ? answerList[i] : "";
+                }
+
+                var corrects = correctAnswers
+    .Where(a => a.Quesid == question.Quesid)
+    .OrderBy(a => a.AnsId)
+    .Select(a => a.Content)
+    .ToList();
+                string correctAnswerStr = string.Join(",", corrects);
+
+                worksheet.Cell(row, 9).Value = correctAnswerStr;
+
+
+                worksheet.Cell(row, 10).Value = question.ImageUrl ?? "";
                 row++;
             }
 
+            // ✅ Sheet hướng dẫn
             var guideSheet = workbook.Worksheets.Add("Import Guide");
             guideSheet.Cell(1, 1).Value = "HƯỚNG DẪN IMPORT EXCEL";
             guideSheet.Cell(2, 1).Value = "1. Question Content: Nội dung câu hỏi (dùng [MATH:...] cho công thức).";
             guideSheet.Cell(3, 1).Value = "2. Type ID: Loại câu hỏi (1: Trắc nghiệm, 2: True/False, 3: Điền kết quả).";
             guideSheet.Cell(4, 1).Value = "3. Mode ID: Mức độ khó.";
             guideSheet.Cell(5, 1).Value = "4. Solution: Giải thích (cho phép có [MATH:...]).";
-            guideSheet.Cell(6, 1).Value = "5. Answers: Các đáp án (phân tách bằng ',', hỗ trợ [MATH:...]).";
-            guideSheet.Cell(7, 1).Value = "6. Correct Answers: Đáp án đúng (có thể dùng [MATH:...]).";
-            guideSheet.Cell(8, 1).Value = "7. Image URL: Link ảnh đã upload (không bắt buộc).";
+            guideSheet.Cell(6, 1).Value = "5-8. Answer 1–4: Các đáp án trắc nghiệm, mỗi ô 1 đáp án.";
+            guideSheet.Cell(7, 1).Value = "9. Correct Answers: Đáp án đúng (phân tách bằng ',', hỗ trợ [MATH:...]).";
+            guideSheet.Cell(8, 1).Value = "10. Image URL: Link ảnh đã upload (không bắt buộc).";
 
             guideSheet.Protect().AllowElement(XLSheetProtectionElements.SelectLockedCells);
 
@@ -196,6 +215,7 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
             return File(stream.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 $"Section_{sectionId}_Questions.xlsx");
         }
+
 
 
 
@@ -371,9 +391,31 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
 
                     // Xử lý formula và trim
                     var solution = GetCellValueAsString(worksheet.Cell(row, 4));
-                    var answers = GetCellValueAsString(worksheet.Cell(row, 5));
-                    var correctAnswers = GetCellValueAsString(worksheet.Cell(row, 6));
-                    var imageUrl = GetCellValueAsString(worksheet.Cell(row, 7));
+
+                    // Đọc đáp án từ 4 cột riêng biệt (5, 6, 7, 8)
+                    var answer1 = GetCellValueAsString(worksheet.Cell(row, 5));
+                    var answer2 = GetCellValueAsString(worksheet.Cell(row, 6));
+                    var answer3 = GetCellValueAsString(worksheet.Cell(row, 7));
+                    var answer4 = GetCellValueAsString(worksheet.Cell(row, 8));
+
+                    // Đọc đáp án đúng từ cột 9
+                    var correctAnswers = GetCellValueAsString(worksheet.Cell(row, 9));
+
+                    // Đọc URL ảnh từ cột 10
+                    var imageUrl = GetCellValueAsString(worksheet.Cell(row, 10));
+
+                    // Tạo chuỗi answers từ các cột riêng lẻ
+                    List<string> answersList = new List<string>();
+                    if (!string.IsNullOrWhiteSpace(answer1)) answersList.Add(answer1);
+                    if (!string.IsNullOrWhiteSpace(answer2)) answersList.Add(answer2);
+                    if (!string.IsNullOrWhiteSpace(answer3)) answersList.Add(answer3);
+                    if (!string.IsNullOrWhiteSpace(answer4)) answersList.Add(answer4);
+
+                    string answers = null;
+                    if (answersList.Count > 0)
+                    {
+                        answers = string.Join(",", answersList);
+                    }
 
                     // Xác thực và chuẩn hóa URL ảnh
                     if (!string.IsNullOrWhiteSpace(imageUrl))
@@ -416,8 +458,17 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
                                 continue;
                             }
                             // Kiểm tra xem đáp án đúng có nằm trong danh sách đáp án không
-                            var answersList = answers.Split(',').Select(a => a.Trim()).ToList();
-                            if (!answersList.Contains(correctAnswers))
+                            var ansListCheck = answers.Split(',').Select(a => a.Trim()).ToList();
+                            var correctAnsCheck = correctAnswers.Split(',').Select(a => a.Trim()).ToList();
+
+                            if (correctAnsCheck.Count != 1)
+                            {
+                                errors.Add($"Dòng {row}: Câu hỏi trắc nghiệm chỉ được có một đáp án đúng");
+                                row++;
+                                continue;
+                            }
+
+                            if (!ansListCheck.Contains(correctAnsCheck[0]))
                             {
                                 errors.Add($"Dòng {row}: Đáp án đúng phải có trong danh sách đáp án");
                                 row++;
@@ -428,7 +479,10 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
                         case 2: // True/False với 4 ý
                             answers = "True,False";
 
+
+
                             var tfAnswers = correctAnswers.Split(',').Select(x => x.Trim()).ToList();
+
                             if (tfAnswers.Count != 4 || tfAnswers.Any(a => a != "True" && a != "False"))
                             {
                                 errors.Add($"Dòng {row}: Đáp án cho câu hỏi True/False phải có đúng 4 giá trị 'True' hoặc 'False'");
@@ -448,7 +502,6 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
                             }
                             break;
                     }
-                    //abczyz
 
                     if (questionMap.TryGetValue(quesContent.ToLower(), out var existingQuestion))
                     {
@@ -490,7 +543,7 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
                         {
                             await _context.CorrectAnswers.AddAsync(new CorrectAnswer
                             {
-                                Quesid = existingQuestion?.Quesid ?? newQuestion.Quesid,
+                                Quesid = newQuestion.Quesid,
                                 Content = ans
                             });
                         }
@@ -503,11 +556,11 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
 
                 // XÓA câu hỏi không còn trong file Excel
                 var questionsToDelete = existingQuestions
-    .Where(q =>
-        q.Secid == sectionId &&
-        !excelQuestions.Contains(q.Quescontent, StringComparer.OrdinalIgnoreCase)
-    )
-    .ToList();
+                    .Where(q =>
+                        q.Secid == sectionId &&
+                        !excelQuestions.Contains(q.Quescontent, StringComparer.OrdinalIgnoreCase)
+                    )
+                    .ToList();
 
                 int deleteCount = questionsToDelete.Count;
 
@@ -536,8 +589,6 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
                 return StatusCode(500, new { message = "❌ Lỗi hệ thống khi xử lý file Excel.", error = ex.Message });
             }
         }
-
-        // Phương thức hỗ trợ để lấy giá trị ô Excel, hỗ trợ formula
         private string GetCellValueAsString(IXLCell cell)
         {
             try
@@ -577,7 +628,6 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
 
             throw new ArgumentException("URL không hợp lệ");
         }
-
 
         // ✅ Cập nhật câu hỏi
         [HttpPut("questions/{id}")]
