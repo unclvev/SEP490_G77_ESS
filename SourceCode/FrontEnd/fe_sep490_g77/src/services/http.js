@@ -1,6 +1,6 @@
 import axios from "axios";
-import { BASE_API_LOCAL } from "../share/urlbase";
 import store from "../redux-setup/store";
+import { BASE_API_LOCAL } from "../share/urlbase";
 
 const Http = axios.create({
     baseURL: BASE_API_LOCAL,
@@ -8,7 +8,7 @@ const Http = axios.create({
 
 Http.interceptors.request.use(
     async (config) => {
-        const token = store.getState().token.token;
+        const token = store.getState().token?.token;
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }

@@ -1,5 +1,7 @@
 package com.example.essgrading.Activity.Test;
 
+import static android.widget.Toast.LENGTH_SHORT;
+
 import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -18,9 +20,16 @@ import com.example.essgrading.API.ApiConfig;
 import com.example.essgrading.API.ApiService;
 import com.example.essgrading.Activity.BaseActivity;
 import com.example.essgrading.R;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 import java.io.ByteArrayOutputStream;
+import java.util.concurrent.TimeUnit;
+
 import okhttp3.MediaType;
 import okhttp3.MultipartBody;
+import okhttp3.OkHttpClient;
 import okhttp3.RequestBody;
 import okhttp3.ResponseBody;
 import retrofit2.*;
@@ -58,7 +67,10 @@ public class GradingActivity extends BaseActivity implements SurfaceHolder.Callb
         }
 
         btnStatus.setOnClickListener(v -> {
-            if (camera != null) camera.takePicture(null, null, pictureCallback);
+            if (camera != null){
+                btnStatus.setEnabled(false); // Vô hiệu hóa nút
+                camera.takePicture(null, null, pictureCallback);
+            }
         });
     }
 
@@ -69,14 +81,22 @@ public class GradingActivity extends BaseActivity implements SurfaceHolder.Callb
             try {
                 Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
                 ByteArrayOutputStream stream = new ByteArrayOutputStream();
-                bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream);
+//                bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream);
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 60, stream); // nén ở mức 60%
                 byte[] imageBytes = stream.toByteArray();
 
                 RequestBody requestFile = RequestBody.create(MediaType.parse("image/png"), imageBytes);
                 MultipartBody.Part body = MultipartBody.Part.createFormData("image", "scan.png", requestFile);
 
+                OkHttpClient client = new OkHttpClient.Builder()
+                        .connectTimeout(60, TimeUnit.SECONDS)
+                        .readTimeout(60, TimeUnit.SECONDS)
+                        .writeTimeout(60, TimeUnit.SECONDS)
+                        .build();
+
                 Retrofit retrofit = new Retrofit.Builder()
                         .baseUrl(ApiConfig.UPLOAD_URL)
+                        .client(client)
                         .addConverterFactory(GsonConverterFactory.create())
                         .build();
 
@@ -90,13 +110,21 @@ public class GradingActivity extends BaseActivity implements SurfaceHolder.Callb
                             try {
                                 if (response.isSuccessful() && response.body() != null) {
                                     String result = response.body().string();
-                                    Toast.makeText(GradingActivity.this, "✅ Kết quả: " + result, Toast.LENGTH_LONG).show();
-                                    btnStatus.setText("✅ Thành công");
+                                    JSONObject json = new JSONObject(result);
+                                    JSONArray qr = json.getJSONArray("qr_content");
+                                    String score = json.getString("score");
+                                    String code = json.getString("student_code");
+                                    Toast.makeText(GradingActivity.this, "Thành công",LENGTH_SHORT).show();
+                                    btnStatus.setText("✅ Mã QR: " + qr.getString(0) + "\nĐiểm: " + score + "\nSBD: " + code + "\n📷Ấn để chụp tiếp");
+                                    btnStatus.setEnabled(true);
+
                                 } else {
-                                    btnStatus.setText("❌ Lỗi phản hồi: " + response.code());
+                                    btnStatus.setText("❌ Lỗi phản hồi: " + response.code() + "\n📷Ấn để chụp tiếp");
+                                    btnStatus.setEnabled(true); // Kích hoạt lại
                                 }
                             } catch (Exception e) {
-                                btnStatus.setText("❌ Lỗi đọc kết quả");
+                                btnStatus.setText("❌ Lỗi đọc kết quả" + "\n📷Ấn để chụp tiếp");
+                                btnStatus.setEnabled(true); // Kích hoạt lại
                                 e.printStackTrace();
                             }
                         });
@@ -117,7 +145,7 @@ public class GradingActivity extends BaseActivity implements SurfaceHolder.Callb
                     e.printStackTrace();
                 });
             } finally {
-                runOnUiThread(() -> camera.startPreview());
+//                runOnUiThread(() -> camera.startPreview());
             }
         }).start();
     };
