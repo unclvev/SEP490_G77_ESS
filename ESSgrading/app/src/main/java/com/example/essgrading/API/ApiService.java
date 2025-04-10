@@ -23,6 +23,6 @@ public interface ApiService {
     Call<List<TestModel>> getAllExam();
 
     @Multipart
-    @POST("api/upload/image") //sửa endpoint theo đúng URL backend nhận ảnh
+    @POST("scan-essay")
     Call<ResponseBody> uploadImage(@Part MultipartBody.Part image);
 }

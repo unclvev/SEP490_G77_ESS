@@ -66,7 +66,7 @@ const Analysis = () => {
           setCreatedate(data[0].examCreatedDate);
 
           // ==== Tính biểu đồ cột (chartData) ====
-          const ranges = ["0-3", "3-6", "6-7", "7-8", "8-10"];
+          const ranges = ["<3", ">=3 & <6", ">=6 & <7", ">=7 & <8", "8 - 10"];
           const chartCount = [0, 0, 0, 0, 0];
           data.forEach(s => {
             const score = s.score;
@@ -79,31 +79,30 @@ const Analysis = () => {
           const newChartData = ranges.map((r, i) => ({ range: r, count: chartCount[i] }));
           setChartData(newChartData);
     
-          // ==== Tính biểu đồ đường (lineChartData): điểm làm tròn ====
+          // Tính biểu đồ đường (lineChartData)
           const scoreMap = {};
           data.forEach(s => {
-            const rounded = Math.round(s.score);
-            scoreMap[rounded] = (scoreMap[rounded] || 0) + 1;
+            const score = s.score;
+            scoreMap[score] = (scoreMap[score] || 0) + 1;
           });
           const lineData = Object.entries(scoreMap)
-            .map(([score, count]) => ({ score: parseInt(score), students: count }))
+            .map(([score, count]) => ({ score: parseFloat(score), students: count }))
             .sort((a, b) => a.score - b.score);
           setLineChartData(lineData);
-    
           // ==== Tính biểu đồ tròn (pieChartData) ====
           const pieStat = {
-            "Xuất sắc (>9)": 0,
-            "Giỏi (8 - 9)": 0,
-            "Khá (6.5 - 8)": 0,
-            "Trung bình (5 - 6.5)": 0,
+            "Xuất sắc (>=9)": 0,
+            "Giỏi (>=8 & <9)": 0,
+            "Khá (>=6.5 &  <8)": 0,
+            "Trung bình (>=5 & <6.5)": 0,
             "Dưới trung bình (<5)": 0,
           };
           data.forEach(s => {
             const score = s.score;
-            if (score > 9) pieStat["Xuất sắc (>9)"]++;
-            else if (score >= 8) pieStat["Giỏi (8 - 9)"]++;
-            else if (score >= 6.5) pieStat["Khá (6.5 - 8)"]++;
-            else if (score >= 5) pieStat["Trung bình (5 - 6.5)"]++;
+            if (score >= 9) pieStat["Xuất sắc (>=9)"]++;
+            else if (score >= 8) pieStat["Giỏi (>=8 & <9)"]++;
+            else if (score >= 6.5) pieStat["Khá (>=6.5 &  <8)"]++;
+            else if (score >= 5) pieStat["Trung bình (>=5 & <6.5)"]++;
             else pieStat["Dưới trung bình (<5)"]++;
           });
           const pieData = Object.entries(pieStat).map(([name, value]) => ({ name, value }));
