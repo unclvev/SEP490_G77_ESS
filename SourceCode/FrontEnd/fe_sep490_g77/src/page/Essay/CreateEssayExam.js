@@ -16,13 +16,15 @@ import {
 import { useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-toastify";
+import { useSelector } from 'react-redux';
+import { jwtDecode } from "jwt-decode";
 
 const { Search } = Input;
 const { Option } = Select;
 
 const CreateEssayExam = () => {
   const [searchParams] = useSearchParams();
-  const accId = searchParams.get("accid");
+  let accId = searchParams.get("accid");
 
   const [data, setData] = useState([]);
   const [searchText, setSearchText] = useState("");
@@ -34,6 +36,16 @@ const CreateEssayExam = () => {
   const [form] = Form.useForm();
   const [gradeOptions, setGradeOptions] = useState([]);
   const [subjectOptions, setSubjectOptions] = useState([]);
+
+  const token = useSelector((state) => state.token);
+  if (token) {
+      try {
+        const decoded = jwtDecode(token.token);
+        accId = decoded.AccId;
+      } catch (error) {
+        console.error("Invalid token", error);
+      }
+    }
 
   const pageSize = 8;
   const navigate = useNavigate();

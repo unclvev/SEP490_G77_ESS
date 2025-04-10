@@ -3,6 +3,8 @@ import { Input, Select, Button, Form, message } from "antd";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-toastify";
+import { useSelector } from 'react-redux';
+import { jwtDecode } from "jwt-decode";
 
 const { Option } = Select;
 
@@ -11,8 +13,19 @@ const CreateNewEssayPage = () => {
   const [grades, setGrades] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [searchParams] = useSearchParams();
-  const accId = searchParams.get("accid");
+  let accId = searchParams.get("accid");
   const navigate = useNavigate();
+
+  const token = useSelector((state) => state.token);
+  if (token) {
+      try {
+        const decoded = jwtDecode(token.token);
+        accId = decoded.AccId;
+        console.log(accId);
+      } catch (error) {
+        console.error("Invalid token", error);
+      }
+  }
 
   const fetchGradesSubjects = async () => {
     const [gradeRes, subjectRes] = await Promise.all([
