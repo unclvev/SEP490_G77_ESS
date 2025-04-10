@@ -169,7 +169,8 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
 
             foreach (var question in section.Questions)
             {
-                worksheet.Cell(row, 1).Value = question.Quescontent;
+                worksheet.Cell(row, 1).Value = StripHtmlTags(question.Quescontent);
+
                 worksheet.Cell(row, 2).Value = question.TypeId;
                 worksheet.Cell(row, 3).Value = question.Modeid;
                 worksheet.Cell(row, 4).Value = question.Solution ?? "";
@@ -215,6 +216,15 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
             return File(stream.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 $"Section_{sectionId}_Questions.xlsx");
         }
+
+        private string StripHtmlTags(string html)
+        {
+            if (string.IsNullOrWhiteSpace(html)) return string.Empty;
+
+            // Loại bỏ tất cả thẻ HTML, nhưng giữ nguyên nội dung [MATH:...]
+            return Regex.Replace(html, "<.*?>", string.Empty).Trim();
+        }
+
 
 
 
