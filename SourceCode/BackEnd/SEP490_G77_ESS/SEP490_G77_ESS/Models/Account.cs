@@ -27,8 +27,6 @@ public partial class Account
 
     public string? Phone { get; set; }
 
-    public long? Roleid { get; set; }
-
     public string? PasswordResetToken { get; set; }
 
     public DateTime? ResetTokenExpires { get; set; }
@@ -37,13 +35,11 @@ public partial class Account
 
     public int? IsActive { get; set; }
 
-    public virtual ICollection<BankAccess> BankAccesses { get; set; } = new List<BankAccess>();
-
     public virtual ICollection<Bank> Banks { get; set; } = new List<Bank>();
 
     public virtual ICollection<Exam> Exams { get; set; } = new List<Exam>();
 
     public virtual ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
 
-    public virtual Role? Role { get; set; }
+    public virtual ICollection<ResourceAccess> ResourceAccesses { get; set; } = new List<ResourceAccess>();
 }

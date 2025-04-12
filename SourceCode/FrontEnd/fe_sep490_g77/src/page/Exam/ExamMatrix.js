@@ -1,224 +1,131 @@
-import React, { useState, useEffect } from "react";
-import { Tree, Table, InputNumber, Button, Modal, Select, message } from "antd";
-import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
-import { useNavigate, useParams } from "react-router-dom";
-import { countQExam, createExam, loadbExam, loadbExams } from "../../services/api";
+import React, { useState } from "react";
+import { Tree, Table, InputNumber, Button } from "antd";
+import { DeleteOutlined } from "@ant-design/icons";
+import { useNavigate } from "react-router-dom";
 
 const { TreeNode } = Tree;
-const { Option } = Select;
+
+const questionBank = [
+  {
+    title: "Chương I",
+    key: "chuong-1",
+    children: [],
+  },
+  {
+    title: "Chương II",
+    key: "chuong-2",
+    children: [
+      {
+        title: "Bài 1: Phương trình bậc 4",
+        key: "bai-1",
+      },
+      {
+        title: "Bài 2: Hệ phương trình 2 ẩn",
+        key: "bai-2",
+      },
+    ],
+  },
+];
 
 const ExamCreation = () => {
   const navigate = useNavigate();
   const [selectedTopics, setSelectedTopics] = useState([]);
-  const [isBankModalVisible, setBankModalVisible] = useState(false);
-  const [banks, setBanks] = useState([]);
-  const [sections, setSections] = useState([]);
-  const [selectedBank, setSelectedBank] = useState(null);
-  const [examInfo, setExamInfo] = useState({ name: "", grade: "", subject: "" });
 
-
-  useEffect(() => {
- 
-    
-    fetchBanks();
-  }, []);
-
-  const fetchBanks = async () => {
-    try {
-      const response = await loadbExams();
-      setBanks(response.data);
-    } catch (error) {
-      console.error("Lỗi khi tải danh sách ngân hàng:", error);
-      message.error("Không thể tải danh sách ngân hàng.");
-    }
-  };
-
-  const fetchBankDetails = async (bankId) => {
-    try {
-      const response = await loadbExam(bankId);
-      setSelectedBank(response.data);
-      const sections = response.data.sections ?? [];
-
-      const bankNode = {
-        key: `bank-${response.data.bankId}`,
-        title: response.data.bankName,
-        children: sections.map((section) => ({
-          key: `section-${section.secId}`,
-          title: section.secName,
-        })),
-      };
-      setSections([bankNode]);
-    } catch (error) {
-      console.error("Lỗi khi tải dữ liệu ngân hàng:", error);
-      message.error("Không thể tải dữ liệu ngân hàng.");
-    }
-  };
-
-  const handleCreateExam = async () => {
-    const examStructure = selectedTopics.map((topic) => ({
-      sectionId: topic.key.replace("section-", ""),
-      easy: topic.levels.easy || 0,
-      medium: topic.levels.medium || 0,
-      hard: topic.levels.hard || 0,
-    }));
-
-    try {
-      const response = await createExam(examStructure);
-      if (response && response.data.examId) {
-        navigate(`/exam/preview/${response.data.examId}`);
-      } else {
-        console.error("API không trả về examId hợp lệ:", response);
-      }
-    } catch (error) {
-      console.error("Lỗi khi tạo đề thi:", error);
-    }
-  };
-
-  const handleBankSelect = (value) => {
-    setSelectedBank(value);
-    fetchBankDetails(value);
-  };
-
-  const onSelect = async (keys, info) => {
-    if (info.node.key.startsWith("bank-")) {
-      message.warning("Không thể chọn ngân hàng, chỉ chọn được section.");
-      return;
-    }
-
-    if (!selectedTopics.some((item) => item.key === info.node.key)) {
-      try {
-        const examId = info.node.key.replace("section-", "");
-        // Sử dụng qtype được lấy từ URL để truyền xuống API
-        const response = await countQExam(examId, 1);
-        const levelMapping = { Basic: "easy", Intermediate: "medium", Advanced: "hard" };
-        const questionCounts = response.data.reduce((acc, item) => {
-          acc[levelMapping[item.level] || item.level] = item.count || 0;
-          return acc;
-        }, { easy: 0, medium: 0, hard: 0 });
-
-        setSelectedTopics([
-          ...selectedTopics,
-          {
-            key: info.node.key,
-            title: info.node.title,
-            levels: { easy: 0, medium: 0, hard: 0 },
-            maxLevels: { ...questionCounts },
-          },
-        ]);
-      } catch (error) {
-        console.error("Lỗi khi tải số lượng câu hỏi:", error);
-        message.error("Không thể tải số lượng câu hỏi.");
+  const onSelect = (keys, info) => {
+    if (!info.node.children) {
+      const topicExists = selectedTopics.some((item) => item.key === info.node.key);
+      if (!topicExists) {
+        setSelectedTopics([...selectedTopics, { key: info.node.key, title: info.node.title, levels: {} }]);
       }
     }
   };
 
-  const handleDelete = (key) => {
-    setSelectedTopics(selectedTopics.filter((item) => item.key !== key));
-  };
-
-  const handleUseBank = () => {
-    setBankModalVisible(false);
-  };
-
-  const handleQuestionCountChange = (key, level, value) => {
-    setSelectedTopics((prevTopics) =>
-      prevTopics.map((topic) =>
-        topic.key === key
-          ? { ...topic, levels: { ...topic.levels, [level]: Math.min(value, topic.maxLevels[level]) } }
-          : topic
+  const handleInputChange = (key, level, type, value) => {
+    setSelectedTopics((prev) =>
+      prev.map((item) =>
+        item.key === key
+          ? { ...item, levels: { ...item.levels, [level]: { ...item.levels[level], [type]: value } } }
+          : item
       )
     );
   };
 
+  const handleDelete = (key) => {
+    setSelectedTopics((prev) => prev.filter((item) => item.key !== key));
+  };
+
+  const levels = ["Nhận biết", "Thông hiểu", "Vận dụng"];
+  const columns = [
+    { title: "STT", dataIndex: "index", key: "index", width: 50 },
+    { title: "Nội dung kiến thức", dataIndex: "title", key: "title" },
+    ...levels.flatMap((level) => [
+      {
+        title: level,
+        children: [
+          {
+            title: "Số TN",
+            dataIndex: ["levels", level, "mcq"],
+            key: `${level}-mcq`,
+            render: (text, record) => (
+              <InputNumber
+                min={0}
+                value={text || 0}
+                onChange={(value) => handleInputChange(record.key, level, "mcq", value)}
+              />
+            ),
+          },
+          {
+            title: "Số TL",
+            dataIndex: ["levels", level, "essay"],
+            key: `${level}-essay`,
+            render: (text, record) => (
+              <InputNumber
+                min={0}
+                value={text || 0}
+                onChange={(value) => handleInputChange(record.key, level, "essay", value)}
+              />
+            ),
+          },
+        ],
+      },
+    ]),
+    {
+      title: "Xóa",
+      dataIndex: "delete",
+      key: "delete",
+      render: (_, record) => (
+        <Button type="text" icon={<DeleteOutlined />} danger onClick={() => handleDelete(record.key)} />
+      ),
+    },
+  ];
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100vh", padding: 20, background: "#f5f5f5" }}>
-      <div style={{ width: "100%", display: "flex", justifyContent: "flex-end", marginBottom: 10 }}>
-        <Button type="primary" onClick={handleCreateExam}>
-          Khởi tạo
-        </Button>
-      </div>
-      <div style={{ display: "flex", flex: 1 }}>
-        <div style={{ width: "25%", background: "#fff", padding: 10, borderRight: "1px solid #ddd", overflowY: "auto" }}>
-          <Button icon={<PlusOutlined />} onClick={() => setBankModalVisible(true)}>
-            Chọn ngân hàng câu hỏi
-          </Button>
-          <Modal title="Chọn Ngân Hàng Câu Hỏi" open={isBankModalVisible} onOk={handleUseBank} onCancel={() => setBankModalVisible(false)}>
-            <Select style={{ width: "100%" }} onChange={handleBankSelect}>
-              {banks.map((bank) => (
-                <Option key={bank.bankId} value={bank.bankId}>
-                  {bank.bankName}
-                </Option>
+    <div style={{ display: "flex", height: "100vh", padding: 20, background: "#f5f5f5" }}>
+      <div style={{ width: "25%", background: "#fff", padding: 10, borderRight: "1px solid #ddd" }}>
+        <h3>Ngân hàng câu hỏi</h3>
+        <Tree onSelect={onSelect} defaultExpandAll>
+          {questionBank.map((chapter) => (
+            <TreeNode title={chapter.title} key={chapter.key}>
+              {chapter.children?.map((lesson) => (
+                <TreeNode title={lesson.title} key={lesson.key} />
               ))}
-            </Select>
-          </Modal>
-          <h3>Ngân hàng câu hỏi</h3>
-          <Tree onSelect={onSelect} defaultExpandAll>
-            {sections.map((node) => (
-              <TreeNode key={node.key} title={node.title}>
-                {node.children.map((child) => (
-                  <TreeNode key={child.key} title={child.title} />
-                ))}
-              </TreeNode>
-            ))}
-          </Tree>
-        </div>
-        <div style={{ flex: 1, padding: 20, background: "#fff" }}>
-          {/* Hiển thị định nghĩa loại đề thi dựa theo qtype */}
-          <h3>
-            Ma trận đề thi: Đề thi loại 50 câu trắc nghiệm
-          </h3>
-          <Table
-            columns={[
-              { title: "STT", dataIndex: "index", key: "index", width: 50 },
-              { title: "Nội dung kiến thức", dataIndex: "title", key: "title" },
-              {
-                title: "Dễ",
-                dataIndex: "easy",
-                key: "easy",
-                render: (_, record) => (
-                  <InputNumber min={0} max={record.maxLevels.easy} value={record.levels.easy} onChange={(value) => handleQuestionCountChange(record.key, "easy", value)} />
-                ),
-              },
-              {
-                title: "Trung bình",
-                dataIndex: "medium",
-                key: "medium",
-                render: (_, record) => (
-                  <InputNumber
-                    min={0}
-                    max={record.maxLevels.medium}
-                    value={record.levels.medium}
-                    onChange={(value) => handleQuestionCountChange(record.key, "medium", value)}
-                  />
-                ),
-              },
-              {
-                title: "Khó",
-                dataIndex: "hard",
-                key: "hard",
-                render: (_, record) => (
-                  <InputNumber
-                    min={0}
-                    max={record.maxLevels.hard}
-                    value={record.levels.hard}
-                    onChange={(value) => handleQuestionCountChange(record.key, "hard", value)}
-                  />
-                ),
-              },
-              {
-                title: "Xóa",
-                key: "delete",
-                render: (_, record) => (
-                  <Button type="text" icon={<DeleteOutlined />} danger onClick={() => handleDelete(record.key)} />
-                ),
-              },
-            ]}
-            dataSource={selectedTopics.map((item, index) => ({ ...item, index: index + 1 }))}
-            rowKey="key"
-            pagination={false}
-            bordered
-          />
-        </div>
+            </TreeNode>
+          ))}
+        </Tree>
+      </div>
+      <div style={{ flex: 1, padding: 20, background: "#fff" }}>
+        <h3>Ma trận đề thi</h3>
+        <Table
+          columns={columns}
+          dataSource={selectedTopics.map((item, index) => ({ ...item, index: index + 1 }))}
+          rowKey="key"
+          pagination={false}
+          bordered
+        />
+      </div>
+      <div style={{ position: "absolute", bottom: 20, right: 20 }}>
+        <Button danger style={{ marginRight: 10 }} onClick={() => navigate("/")}>Hủy</Button>
+        <Button type="primary" onClick={() => navigate("/exam/preview")}>Tiếp tục</Button>
       </div>
     </div>
   );

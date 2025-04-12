@@ -19,10 +19,6 @@ public partial class Question
 
     public string? AnswerContent { get; set; }
 
-    public long? DfSectionId { get; set; }
-
-    public string? ImageUrl { get; set; }
-
     public virtual ICollection<CorrectAnswer> CorrectAnswers { get; set; } = new List<CorrectAnswer>();
 
     public virtual Level? Mode { get; set; }

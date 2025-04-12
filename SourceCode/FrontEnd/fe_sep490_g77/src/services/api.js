@@ -1,10 +1,49 @@
-import Http from "./http";
+import Http from "./http"
+//manager-api
+
+export const searchUserToInvite = (query) =>
+  Http.get("/Manager/SearchUserToInvite", { params: { search: query } })
+    .then((response) => response.data);
+
+
+export const inviteUser = async (payload) => Http.post("/Manager/InviteUser", payload)
+  .then((response) => response.data)
+  .catch((error) => {
+    throw new Error(error.response?.data?.message || "Invite user failed");
+  });
+  
+  export const getMembers = (bankId, resourceType) =>
+    Http.get(`/Manager/Member/${bankId}/${resourceType}`)
+      .then((response) => response.data)
+      .catch((error) => {
+        throw new Error(error.response?.data?.message || "Get members failed");
+      });
+  export const removeUser = (bankId, accId) =>
+    Http.delete(`/Manager/remove/${bankId}/${accId}`)
+      .then((response) => response.data)
+      .catch((error) => {
+          throw new Error(error.response?.data?.message || "Remove user failed");
+      });
+      export const updateRole = (bankId, accId, data) =>
+        Http.put(`/Manager/UpdateRole/${bankId}/${accId}`, data, {
+          headers: {
+            "Content-Type": "application/json"
+          }
+        })
+          .then((response) => response.data)
+          .catch((error) => {
+            throw new Error(error.response?.data?.message || "Update role failed");
+          });
+      
+
 
 //auth-api
 
 export const register = (data) => Http.post("/Register", data)
 
 export const login = (data) => Http.post("/Login", data)
+
+export const refreshToken = (data) => Http.post("/Login/refresh", data)
 
 export const forgotPassword = (data) =>
     Http.get("/ForgotPassword/forgot-password", { params: data });
@@ -13,12 +52,12 @@ export const resetPassword = (params) => {
   };
   
   
-//profile-api
-export const getProfile = () => Http.get("/Profile/info");
+  //profile-api
+  export const getProfile = () => Http.get("/Profile/info");
 
-export const updateProfile = (data) => Http.put("/Profile/update", data);
+  export const updateProfile = (data) => Http.put("/Profile/update", data);
   
-export const changePassword = (data) => Http.put("/Profile/changePassword", data);
+  export const changePassword = (data) => Http.put("/Profile/changePassword", data);
 
 //exam-api
 

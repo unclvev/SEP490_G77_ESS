@@ -9,20 +9,10 @@ using SEP490_G77_ESS.Services;
 using SEP490_G77_ESS.Utils;
 using Swashbuckle.AspNetCore.Filters;
 using System.Text;
-using Microsoft.Extensions.FileProviders;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.WebHost.ConfigureKestrel(serverOptions =>
-{
-    //serverOptions.ListenAnyIP(7052);
-    serverOptions.ListenAnyIP(7052, listenOptions =>
-    {
-        listenOptions.UseHttps();
-    });
-});
-
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
@@ -38,15 +28,41 @@ builder.Services.AddSwaggerGen(options =>
 
     options.OperationFilter<SecurityRequirementsOperationFilter>();
 });
-//builder.Services.AddHostedService<AccountCleanupService>();
+builder.Services.AddHostedService<AccountCleanupService>();
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("RequireReadPermissionBank", policy =>
+    {
+        policy.RequireClaim("canRead", "True");
+    });
+});
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("RequireModifyPermissionBank", policy =>
+    {
+        policy.RequireClaim("Bank", "True");
+        policy.RequireClaim("canModify", "True");
+        policy.RequireClaim("canRead", "True");
+    });
+});
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("RequireDeletePermission", policy =>
+    {
+        policy.RequireClaim("canRead", "True");
+        policy.RequireClaim("canDelete", "True");
+    });
+});
 
 // Add services to the container.
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAllOrigins", builder =>
-        builder.AllowAnyOrigin()  // Cho phép tất cả các nguồn
-               .AllowAnyMethod()  // Cho phép tất cả các phương thức HTTP (GET, POST, PUT, DELETE, v.v.)
-               .AllowAnyHeader());  // Cho phép tất cả các header
+        builder.AllowAnyOrigin()
+               .AllowAnyMethod()
+               .AllowAnyHeader());
+
 });
 
 builder.Services.AddDbContext<EssDbV11Context>(options =>
@@ -60,6 +76,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
                 builder.Configuration.GetSection("AppSetting:Token").Value!)),
+            ClockSkew = TimeSpan.Zero,
             ValidateIssuer = false,
             ValidateAudience = false
         };
@@ -80,22 +97,11 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
-
-// Add this before app.Run()
-// Update the UseStaticFiles configuration
-app.UseStaticFiles(new StaticFileOptions
-{
-    FileProvider = new PhysicalFileProvider(
-        Path.Combine(builder.Environment.WebRootPath, "images")),
-    RequestPath = "/images"
-});
-
-
 app.UseCors("AllowAllOrigins");
-app.UseAuthentication();
-app.UseAuthorization();
 
+app.UseAuthentication();
+
+app.UseAuthorization();
 
 app.MapControllers();
 
