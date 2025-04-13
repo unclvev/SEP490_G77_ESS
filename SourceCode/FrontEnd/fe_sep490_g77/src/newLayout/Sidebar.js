@@ -17,7 +17,7 @@ const { Sider } = Layout;
 const Sidebar = () => {
   return (
     <Sider breakpoint="lg" collapsedWidth="80" className="bg-white">
-      <div className="h-16 flex items-center justify-center bg-blue-500">
+      <div className="h-16 flex items-center justify-center bg-white border border-blue-500">
         <h1 className="text-white font-bold text-xl">ESS</h1>
       </div>
       <Menu theme="light" mode="inline" defaultSelectedKeys={['1']}>

@@ -2,13 +2,13 @@ import React, { useRef, useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { QRCodeCanvas } from "qrcode.react";
 
-const PreviewGenQR = () => {
+const Guideline = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const printRef = useRef();
   const frontImageRef = useRef();
   const backImageRef = useRef();
-  const { qrList, frontImage, backImage } = location.state || {};
+  const { qrList, frontImage, backImage, layout, qrPosition } = location.state || {};
   const [isPrintReady, setIsPrintReady] = useState(false);
   const [qrImages, setQrImages] = useState({});
   const [qrPositions, setQrPositions] = useState([]);
@@ -103,7 +103,7 @@ const PreviewGenQR = () => {
   };
   
   const printNow = () => {
-    // Verify all QR codes have been converted to images
+    const { leftQR, rightQR, style } = qrPosition || {};
     const allQrReady = qrList.every(qr => qrImages[qr.id]);
     if (!allQrReady) {
       console.error("❌ Một số QR chưa được tạo thành ảnh, thử lại...");
@@ -126,13 +126,17 @@ const PreviewGenQR = () => {
             .page { position: relative; page-break-after: always; margin-bottom: 20px; }
             .page:last-child { page-break-after: avoid; }
             img.base-image { width: 100%; display: block; }
-            img.qr-img { width: 50px; height: 50px; position: absolute; }
+            img.qr-img {
+              position: absolute;
+              width: ${style?.width || "50px"};
+              ${style?.height ? `height: ${style.height};` : ""}
+              ${style?.maxWidth ? `max-width: ${style.maxWidth};` : ""}
+            }
           </style>
         </head>
         <body>
     `);
-  
-    // Generate each page separately with its own QR code
+    
     qrList.forEach((qr, index) => {
       const qrImageUrl = qrImages[qr.id];
       
@@ -141,8 +145,17 @@ const PreviewGenQR = () => {
           <!-- Front page with QR codes -->
           <div style="position: relative; margin-bottom: 20px;">
             <img src="${frontImage}" class="base-image" alt="Front page" />
-            <img src="${qrImageUrl}" class="qr-img" style="top: 22%; left: 88%;" alt="QR Code Left ${qr.id}" />
-            <img src="${qrImageUrl}" class="qr-img" style="top: 10%; left: 88%;" alt="QR Code Right ${qr.id}" />
+            <img src="${qrImageUrl}" class="qr-img" style="
+                top: ${leftQR.top};
+                ${leftQR.left ? `left: ${leftQR.left};` : ""}
+                ${leftQR.right ? `right: ${leftQR.right};` : ""}
+              " alt="QR Code Left ${qr.id}" />
+
+              <img src="${qrImageUrl}" class="qr-img" style="
+                top: ${rightQR.top};
+                ${rightQR.left ? `left: ${rightQR.left};` : ""}
+                ${rightQR.right ? `right: ${rightQR.right};` : ""}
+              " alt="QR Code Right ${qr.id}" />
           </div>
           
           <!-- Back page -->
@@ -168,10 +181,11 @@ const PreviewGenQR = () => {
   };
   
   return (
-    <div className="flex flex-col items-center min-h-screen bg-gray-200 p-6">
-      <h1 className="text-2xl font-bold text-blue-600 print:hidden">Xem trước các bản in</h1>
-
-      <div ref={printRef} className="w-full max-w-3xl bg-white p-6 shadow-lg">
+    <div className="flex flex-col items-center min-h-screen bg-white p-6">
+      <h1 className="text-2xl font-bold text-blue-600 print:hidden border px-4 py-2 rounded-lg bg-white mb-6">
+        XEM TRƯỚC CÁC BẢN IN
+      </h1>
+      <div ref={printRef} className="w-full bg-white border p-4 shadow-md rounded-lg">
         {qrList.map((qr, index) => (
           <div key={qr.id} className="mb-8 page-break">
             <div className="relative mb-8">
@@ -189,27 +203,50 @@ const PreviewGenQR = () => {
 
               {/* Left QR Position */}
               <div 
-                className="absolute qr-code" 
-                style={qrPositions[index]?.leftQR || { top: '22%', left: '88%', position: 'absolute' }}
+                className="absolute qr-code"
+                style={{
+                  top: qrPosition.leftQR.top,
+                  left: qrPosition.leftQR.left,
+                  right: qrPosition.leftQR.right,
+                  position: qrPosition.leftQR.position,
+                  width: qrPosition.style.width,
+                  height: qrPosition.style.height,
+                  maxWidth: qrPosition.style.maxWidth
+                }}
               >
                 <QRCodeCanvas 
                   value={qr.qrContent || 'default'} 
-                  size={50} 
                   data-qr-id={qr.id} 
+                  style={{
+                    width: "100%",
+                    height: "100%"
+                  }}
                 />
               </div>
 
               {/* Right QR Position */}
               <div 
-                className="absolute qr-code" 
-                style={qrPositions[index]?.rightQR || { top: '10%', left: '88%', position: 'absolute' }}
+                className="absolute qr-code"
+                style={{
+                  top: qrPosition.rightQR.top,
+                  left: qrPosition.rightQR.left,
+                  right: qrPosition.rightQR.right,
+                  position: qrPosition.rightQR.position,
+                  width: qrPosition.style.width,
+                  height: qrPosition.style.height,
+                  maxWidth: qrPosition.style.maxWidth
+                }}
               >
                 <QRCodeCanvas 
                   value={qr.qrContent || 'default'} 
-                  size={50} 
-                  data-qr-id={qr.id}
+                  data-qr-id={qr.id} 
+                  style={{
+                    width: "100%",
+                    height: "100%"
+                  }}
                 />
               </div>
+
             </div>
 
             <div className="relative">
@@ -240,4 +277,4 @@ const PreviewGenQR = () => {
   );
 };
 
-export default PreviewGenQR;
+export default Guideline;
