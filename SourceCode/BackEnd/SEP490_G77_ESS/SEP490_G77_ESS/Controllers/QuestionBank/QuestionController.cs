@@ -166,6 +166,7 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
 
             int row = 2;
             var correctAnswers = await _context.CorrectAnswers.ToListAsync();
+            var baseUrl = $"{Request.Scheme}://{Request.Host}";
 
             foreach (var question in section.Questions)
             {
@@ -194,7 +195,25 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
                 worksheet.Cell(row, 9).Value = correctAnswerStr;
 
 
-                worksheet.Cell(row, 10).Value = question.ImageUrl ?? "";
+                if (!string.IsNullOrEmpty(question.ImageUrl))
+                {
+                    string fullImageUrl = question.ImageUrl.StartsWith("http")
+     ? question.ImageUrl
+     : baseUrl + question.ImageUrl;
+                    worksheet.Cell(row, 10).FormulaA1 = $"IMAGE(\"{fullImageUrl}\")";
+
+                    // 👉 Đặt chiều cao hàng
+                    worksheet.Row(row).Height = 100;
+
+                    // 👉 Đặt chiều rộng cột (nếu chưa đặt)
+                    worksheet.Column(10).Width = 30; // Điều chỉnh theo tỷ lệ mong muốn
+
+                }
+                else
+                {
+                    worksheet.Cell(row, 10).Value = "";
+                }
+
                 row++;
             }
 
@@ -421,7 +440,25 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
                     }
 
                     // Đọc URL ảnh từ cột 10
-                    var imageUrl = GetCellValueAsString(worksheet.Cell(row, 10));
+                    var imageCell = worksheet.Cell(row, 10);
+                    string imageUrl = null;
+
+                    if (imageCell.HasFormula)
+                    {
+                        var formula = imageCell.FormulaA1; // Ví dụ: =IMAGE("https://.../abc.png", 1, "desc", 100, 100)
+
+                        var match = Regex.Match(formula, "IMAGE\\([\"'](?<url>.*?)[\"']", RegexOptions.IgnoreCase);
+
+                        if (match.Success)
+                        {
+                            imageUrl = match.Groups["url"].Value;
+                        }
+                    }
+                    else
+                    {
+                        imageUrl = GetCellValueAsString(imageCell); // fallback nếu là text thường
+                    }
+
 
                     // Tạo chuỗi answers từ các cột riêng lẻ
                     List<string> answersList = new List<string>();
@@ -701,7 +738,7 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
 
             return Ok(new { message = "Câu hỏi đã được cập nhật!" });
         }
-    
+
 
         [HttpPost("upload-image-base64")]
         public IActionResult UploadBase64Image([FromBody] Base64ImageDto dto)
