@@ -44,7 +44,6 @@ public class TestListActivity extends BaseActivity {
         setHeaderTitle("Trắc nghiệm");
 
         recyclerViewTests = findViewById(R.id.recyclerViewTests);
-        fabAddTest = findViewById(R.id.fabAddTest);
 
         testList = new ArrayList<>();
         testAdapter = new TestAdapter(this, testList, selectedTest -> {
