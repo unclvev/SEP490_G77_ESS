@@ -455,8 +455,13 @@ const saveEditedFormula = () => {
     } 
     else if (newQuestion.typeId === 3) {
       // Điền kết quả
+      const answer = newQuestion.correctAnswers[0];
       if (!newQuestion.correctAnswers[0] || newQuestion.correctAnswers[0].length !== 4) {
         toast.warning("⚠️ Đáp án điền kết quả phải có đúng 4 ký tự!");
+        return;
+      }
+      if (!/^[\d\-,]{4}$/.test(answer)) {
+        toast.warning("⚠️ Chỉ cho phép nhập số, dấu - và dấu , trong 4 ký tự!");
         return;
       }
     }
@@ -821,7 +826,7 @@ const renderMathInput = () => {
         {/* Nút Export và Import */}
         <div className="flex justify-between mb-4">
           <Button type="default" icon={<DownloadOutlined />} onClick={handleExportExcel}>
-            Export Excel
+          📥 Tải File Mẫu (Import/Export)
           </Button>
           <Upload customRequest={handleImportExcel} showUploadList={false}>
             <Button type="primary" icon={<UploadOutlined />}>Import Excel</Button>
