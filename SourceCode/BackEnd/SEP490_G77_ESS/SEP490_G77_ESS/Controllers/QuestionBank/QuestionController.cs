@@ -165,6 +165,22 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
             worksheet.Cell(1, 10).Value = "Image URL";
 
             int row = 2;
+            // ✅ Luôn thêm dòng ví dụ mẫu trước (row 2)
+            worksheet.Cell(row, 1).Value = "1 + 1 = ?";
+            worksheet.Cell(row, 2).Value = 1; // Trắc nghiệm
+            worksheet.Cell(row, 3).Value = 1; // Mức độ
+            worksheet.Cell(row, 4).Value = "Phép cộng cơ bản.";
+            worksheet.Cell(row, 5).Value = "1";
+            worksheet.Cell(row, 6).Value = "2";
+            worksheet.Cell(row, 7).Value = "3";
+            worksheet.Cell(row, 8).Value = "4";
+            worksheet.Cell(row, 9).Value = "2";
+            worksheet.Cell(row, 10).FormulaA1 = "IMAGE(\"https://localhost:7052/images/example.png\")";
+
+            worksheet.Row(row).Height = 100;
+            worksheet.Column(10).Width = 30;
+
+            row++; // Bắt đầu từ dòng 3 cho câu hỏi thật
             var correctAnswers = await _context.CorrectAnswers.ToListAsync();
             var baseUrl = $"{Request.Scheme}://{Request.Host}";
 
@@ -220,13 +236,13 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
             // ✅ Sheet hướng dẫn
             var guideSheet = workbook.Worksheets.Add("Import Guide");
             guideSheet.Cell(1, 1).Value = "HƯỚNG DẪN IMPORT EXCEL";
-            guideSheet.Cell(2, 1).Value = "1. Question Content: Nội dung câu hỏi (dùng [MATH:...] cho công thức).";
+            guideSheet.Cell(2, 1).Value = "1. Question Content: Nội dung câu hỏi ().";
             guideSheet.Cell(3, 1).Value = "2. Type ID: Loại câu hỏi (1: Trắc nghiệm, 2: True/False, 3: Điền kết quả).";
-            guideSheet.Cell(4, 1).Value = "3. Mode ID: Mức độ khó.";
-            guideSheet.Cell(5, 1).Value = "4. Solution: Giải thích (cho phép có [MATH:...]).";
+            guideSheet.Cell(4, 1).Value = "3. Mode ID: Mức độ khó.(1: Nhận biết, 2: Thổng hiểu, 3: Vận dụng )";
+            guideSheet.Cell(5, 1).Value = "4. Solution: Giải thích cho câu hỏi).";
             guideSheet.Cell(6, 1).Value = "5-8. Answer 1–4: Các đáp án trắc nghiệm, mỗi ô 1 đáp án.";
-            guideSheet.Cell(7, 1).Value = "9. Correct Answers: Đáp án đúng (phân tách bằng ',', hỗ trợ [MATH:...]).";
-            guideSheet.Cell(8, 1).Value = "10. Image URL: Link ảnh đã upload (không bắt buộc).";
+            guideSheet.Cell(7, 1).Value = "9. Correct Answers: Đáp án đúng (phân tách bằng ',', với dạng đúng sai thì các đáp án cách nhau bằng dấu ; với nhập đáp án thì phải gõ đủ 4 ký tự bao gồm dấu - và ,).";
+            guideSheet.Cell(8, 1).Value = "10. Image URL: gõ công thức ảnh theo ví dụ có sẵn (không bắt buộc).";
 
             guideSheet.Protect().AllowElement(XLSheetProtectionElements.SelectLockedCells);
 
@@ -788,7 +804,7 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
             public string Base64Image { get; set; }
         }
 
-
+        
 
 
         // ✅ Xóa câu hỏi
