@@ -705,6 +705,25 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
         [HttpPut("questions/{id}")]
         public async Task<IActionResult> UpdateQuestion(long id, [FromBody] QuestionDto questionDto)
         {
+            if (string.IsNullOrWhiteSpace(questionDto.Quescontent))
+            {
+                return BadRequest("Question content must not be empty!");
+            }
+
+            if (questionDto.Secid == null || questionDto.Secid <= 0)
+            {
+                return BadRequest("Invalid Section ID!");
+            }
+
+            if (questionDto.TypeId <= 0 || !_context.TypeQuestions.Any(t => t.TypeId == questionDto.TypeId))
+            {
+                return BadRequest("Invalid question type!");
+            }
+
+            if (questionDto.Modeid <= 0 || !_context.Levels.Any(m => m.LevelId == questionDto.Modeid))
+            {
+                return BadRequest("Invalid difficulty level!");
+            }
             var question = await _context.Questions.FindAsync(id);
             if (question == null)
                 return NotFound(new { message = "Không tìm thấy câu hỏi!" });
