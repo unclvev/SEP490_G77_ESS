@@ -27,8 +27,8 @@ namespace SEP490_G77_ESS.Tests.Controller.BankTests
             _context.Database.EnsureCreated();
 
             var grade = new Grade { GradeId = 1, GradeLevel = "10" };
-            var subject = new Subject { SubjectId = 1, SubjectName = "Math" };
-            var curriculum = new Curriculum { CurriculumId = 1, CurriculumName = "CB" };
+            var subject = new Subject { SubjectId = 1, SubjectName = "Toán" };
+            var curriculum = new Curriculum { CurriculumId = 1, CurriculumName = "Sách cánh diều " };
 
             _context.Grades.Add(grade);
             _context.Subjects.Add(subject);
