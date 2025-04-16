@@ -2,7 +2,9 @@
 {
     public class UpdateRoleDTO
     {
-        public bool CanEdit { get; set; }
-        public bool CanView { get; set; }
+        public string RoleName { get; set; }
+        public bool CanModify { get; set; }
+        public bool CanRead { get; set; }
+        public bool CanDelete { get; set; }
     }
 }

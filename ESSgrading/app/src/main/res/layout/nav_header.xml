@@ -38,7 +38,9 @@
             android:layout_height="32dp"
             android:src="@drawable/ic_logout"
             android:layout_alignParentEnd="true"
-            android:layout_centerVertical="true"/>
+            android:layout_centerVertical="true"
+            android:clickable="true"
+            android:focusable="true"/>
     </RelativeLayout>
 
     <!-- Email -->

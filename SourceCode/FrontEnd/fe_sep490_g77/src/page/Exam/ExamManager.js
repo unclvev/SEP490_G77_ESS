@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Card, Button, Input, Spin, Modal } from "antd";
-import { EditOutlined, DeleteOutlined, PlusOutlined } from "@ant-design/icons";
+import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { delExam, getExams, updateExam } from "../../services/api";
 import { toast } from "react-toastify";
@@ -9,13 +9,11 @@ import "react-toastify/dist/ReactToastify.css";
 const ExamManagement = () => {
   const navigate = useNavigate();
   const [exams, setExams] = useState([]);
-  const [allExams, setAllExams] = useState([]); // Lưu toàn bộ đề thi để sau khi tìm kiếm có thể reset lại
   const [loading, setLoading] = useState(true);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [examid, setExamid] = useState(null);
   const [newName, setNewExamName] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -23,7 +21,6 @@ const ExamManagement = () => {
         const response = await getExams();
         setLoading(false);
         setExams(response.data);
-        setAllExams(response.data);
       } catch (error) {
         toast.error("Lỗi khi lấy danh sách đề thi!");
         console.error("Error fetching exams:", error);
@@ -33,32 +30,18 @@ const ExamManagement = () => {
     fetchData();
   }, []);
 
-  // Hàm thực hiện tìm kiếm đề thi dựa vào từ khóa nhập vào
-  const handleSearch = (value) => {
-    setSearchTerm(value);
-    if (value.trim() === "") {
-      setExams(allExams);
-    } else {
-      const filteredExams = allExams.filter((exam) =>
-        exam.examname.toLowerCase().includes(value.toLowerCase())
-      );
-      setExams(filteredExams);
-    }
-  };
-
   const deleteExamById = async () => {
     try {
       const response = await delExam(examid);
-      toast.success("Xóa đề thi thành công!");
-      setExams((prevExams) => prevExams.filter((exam) => exam.examId !== examid));
-      setAllExams((prevExams) => prevExams.filter((exam) => exam.examId !== examid));
-      setDeleteModalVisible(false);
-    } catch (error) {
-      if (error.response && error.response.status === 404) {
-        toast.error("Không tìm thấy bài kiểm tra hoặc bạn không có quyền xóa.");
-      } else {
+      if (!response.ok) {
         toast.error("Xóa đề thi thất bại!");
+      } else {
+        toast.success("Xóa đề thi thành công!");
+        setExams((prevExams) => prevExams.filter((exam) => exam.examId !== examid));
+        setDeleteModalVisible(false);
       }
+    } catch (error) {
+      toast.error("Không thể xóa đề thi!");
       console.error("Can not delete the exam:", error);
     }
   };
@@ -81,21 +64,20 @@ const ExamManagement = () => {
     }
 
     try {
-      await updateExam(examid, { newName });
-      toast.success("Cập nhật tên đề thi thành công!");
-      setExams((prevExams) =>
-        prevExams.map((exam) =>
-          exam.examId === examid ? { ...exam, examname: newName } : exam
-        )
-      );
-      setAllExams((prevExams) =>
-        prevExams.map((exam) =>
-          exam.examId === examid ? { ...exam, examname: newName } : exam
-        )
-      );
-      setEditModalVisible(false);
+      const response = await updateExam(examid, newName);
+      if (!response.ok) {
+        toast.error("Cập nhật tên đề thi thất bại!");
+      } else {
+        toast.success("Cập nhật tên đề thi thành công!");
+        setExams((prevExams) =>
+          prevExams.map((exam) =>
+            exam.examId === examid ? { ...exam, examname: newName } : exam
+          )
+        );
+        setEditModalVisible(false);
+      }
     } catch (error) {
-      toast.error("Cập nhật tên đề thi thất bại!");
+      toast.error("Không thể cập nhật tên đề thi!");
       console.error("Can not update the exam:", error);
     }
   };
@@ -105,21 +87,10 @@ const ExamManagement = () => {
       <h2 style={{ textAlign: "center" }}>QUẢN LÍ ĐỀ THI</h2>
 
       <div style={{ display: "flex", justifyContent: "center", marginBottom: 20 }}>
-        <Input.Search
-          placeholder="Tìm kiếm đề thi..."
-          style={{ width: 300 }}
-          value={searchTerm}
-          onChange={(e) => handleSearch(e.target.value)}
-        />
+        <Input.Search placeholder="Tìm kiếm đề thi..." style={{ width: 300 }} />
       </div>
 
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <h3>ĐỀ CỦA BẠN</h3>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate("/exam/select")}>
-          Tạo đề thi
-        </Button>
-      </div>
-
+      <h3>ĐỀ CỦA BẠN</h3>
       {loading ? (
         <div style={{ display: "flex", justifyContent: "center", marginTop: 50 }}>
           <Spin size="large" />

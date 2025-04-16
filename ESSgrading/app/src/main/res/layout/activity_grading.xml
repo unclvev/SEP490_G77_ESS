@@ -30,7 +30,7 @@
             android:id="@+id/btnStatus"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Status"
+            android:text="Chụp"
             android:textSize="16sp"
             android:background="@color/deepblue"
             android:textColor="@android:color/white"

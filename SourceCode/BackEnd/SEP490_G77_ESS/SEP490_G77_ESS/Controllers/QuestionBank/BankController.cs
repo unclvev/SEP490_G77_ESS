@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using SEP490_G77_ESS.Models;
 using SEP490_G77_ESS.DTO.BankdDTO;
 using ClosedXML.Excel;
+using Microsoft.AspNetCore.Authorization;
 
 namespace SEP490_G77_ESS.Controllers
 {
@@ -23,270 +24,27 @@ namespace SEP490_G77_ESS.Controllers
 
         // ✅ Lấy danh sách ngân hàng câu hỏi
         [HttpGet("account/{accid}")]
-        public async Task<ActionResult<IEnumerable<object>>> GetBanksByAccount(
-     long accid, [FromQuery] string query = "", [FromQuery] string grade = "", [FromQuery] string subject = "", [FromQuery] string curriculum = "")
+        public async Task<ActionResult<IEnumerable<object>>> GetBanksByAccount(long accid)
         {
-            var banksQuery = _context.Banks
-                .Where(b => b.Accid == accid)
-                .Include(b => b.Grade)
+            var banks = await _context.Banks
+                .Where(b => b.Accid == accid) // Chỉ lấy bank thuộc account này
+                .Include(b => b.GradeId)
                 .Include(b => b.Subject)
-                .Include(b => b.Curriculum)
-                .Include(b => b.Sections)
-                .AsQueryable();
-
-            if (!string.IsNullOrEmpty(query))
-                banksQuery = banksQuery.Where(b => b.Bankname.Contains(query));
-
-            if (!string.IsNullOrEmpty(grade))
-                banksQuery = banksQuery.Where(b => b.Grade.GradeLevel == grade);
-
-            if (!string.IsNullOrEmpty(subject))
-                banksQuery = banksQuery.Where(b => b.Subject.SubjectName.Contains(subject));
-
-            if (!string.IsNullOrEmpty(curriculum))
-                banksQuery = banksQuery.Where(b => b.Curriculum.CurriculumName.Contains(curriculum));
-
-            var banks = await banksQuery
-                .OrderByDescending(b => b.CreateDate)
                 .Select(b => new
                 {
                     b.BankId,
                     b.Bankname,
                     Totalquestion = _context.Questions
-                        .Count(q => q.Secid != null && b.Sections.Any(s => s.Secid == q.Secid)),
+                        .Where(q => q.Secid != null && b.Sections.Select(s => s.Secid).Contains(q.Secid.Value))
+                        .Count(),
                     b.CreateDate,
                     Grade = b.Grade != null ? b.Grade.GradeLevel : "Không xác định",
-                    Subject = b.Subject != null ? b.Subject.SubjectName : "Không xác định",
-                    Curriculum = b.Curriculum != null ? b.Curriculum.CurriculumName : "Không xác định"
+                    Subject = b.Subject != null ? b.Subject.SubjectName : "Không xác định"
                 })
-                .OrderByDescending(b => b.CreateDate)
                 .ToListAsync();
 
             return Ok(banks);
         }
-        [HttpGet("default-banks")]
-        public async Task<IActionResult> GetDefaultBanks(
-            [FromQuery] string grade = "",
-            [FromQuery] string subject = "",
-            [FromQuery] string curriculum = "")
-        {
-            var banksQuery = _context.DefaultSectionHierarchies
-                .Include(d => d.Grade)
-                .Include(d => d.Subject)
-                .Include(d => d.Curriculum)
-                .AsQueryable();
-
-            if (!string.IsNullOrEmpty(grade))
-                banksQuery = banksQuery.Where(d => d.Grade.GradeLevel == grade);
-            if (!string.IsNullOrEmpty(subject))
-                banksQuery = banksQuery.Where(d => d.Subject.SubjectName.Contains(subject));
-            if (!string.IsNullOrEmpty(curriculum))
-                banksQuery = banksQuery.Where(d => d.Curriculum.CurriculumName.Contains(curriculum));
-
-            // Get the basic bank information first
-            var banks = await banksQuery.ToListAsync();
-
-            // Create a list to hold our final result
-            var result = new List<object>();
-
-            // Process each bank individually
-            foreach (var bank in banks)
-            {
-                try
-                {
-                    // Get all section IDs for this bank's curriculum
-                    var sectionIds = await _context.DefaultSectionHierarchies
-                        .Where(s => s.CurriculumId == bank.CurriculumId)
-                        .Select(s => s.DfSectionId)
-                        .ToListAsync();
-
-                    // Count questions using the same logic as in GetDefaultBank
-                    var questionCount = await _context.Questions
-                        .Where(q => q.DfSectionId.HasValue && sectionIds.Contains(q.DfSectionId.Value))
-                        .CountAsync();
-
-                    // Add to result with all fields explicitly set
-                    result.Add(new
-                    {
-                        BankId = bank.DfSectionId,
-                        BankName = $"{bank.Subject.SubjectName}-{bank.Grade.GradeLevel}",
-                        Grade = bank.Grade.GradeLevel,
-                        Subject = bank.Subject.SubjectName,
-                        Curriculum = bank.Curriculum.CurriculumName,
-                        TotalQuestion = questionCount
-                    });
-                }
-                catch (Exception ex)
-                {
-                    // Log the exception but continue processing other banks
-                    Console.WriteLine($"Error processing bank {bank.DfSectionId}: {ex.Message}");
-                }
-            }
-
-            return Ok(result);
-        }
-
-
-
-
-
-
-
-
-        [HttpGet("default/{id}")]
-        public async Task<ActionResult<object>> GetDefaultBank(long id)
-        {
-            // ✅ Lấy thông tin ngân hàng dựa trên `id`
-            var bankInfo = await _context.DefaultSectionHierarchies
-                .Include(d => d.Grade)
-                .Include(d => d.Subject)
-                .Include(d => d.Curriculum)
-                .Where(d => d.DfSectionId == id)
-                .FirstOrDefaultAsync();
-
-            if (bankInfo == null)
-            {
-                return NotFound(new { message = "Không tìm thấy ngân hàng câu hỏi" });
-            }
-
-            // ✅ Lấy `curriculum_id` của ngân hàng này
-            var curriculumId = bankInfo.CurriculumId;
-
-            // ✅ Lấy tất cả `df_section_id` thuộc curriculum này
-            var sectionIds = await _context.DefaultSectionHierarchies
-                .Where(s => s.CurriculumId == curriculumId)
-                .Select(s => s.DfSectionId)
-                .ToListAsync();
-
-            // ✅ Tính tổng số câu hỏi của tất cả sections trong ngân hàng
-            var totalQuestions = await _context.Questions
-                .Where(q => q.DfSectionId.HasValue && sectionIds.Contains(q.DfSectionId.Value))
-                .CountAsync();
-
-            // ✅ Trả về dữ liệu đúng
-            var bank = new
-            {
-                BankId = bankInfo.DfSectionId,
-                BankName = $"{bankInfo.Subject.SubjectName} - {bankInfo.Grade.GradeLevel}",
-                Grade = bankInfo.Grade.GradeLevel,
-                Subject = bankInfo.Subject.SubjectName,
-                Curriculum = bankInfo.Curriculum.CurriculumName,
-                TotalQuestion = totalQuestions // 🟢 Giá trị chính xác
-            };
-
-            return Ok(bank);
-        }
-
-
-        [HttpGet("default/{bankId}/sections")]
-        public async Task<ActionResult<IEnumerable<object>>> GetDefaultSectionsByBankId(long bankId)
-        {
-            var curriculumId = await _context.DefaultSectionHierarchies
-                .Where(d => d.DfSectionId == bankId)
-                .Select(d => d.CurriculumId)
-                .FirstOrDefaultAsync();
-
-            if (curriculumId == null)
-            {
-                return NotFound(new { message = "Không tìm thấy curriculum cho bank này!" });
-            }
-
-            var sections = await _context.DefaultSectionHierarchies
-                .Where(s => s.CurriculumId == curriculumId)
-                .ToListAsync();
-
-            var hierarchyRelations = await _context.DefaultSectionHierarchies
-                .Where(s => s.AncestorId != null && s.DescendantId != null && s.AncestorId != s.DescendantId)
-                .ToListAsync();
-
-            var descendantIds = hierarchyRelations.Select(h => h.DescendantId.Value).ToHashSet();
-
-            var rootSections = sections
-                .Where(s => (s.AncestorId == s.DfSectionId) || (s.AncestorId == null && !descendantIds.Contains(s.DfSectionId)))
-                .ToList();
-
-            var sectionLookup = sections.ToDictionary(s => s.DfSectionId);
-            var hierarchyLookup = hierarchyRelations
-                .GroupBy(h => h.AncestorId)
-                .ToDictionary(g => g.Key, g => g.Select(h => h.DescendantId.Value).ToList());
-
-            // ✅ Lấy số lượng câu hỏi theo từng section
-            var questionCounts = await _context.Questions
-                .Where(q => q.DfSectionId.HasValue && sections.Select(s => s.DfSectionId).Contains(q.DfSectionId.Value))
-                .GroupBy(q => q.DfSectionId)
-                .Select(g => new { SectionId = g.Key, Count = g.Count() })
-                .ToDictionaryAsync(g => g.SectionId.Value, g => g.Count);
-
-            var sectionTree = rootSections
-                .Select(s => BuildSectionTree(s, sectionLookup, hierarchyLookup, questionCounts))
-                .ToList();
-
-            return Ok(sectionTree);
-        }
-
-        // ✅ Build cây đệ quy tối ưu (có cộng dồn số câu hỏi)
-        private object BuildSectionTree(DefaultSectionHierarchy section,
-            Dictionary<long, DefaultSectionHierarchy> sectionLookup,
-            Dictionary<long?, List<long>> hierarchyLookup,
-            Dictionary<long, int> questionCounts)
-        {
-            var childSections = hierarchyLookup.ContainsKey(section.DfSectionId)
-                ? hierarchyLookup[section.DfSectionId].Where(sectionLookup.ContainsKey).Select(id => sectionLookup[id]).ToList()
-                : new List<DefaultSectionHierarchy>();
-
-            // ✅ Đếm số câu hỏi của section hiện tại (nếu có)
-            int totalQuestions = questionCounts.ContainsKey(section.DfSectionId) ? questionCounts[section.DfSectionId] : 0;
-
-            var children = childSections
-                .Select(s => BuildSectionTree(s, sectionLookup, hierarchyLookup, questionCounts))
-                .ToList();
-
-            totalQuestions += children.Sum(c => (int)c.GetType().GetProperty("questionCount").GetValue(c, null));
-
-            return new
-            {
-                secid = section.DfSectionId,
-                secname = section.DfSectionName,
-                questionCount = totalQuestions, // ✅ Cộng dồn số câu hỏi từ con
-                children = children
-            };
-        }
-
-
-
-        [HttpGet("default/{sectionId}/questions")]
-        public async Task<ActionResult<IEnumerable<object>>> GetQuestionsForSection(long sectionId)
-        {
-            // ✅ Kiểm tra sectionId có tồn tại không
-            var sectionExists = await _context.DefaultSectionHierarchies.AnyAsync(s => s.DfSectionId == sectionId);
-            if (!sectionExists)
-            {
-                return NotFound(new { message = "Không tìm thấy section này!" });
-            }
-
-            // ✅ Chỉ lấy câu hỏi thuộc sectionId cụ thể
-            var questions = await _context.Questions
-                .Where(q => q.DfSectionId == sectionId)
-                .Select(q => new
-                {
-                    q.Quesid,
-                    q.Quescontent,
-                    q.TypeId,
-                    q.Modeid,
-                    q.Solution,
-                    q.AnswerContent,
-                    q.ImageUrl,
-                    CorrectAnswers = _context.CorrectAnswers
-                        .Where(a => a.Quesid == q.Quesid)
-                        .Select(a => a.Content)
-                        .ToList()
-                })
-                .ToListAsync();
-
-            return Ok(questions.Any() ? questions : new List<object>()); // ✅ Đảm bảo luôn trả về []
-        }
-
-
 
 
 
@@ -328,22 +86,49 @@ namespace SEP490_G77_ESS.Controllers
 
 
         // ✅ Thêm mới ngân hàng câu hỏi
-        [HttpPost]
-        public async Task<ActionResult<Bank>> CreateBank([FromBody] Bank bank)
-        {
-            if (string.IsNullOrEmpty(bank.Bankname))
-            {
-                return BadRequest(new { message = "Tên ngân hàng câu hỏi không được để trống" });
-            }
+        //[HttpPost]
+        //public async Task<ActionResult<Bank>> CreateBank([FromQuery] String bank)
+        //{
+        //    if (string.IsNullOrEmpty(bank.Bankname))
+        //    {
+        //        return BadRequest(new { message = "Tên ngân hàng câu hỏi không được để trống" });
+        //    }
+        //    var newBank = new Bank
+        //    {
+        //        Bankname = bank,
+        //        Bankstatus = 1,
+        //        Totalquestion = 0,
+        //        CreateDate = DateTime.Now,
+        //        Accid = 9, // Thay đổi theo nhu cầu
 
-            bank.CreateDate = DateTime.Now;
-            _context.Banks.Add(bank);
-            await _context.SaveChangesAsync();
+        //    };
 
-            return CreatedAtAction(nameof(GetBank), new { id = bank.BankId }, bank);
-        }
+        //    _context.Banks.Add(newBank);
+
+        //    await _context.SaveChangesAsync();
+        //    add new recourseAccess
+        //    var recourseAccess = new ResourceAccess
+        //    {
+        //        Accid = bank.Accid,
+        //        ResourceType = "bank",
+        //        ResourceId = bank.BankId,
+        //        IsOwner = true,
+        //        Role = new RoleAccess
+        //        {
+        //            RoleName = "owner",
+        //            CanRead = true,
+        //            CanModify = true,
+        //            CanDelete = true
+        //        }
+        //    };
+        //    _context.ResourceAccesses.Add(recourseAccess);
+        //    await _context.SaveChangesAsync();
+
+        //    return CreatedAtAction(nameof(GetBank), new { id = newBank.BankId }, bank);
+        //}
 
         // ✅ Cập nhật chỉ Bankname
+        [Authorize(Policy = "RequireModifyPermission")]
         [HttpPut("{id}/name")]
         public async Task<IActionResult> UpdateBankName(long id, [FromBody] Bank bank)
         {
@@ -392,21 +177,15 @@ namespace SEP490_G77_ESS.Controllers
                 return NotFound(new { message = "Không tìm thấy ngân hàng câu hỏi" });
             }
 
-            // ✅ Xóa dữ liệu trong Correct_Answer trước
-            // ✅ Xóa dữ liệu trong Correct_Answer trước
-            var questionIds = bank.Sections.SelectMany(s => s.Questions).Select(q => q.Quesid).ToList();
-            var correctAnswers = _context.CorrectAnswers
-      .Where(ca => ca.Quesid.HasValue && questionIds.Contains(ca.Quesid.Value))
-      .ToList();
-
-
-
             // ✅ Xóa toàn bộ câu hỏi thuộc các Sections của Bank
-            var questions = _context.Questions.Where(q => questionIds.Contains(q.Quesid));
-            _context.Questions.RemoveRange(questions);
+            var sections = bank.Sections.ToList();
+            foreach (var section in sections)
+            {
+                var questions = _context.Questions.Where(q => q.Secid == section.Secid);
+                _context.Questions.RemoveRange(questions);
+            }
 
             // ✅ Xóa toàn bộ Sections thuộc Bank
-            var sections = bank.Sections.ToList();
             _context.Sections.RemoveRange(sections);
 
             // ✅ Xóa quan hệ SectionHierarchy liên quan đến Bank
@@ -415,10 +194,6 @@ namespace SEP490_G77_ESS.Controllers
                 .Where(sh => sectionIds.Contains(sh.AncestorId) || sectionIds.Contains(sh.DescendantId));
             _context.SectionHierarchies.RemoveRange(sectionHierarchies);
 
-            // ✅ Xóa toàn bộ dữ liệu trong BankAccess liên quan đến Bank
-            var bankAccesses = _context.BankAccesses.Where(ba => ba.Bankid == id);
-            _context.BankAccesses.RemoveRange(bankAccesses);
-
             // ✅ Xóa ngân hàng câu hỏi
             _context.Banks.Remove(bank);
 
@@ -426,7 +201,6 @@ namespace SEP490_G77_ESS.Controllers
 
             return Ok(new { message = "Xóa ngân hàng câu hỏi và toàn bộ dữ liệu liên quan thành công" });
         }
-
 
 
         // ✅ Tìm kiếm ngân hàng câu hỏi theo tên
@@ -454,9 +228,12 @@ namespace SEP490_G77_ESS.Controllers
         }
 
 
+        // ✅ Tạo ngân hàng câu hỏi tự động nếu chưa có
+        // ✅ Tạo ngân hàng câu hỏi tự động luôn tạo mới
         [HttpPost("generate/{accid}")]
-        public async Task<ActionResult<object>> GenerateQuestionBank(long accid, [FromBody] Bank bank)
+        public async Task<ActionResult<BankDto>> GenerateQuestionBank(long accid, [FromBody] Bank bank)
         {
+            // 🔍 Kiểm tra thông tin bắt buộc
             var grade = await _context.Grades.FindAsync(bank.GradeId);
             var subject = await _context.Subjects.FindAsync(bank.SubjectId);
             var curriculum = bank.CurriculumId != null ? await _context.Curricula.FindAsync(bank.CurriculumId) : null;
@@ -466,6 +243,7 @@ namespace SEP490_G77_ESS.Controllers
                 return BadRequest(new { message = "Không tìm thấy Khối học, Môn học hoặc Chương trình!" });
             }
 
+            // 🔹 Tạo ngân hàng câu hỏi mới
             string newBankName = curriculum != null
                 ? $"Ngân hàng {subject.SubjectName} {grade.GradeLevel} - {curriculum.CurriculumName}"
                 : $"Ngân hàng {subject.SubjectName} {grade.GradeLevel}";
@@ -479,29 +257,23 @@ namespace SEP490_G77_ESS.Controllers
                 SubjectId = bank.SubjectId,
                 CurriculumId = bank.CurriculumId,
                 CreateDate = DateTime.Now,
-                Accid = accid
+                Accid = accid // ✅ Thêm accid vào đây
             };
 
             _context.Banks.Add(newBank);
-            await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync(); // Lưu để lấy ID của ngân hàng mới
 
-            // Get all default sections for this curriculum
+            Console.WriteLine($"✅ Tạo ngân hàng câu hỏi mới: {newBank.BankId} - {newBank.Bankname} (accid: {accid})");
+
+            List<SectionDto> createdSections = new List<SectionDto>();
+
+            // ✅ Chỉ lấy dữ liệu từ Default_Section_Hierarchy
             var defaultSections = await _context.DefaultSectionHierarchies
                 .Where(d => d.CurriculumId == bank.CurriculumId)
                 .ToListAsync();
 
-            // Get hierarchy relations from default sections
-            var hierarchyRelations = await _context.DefaultSectionHierarchies
-                .Where(s => s.CurriculumId == bank.CurriculumId &&
-                            s.AncestorId != null && s.DescendantId != null &&
-                            s.AncestorId != s.DescendantId)
-                .ToListAsync();
+            Console.WriteLine($"📌 Lấy {defaultSections.Count} sections từ Default_Section_Hierarchy");
 
-            // Create a mapping from default section IDs to new section IDs
-            Dictionary<long, long> sectionMapping = new Dictionary<long, long>();
-            Dictionary<long, string> sectionNames = new Dictionary<long, string>();
-
-            // Create sections first
             foreach (var defaultSection in defaultSections)
             {
                 var newSection = new Section
@@ -513,101 +285,22 @@ namespace SEP490_G77_ESS.Controllers
                 _context.Sections.Add(newSection);
                 await _context.SaveChangesAsync();
 
-                // Store mapping from default section ID to new section ID
-                sectionMapping[defaultSection.DfSectionId] = newSection.Secid;
-                sectionNames[newSection.Secid] = defaultSection.DfSectionName;
-            }
-            foreach (var defaultSection in defaultSections)
-            {
-                var selfHierarchy = new SectionHierarchy
+                createdSections.Add(new SectionDto
                 {
-                    AncestorId = sectionMapping[defaultSection.DfSectionId],
-                    DescendantId = sectionMapping[defaultSection.DfSectionId],
-                    Depth = 0
-                };
-                _context.SectionHierarchies.Add(selfHierarchy);
+                    Secid = newSection.Secid,
+                    Secname = newSection.Secname
+                });
+
+                Console.WriteLine($"➕ Thêm Section: {newSection.Secid} - {newSection.Secname}");
             }
 
-            // Create section hierarchy relationships
-            foreach (var relation in hierarchyRelations)
-            {
-                if (relation.AncestorId.HasValue && relation.DescendantId.HasValue)
-                {
-                    // Create the same relationship in the new sections
-                    if (sectionMapping.ContainsKey(relation.AncestorId.Value) &&
-                        sectionMapping.ContainsKey(relation.DescendantId.Value))
-                    {
-                        var sectionHierarchy = new SectionHierarchy
-                        {
-                            AncestorId = sectionMapping[relation.AncestorId.Value],
-                            DescendantId = sectionMapping[relation.DescendantId.Value],
-                            Depth = relation.Depth.HasValue ? (long)relation.Depth.Value : 0
-                        };
-
-                        _context.SectionHierarchies.Add(sectionHierarchy);
-                    }
-                }
-            }
-
-            await _context.SaveChangesAsync();
-
-            // Identify root sections by using the same logic as GetDefaultSectionsByBankId
-            var descendantIds = hierarchyRelations
-                .Select(h => h.DescendantId.Value)
-                .ToHashSet();
-
-            var rootDefaultSections = defaultSections
-                .Where(s => (s.AncestorId == s.DfSectionId) ||
-                           (s.AncestorId == null && !descendantIds.Contains(s.DfSectionId)))
-                .ToList();
-
-            var sectionLookup = defaultSections.ToDictionary(s => s.DfSectionId);
-            var hierarchyLookup = hierarchyRelations
-                .GroupBy(h => h.AncestorId)
-                .ToDictionary(g => g.Key, g => g.Select(h => h.DescendantId.Value).ToList());
-
-            // Build the response with multiple root sections
-            var sectionTree = rootDefaultSections
-                .Select(s => BuildSectionTreeForResponse(s, sectionLookup, hierarchyLookup, sectionMapping))
-                .ToList();
-
-            // Return the bank with sections at the proper hierarchy
-            return Ok(new
+            return Ok(new BankDto
             {
                 BankId = newBank.BankId,
                 BankName = newBank.Bankname,
                 CurriculumId = newBank.CurriculumId,
-                Grade = grade.GradeLevel,
-                Subject = subject.SubjectName,
-                Sections = sectionTree  // This is now a list of root sections
+                Sections = createdSections
             });
-        }
-
-        // Build a hierarchical section tree for the response
-        private object BuildSectionTreeForResponse(
-            DefaultSectionHierarchy defaultSection,
-            Dictionary<long, DefaultSectionHierarchy> sectionLookup,
-            Dictionary<long?, List<long>> hierarchyLookup,
-            Dictionary<long, long> sectionMapping)
-        {
-            var childSections = hierarchyLookup.ContainsKey(defaultSection.DfSectionId)
-                ? hierarchyLookup[defaultSection.DfSectionId]
-                    .Where(sectionLookup.ContainsKey)
-                    .Select(id => sectionLookup[id])
-                    .ToList()
-                : new List<DefaultSectionHierarchy>();
-
-            var children = childSections
-                .Select(s => BuildSectionTreeForResponse(s, sectionLookup, hierarchyLookup, sectionMapping))
-                .ToList();
-
-            return new
-            {
-                secid = sectionMapping[defaultSection.DfSectionId],
-                secname = defaultSection.DfSectionName,
-                questionCount = 0, // Initially 0 since it's a new bank
-                children = children
-            };
         }
 
 
@@ -654,90 +347,52 @@ namespace SEP490_G77_ESS.Controllers
         [HttpGet("{bankId}/sections")]
         public async Task<ActionResult<IEnumerable<object>>> GetSectionsByBankId(long bankId)
         {
-            // Find the bank to ensure it exists
-            var bank = await _context.Banks.FindAsync(bankId);
-            if (bank == null)
-            {
-                return NotFound(new { message = "Không tìm thấy ngân hàng câu hỏi" });
-            }
-
-            // Get all sections for this bank
             var sections = await _context.Sections
                 .Where(s => s.BankId == bankId)
-                .ToListAsync();
+                .ToListAsync();  // ✅ Lấy toàn bộ sections của Bank
 
-            // Get section hierarchies for this bank
             var sectionHierarchies = await _context.SectionHierarchies
-                .Where(sh => sections.Select(s => s.Secid).Contains(sh.AncestorId) &&
-                             sections.Select(s => s.Secid).Contains(sh.DescendantId))
-                .ToListAsync();
+                .ToListAsync();  // ✅ Lấy toàn bộ quan hệ cha - con
 
-            // Get question counts for each section
             var questionCounts = await _context.Questions
-                .Where(q => q.Secid != null && sections.Select(s => s.Secid).Contains(q.Secid.Value))
-                .GroupBy(q => q.Secid)
-                .Select(g => new {
-                    Key = g.Key ?? 0,
-                    Count = g.Count()
-                })
-                .ToDictionaryAsync(g => g.Key, g => g.Count);
+    .Where(q => q.Secid != null && sections.Select(s => s.Secid).Contains(q.Secid.Value))
+    .GroupBy(q => q.Secid)
+    .Select(g => new { Key = g.Key ?? 0, Count = g.Count() }) // ✅ Đảm bảo Key không null
+    .ToDictionaryAsync(g => g.Key, g => g.Count);  // ✅ Chuyển thành Dictionary<long, int>
 
-            var descendantIds = sectionHierarchies
-      .Where(h => h.AncestorId != h.DescendantId)
-      .Select(h => h.DescendantId)
-      .ToHashSet();
-
-            var rootSections = sectionHierarchies
-                .Where(h => h.AncestorId == h.DescendantId && h.Depth == 0 && !descendantIds.Contains(h.DescendantId))
-                .Select(h => h.AncestorId)
-                .Distinct()
-                .Select(id => sections.FirstOrDefault(s => s.Secid == id))
-                .Where(s => s != null)
-                .ToList();
-
-
-            // Build the section tree for root sections
-            var sectionTree = rootSections
-                .Select(s => BuildSectionTreeForResponse(s, sections, sectionHierarchies, questionCounts))
+            var sectionTree = sections
+                .Where(s => !sectionHierarchies.Any(sh => sh.DescendantId == s.Secid))  // ✅ Chỉ lấy các section gốc
+                .Select(s => BuildSectionTree(s, sections, sectionHierarchies, questionCounts))
                 .ToList();
 
             return Ok(sectionTree);
         }
 
-        // Modified BuildSectionTreeForResponse to match generation method
-        private object BuildSectionTreeForResponse(
-            Section section,
-            List<Section> allSections,
-            List<SectionHierarchy> sectionHierarchies,
-            Dictionary<long, int> questionCounts)
+        // ✅ Hàm đệ quy xây dựng cây section (CÓ SỐ LƯỢNG CÂU HỎI)
+        // ✅ Hàm đệ quy xây dựng cây section (CÓ CỘNG DỒN SỐ LƯỢNG CÂU HỎI)
+        private object BuildSectionTree(Section section, List<Section> sections, List<SectionHierarchy> sectionHierarchies, Dictionary<long, int> questionCounts)
         {
-            // Find child sections
-            var childSectionIds = sectionHierarchies
-                .Where(sh => sh.AncestorId == section.Secid && sh.DescendantId != section.Secid)
-                .Select(sh => sh.DescendantId)
+            // ✅ Lấy danh sách các section con của section hiện tại
+            var childSections = sectionHierarchies
+                .Where(sh => sh.AncestorId == section.Secid)
+                .Select(sh => sections.FirstOrDefault(s => s.Secid == sh.DescendantId))
+                .Where(s => s != null)
                 .ToList();
 
-            var childSections = allSections
-                .Where(s => childSectionIds.Contains(s.Secid))
-                .ToList();
+            // ✅ Tính tổng số câu hỏi: Câu hỏi của section hiện tại + tất cả các section con
+            int totalQuestions = questionCounts.ContainsKey(section.Secid) ? questionCounts[section.Secid] : 0;
 
-            // Recursively build children
-            var children = childSections
-                .Select(s => BuildSectionTreeForResponse(s, allSections, sectionHierarchies, questionCounts))
-                .ToList();
+            // ✅ Đệ quy tính tổng số câu hỏi từ các section con
+            var children = childSections.Select(s => BuildSectionTree(s, sections, sectionHierarchies, questionCounts)).ToList();
 
-            // Calculate question count (including child sections)
-            int directQuestionCount = questionCounts.ContainsKey(section.Secid)
-                ? questionCounts[section.Secid]
-                : 0;
-            int totalQuestionCount = directQuestionCount + children.Sum(c =>
-                (int)c.GetType().GetProperty("questionCount").GetValue(c, null));
+            // ✅ Cộng số câu hỏi của các con vào cha
+            totalQuestions += children.Sum(c => (int)c.GetType().GetProperty("questionCount").GetValue(c, null));
 
             return new
             {
                 secid = section.Secid,
                 secname = section.Secname,
-                questionCount = totalQuestionCount,
+                questionCount = totalQuestions, // ✅ Hiển thị tổng số câu hỏi từ cha và con
                 children = children
             };
         }
@@ -760,58 +415,25 @@ namespace SEP490_G77_ESS.Controllers
 
 
 
+
+
         [HttpPost("{bankId}/add-section")]
         public async Task<ActionResult<object>> AddSection(long bankId, [FromBody] Section section)
         {
             if (string.IsNullOrWhiteSpace(section.Secname))
                 return BadRequest(new { message = "Tên section không được để trống" });
 
-            try
+            var newSection = new Section
             {
-                var bank = await _context.Banks.FindAsync(bankId);
-                if (bank == null)
-                    return NotFound(new { message = "Ngân hàng không tồn tại" });
+                Secname = section.Secname,
+                BankId = bankId
+            };
 
-                var newSection = new Section
-                {
-                    Secname = section.Secname,
-                    BankId = bankId
-                };
+            _context.Sections.Add(newSection);
+            await _context.SaveChangesAsync();
 
-                _context.Sections.Add(newSection);
-                await _context.SaveChangesAsync();
-
-                var selfHierarchy = new SectionHierarchy
-                {
-                    AncestorId = newSection.Secid,
-                    DescendantId = newSection.Secid,
-                    Depth = 0
-                };
-
-                _context.SectionHierarchies.Add(selfHierarchy);
-                await _context.SaveChangesAsync();
-
-                return Ok(new
-                {
-                    message = "Thêm section thành công",
-                    newSection = new
-                    {
-                        newSection.Secid,
-                        newSection.Secname,
-                        newSection.BankId,
-                        questionCount = 0  // Add this for UI consistency
-                    }
-                });
-            }
-            catch (Exception ex)
-            {
-                // Log the exception details
-                Console.WriteLine($"Error adding section: {ex.Message}");
-                return StatusCode(500, new { message = "Lỗi hệ thống khi thêm section" });
-            }
+            return Ok(new { message = "Thêm section thành công", newSection });
         }
-
-
         // ✅ API: Thêm Section con cho bất kỳ Section
         [HttpPost("{parentId}/add-subsection")]
         public async Task<ActionResult<object>> AddSubSection(long parentId, [FromBody] Section section)
@@ -857,13 +479,280 @@ namespace SEP490_G77_ESS.Controllers
         }
 
 
-      
+        [HttpGet("{sectionId}/export-excel")]
+        public async Task<IActionResult> ExportSectionQuestionsToExcel(long sectionId)
+        {
+            var section = await _context.Sections
+                .Include(s => s.Questions)
+                .FirstOrDefaultAsync(s => s.Secid == sectionId);
+
+            if (section == null)
+            {
+                return NotFound(new { message = "Không tìm thấy Section!" });
+            }
+
+            using var workbook = new XLWorkbook();
+
+            // 🟢 **Sheet 1: Dữ liệu câu hỏi**
+            var worksheet = workbook.Worksheets.Add("Section Questions");
+            worksheet.Cell(1, 1).Value = "Question Content";
+            worksheet.Cell(1, 2).Value = "Type ID";
+            worksheet.Cell(1, 3).Value = "Mode ID";
+            worksheet.Cell(1, 4).Value = "Solution";
+            worksheet.Cell(1, 5).Value = "Answers";
+            worksheet.Cell(1, 6).Value = "Correct Answers";
+
+            int row = 2;
+            var correctAnswers = await _context.CorrectAnswers.ToListAsync();
+
+            foreach (var question in section.Questions)
+            {
+                worksheet.Cell(row, 1).Value = question.Quescontent;
+                worksheet.Cell(row, 2).Value = question.TypeId;
+                worksheet.Cell(row, 3).Value = question.Modeid;
+                worksheet.Cell(row, 4).Value = question.Solution ?? "";
+                worksheet.Cell(row, 5).Value = question.AnswerContent ?? "";
+                worksheet.Cell(row, 6).Value = string.Join(",", correctAnswers
+                    .Where(a => a.Quesid == question.Quesid)
+                    .Select(a => a.Content));
+                row++;
+            }
+
+            // 🎯 **Sheet 2: Hướng dẫn Import**
+            var guideSheet = workbook.Worksheets.Add("Import Guide");
+            guideSheet.Cell(1, 1).Value = "HƯỚNG DẪN IMPORT EXCEL";
+            guideSheet.Cell(2, 1).Value = "1. Cột 'Question Content': Nhập nội dung câu hỏi.";
+            guideSheet.Cell(3, 1).Value = "2. Cột 'Type ID': Loại câu hỏi (1: Trắc nghiệm, 2: Tự luận).";
+            guideSheet.Cell(4, 1).Value = "3. Cột 'Mode ID': Mức độ khó của câu hỏi.";
+            guideSheet.Cell(5, 1).Value = "4. Cột 'Solution': Giải thích (Chỉ áp dụng cho tự luận).";
+            guideSheet.Cell(6, 1).Value = "5. Cột 'Answers': Các đáp án (Ngăn cách bằng dấu ',').";
+            guideSheet.Cell(7, 1).Value = "6. Cột 'Correct Answers': Đáp án đúng (Ngăn cách bằng dấu ',').";
+
+            // 🔒 **Làm cho sheet hướng dẫn chỉ đọc**
+            guideSheet.Protect().AllowElement(XLSheetProtectionElements.SelectLockedCells);
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            stream.Position = 0;
+
+            return File(stream.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                $"Section_{sectionId}_Questions.xlsx");
+        }
+
+
+
+        //[HttpPost("{sectionId}/import-excel")]
+        //public async Task<IActionResult> ImportQuestionsFromExcel(long sectionId, IFormFile file)
+        //{
+        //    if (file == null || file.Length == 0)
+        //        return BadRequest(new { message = "File không hợp lệ hoặc rỗng." });
+
+        //    try
+        //    {
+        //        using var stream = new MemoryStream();
+        //        await file.CopyToAsync(stream);
+        //        using var workbook = new XLWorkbook(stream);
+
+        //        var worksheet = workbook.Worksheets.FirstOrDefault();
+        //        if (worksheet == null)
+        //            return BadRequest(new { message = "File Excel không có sheet nào." });
+
+        //        var existingQuestions = await _context.Questions
+        //            .Where(q => q.Secid == sectionId)
+        //            .Include(q => q.CorrectAnswers)
+        //            .ToListAsync();
+
+        //        var questionMap = existingQuestions.ToDictionary(q => q.Quescontent.Trim().ToLower(), q => q);
+        //        var excelQuestions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        //        int row = 2;
+        //        while (!worksheet.Cell(row, 1).IsEmpty())
+        //        {
+        //            var quesContent = worksheet.Cell(row, 1).GetString().Trim();
+        //            if (string.IsNullOrEmpty(quesContent))
+        //            {
+        //                row++;
+        //                continue;
+        //            }
+
+        //            excelQuestions.Add(quesContent);
+
+        //            int.TryParse(worksheet.Cell(row, 2).GetString(), out int typeId);
+        //            int.TryParse(worksheet.Cell(row, 3).GetString(), out int modeId);
+        //            var solution = worksheet.Cell(row, 4).GetString().Trim();
+        //            var answers = worksheet.Cell(row, 5).GetString().Trim();
+        //            var correctAnswers = worksheet.Cell(row, 6).GetString().Trim();
+
+        //            if (questionMap.TryGetValue(quesContent.ToLower(), out var existingQuestion))
+        //            {
+        //                // ✅ Cập nhật nếu câu hỏi đã tồn tại
+        //                existingQuestion.TypeId = typeId;
+        //                existingQuestion.Modeid = modeId;
+        //                existingQuestion.Solution = solution;
+        //                existingQuestion.AnswerContent = answers;
+
+        //                // ✅ Cập nhật lại Correct Answers
+        //                _context.CorrectAnswers.RemoveRange(existingQuestion.CorrectAnswers);
+        //                var newCorrectAnswers = correctAnswers.Split(',')
+        //                    .Where(a => !string.IsNullOrWhiteSpace(a))
+        //                    .Select(a => new CorrectAnswer { Quesid = existingQuestion.Quesid, Content = a.Trim() });
+
+        //                await _context.CorrectAnswers.AddRangeAsync(newCorrectAnswers);
+        //            }
+        //            else
+        //            {
+        //                // ✅ Tạo câu hỏi mới nếu chưa có
+        //                var newQuestion = new Question
+        //                {
+        //                    Quescontent = quesContent,
+        //                    Secid = sectionId,
+        //                    TypeId = typeId,
+        //                    Modeid = modeId,
+        //                    Solution = solution,
+        //                    AnswerContent = answers
+        //                };
+        //                _context.Questions.Add(newQuestion);
+        //                await _context.SaveChangesAsync();
+
+        //                // ✅ Thêm Correct Answers nếu có
+        //                var newCorrectAnswers = correctAnswers.Split(',')
+        //                    .Where(a => !string.IsNullOrWhiteSpace(a))
+        //                    .Select(a => new CorrectAnswer { Quesid = newQuestion.Quesid, Content = a.Trim() });
+
+        //                await _context.CorrectAnswers.AddRangeAsync(newCorrectAnswers);
+        //            }
+
+        //            row++;
+        //        }
+
+        //        // ✅ **XÓA câu hỏi cũ không có trong file Excel nhưng thuộc Section này**
+        //        var questionsToDelete = existingQuestions
+        //            .Where(q => !excelQuestions.Contains(q.Quescontent))
+        //            .ToList();
+
+        //        if (questionsToDelete.Count > 0)
+        //        {
+        //            var correctAnswersToDelete = questionsToDelete.SelectMany(q => q.CorrectAnswers).ToList();
+        //            _context.CorrectAnswers.RemoveRange(correctAnswersToDelete);
+        //            _context.Questions.RemoveRange(questionsToDelete);
+        //        }
+
+        //        await _context.SaveChangesAsync();
+        //        return Ok(new { message = "Import dữ liệu thành công!" });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return StatusCode(500, new { message = "Lỗi hệ thống khi xử lý file Excel.", error = ex.Message });
+        //    }
+        //}
+        [HttpPost("{sectionId}/import-excel")]
+        public async Task<IActionResult> ImportQuestionsFromExcel(long sectionId, IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+                return BadRequest(new { message = "File không hợp lệ hoặc rỗng." });
+
+            try
+            {
+                using var stream = new MemoryStream();
+                await file.CopyToAsync(stream);
+                using var workbook = new XLWorkbook(stream);
+
+                // 🔍 **Tìm sheet có tên 'Section Questions'**
+                var worksheet = workbook.Worksheets.FirstOrDefault(w => w.Name == "Section Questions")
+                                ?? workbook.Worksheets.FirstOrDefault(); // Nếu không tìm thấy thì lấy sheet đầu tiên
+
+                if (worksheet == null)
+                    return BadRequest(new { message = "File Excel không có sheet hợp lệ." });
+
+                var existingQuestions = await _context.Questions
+                    .Where(q => q.Secid == sectionId)
+                    .Include(q => q.CorrectAnswers)
+                    .ToListAsync();
+
+                var questionMap = existingQuestions.ToDictionary(q => q.Quescontent.Trim().ToLower(), q => q);
+                var excelQuestions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                int row = 2;
+                while (!worksheet.Cell(row, 1).IsEmpty())
+                {
+                    var quesContent = worksheet.Cell(row, 1).GetString().Trim();
+                    if (string.IsNullOrEmpty(quesContent))
+                    {
+                        row++;
+                        continue;
+                    }
+
+                    excelQuestions.Add(quesContent);
+
+                    int.TryParse(worksheet.Cell(row, 2).GetString(), out int typeId);
+                    int.TryParse(worksheet.Cell(row, 3).GetString(), out int modeId);
+                    var solution = worksheet.Cell(row, 4).GetString().Trim();
+                    var answers = worksheet.Cell(row, 5).GetString().Trim();
+                    var correctAnswers = worksheet.Cell(row, 6).GetString().Trim();
+
+                    if (questionMap.TryGetValue(quesContent.ToLower(), out var existingQuestion))
+                    {
+                        // ✅ **Cập nhật nếu câu hỏi đã tồn tại**
+                        existingQuestion.TypeId = typeId;
+                        existingQuestion.Modeid = modeId;
+                        existingQuestion.Solution = solution;
+                        existingQuestion.AnswerContent = answers;
+
+                        _context.CorrectAnswers.RemoveRange(existingQuestion.CorrectAnswers);
+                        var newCorrectAnswers = correctAnswers.Split(',')
+                            .Where(a => !string.IsNullOrWhiteSpace(a))
+                            .Select(a => new CorrectAnswer { Quesid = existingQuestion.Quesid, Content = a.Trim() });
+
+                        await _context.CorrectAnswers.AddRangeAsync(newCorrectAnswers);
+                    }
+                    else
+                    {
+                        // ✅ **Thêm mới câu hỏi**
+                        var newQuestion = new Question
+                        {
+                            Quescontent = quesContent,
+                            Secid = sectionId,
+                            TypeId = typeId,
+                            Modeid = modeId,
+                            Solution = solution,
+                            AnswerContent = answers
+                        };
+                        _context.Questions.Add(newQuestion);
+                        await _context.SaveChangesAsync();
+
+                        var newCorrectAnswers = correctAnswers.Split(',')
+                            .Where(a => !string.IsNullOrWhiteSpace(a))
+                            .Select(a => new CorrectAnswer { Quesid = newQuestion.Quesid, Content = a.Trim() });
+
+                        await _context.CorrectAnswers.AddRangeAsync(newCorrectAnswers);
+                    }
+
+                    row++;
+                }
+
+                // ✅ **XÓA câu hỏi không còn trong file Excel**
+                var questionsToDelete = existingQuestions.Where(q => !excelQuestions.Contains(q.Quescontent)).ToList();
+                if (questionsToDelete.Count > 0)
+                {
+                    var correctAnswersToDelete = questionsToDelete.SelectMany(q => q.CorrectAnswers).ToList();
+                    _context.CorrectAnswers.RemoveRange(correctAnswersToDelete);
+                    _context.Questions.RemoveRange(questionsToDelete);
+                }
+
+                await _context.SaveChangesAsync();
+                return Ok(new { message = "✅ Import dữ liệu thành công!" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "❌ Lỗi hệ thống khi xử lý file Excel.", error = ex.Message });
+            }
+        }
 
 
 
 
         // ✅ Cập nhật tên Section
-  [HttpPut("section/{sectionId}")]
+        [HttpPut("section/{sectionId}")]
         public async Task<IActionResult> UpdateSection(long sectionId, [FromBody] Section updatedSection)
         {
             var section = await _context.Sections.FindAsync(sectionId);

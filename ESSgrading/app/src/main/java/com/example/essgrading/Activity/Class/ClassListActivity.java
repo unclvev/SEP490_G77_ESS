@@ -30,7 +30,6 @@ public class ClassListActivity extends BaseActivity {
         setHeaderTitle("Lớp học");
 
         recyclerViewClasses = findViewById(R.id.recyclerViewClasses);
-        fabAddClass = findViewById(R.id.fabAddClass);
 
         // Dữ liệu lớp học giả lập
         classList = new ArrayList<>();
