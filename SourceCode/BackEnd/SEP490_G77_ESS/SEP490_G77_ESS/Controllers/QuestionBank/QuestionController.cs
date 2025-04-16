@@ -187,9 +187,7 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
     .OrderBy(a => a.AnsId)
     .Select(a => a.Content)
     .ToList();
-                string correctAnswerStr = question.TypeId == 2
-     ? string.Join(";", corrects)  // chỉ chuyển , → ; khi typeId=2
-     : string.Join(",", corrects);
+                string correctAnswerStr = string.Join(",", corrects);
 
                 worksheet.Cell(row, 9).Value = correctAnswerStr;
 
@@ -411,14 +409,7 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
                     var answer4 = GetCellValueAsString(worksheet.Cell(row, 8));
 
                     // Đọc đáp án đúng từ cột 9
-                    // Đọc đáp án đúng từ cột 9
                     var correctAnswers = GetCellValueAsString(worksheet.Cell(row, 9));
-
-                    // Kiểm tra nếu là câu hỏi True/False, thay đổi dấu phân cách từ ";" thành ","
-                    if (typeId == 2)
-                    {
-                        correctAnswers = correctAnswers.Replace(";", ",");
-                    }
 
                     // Đọc URL ảnh từ cột 10
                     var imageUrl = GetCellValueAsString(worksheet.Cell(row, 10));
