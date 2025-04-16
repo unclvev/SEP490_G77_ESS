@@ -13,5 +13,15 @@ public partial class DefaultSectionHierarchy
 
     public long? CurriculumId { get; set; }
 
+    public long? GradeId { get; set; }
+
+    public long? SubjectId { get; set; }
+
+    public long? AncestorId { get; set; }
+
+    public long? DescendantId { get; set; }
+
+    public long? Depth { get; set; }
+
     public virtual Curriculum? Curriculum { get; set; }
 }
