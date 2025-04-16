@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using SEP490_G77_ESS.Controllers;
 using SEP490_G77_ESS.Models;
 
-namespace SEP490_G77_ESS.Tests.Controllers
+namespace SEP490_G77_ESS.Tests.Controller.BankTests
 {
     public class BankControllerTests
     {

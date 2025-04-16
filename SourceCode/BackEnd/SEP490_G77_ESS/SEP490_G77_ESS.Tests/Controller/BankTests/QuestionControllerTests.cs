@@ -8,7 +8,7 @@ using SEP490_G77_ESS.Controllers.QuestionBank;
 using SEP490_G77_ESS.Models;
 using SEP490_G77_ESS.DTO.BankdDTO;
 
-namespace SEP490_G77_ESS.Tests.Controllers
+namespace SEP490_G77_ESS.Tests.Controller.BankTests
 {
     [TestFixture]
     public class QuestionControllerTests
@@ -383,13 +383,13 @@ namespace SEP490_G77_ESS.Tests.Controllers
             // Tạo file ảnh giả lập
             var imagePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", "test.png");
             Directory.CreateDirectory(Path.GetDirectoryName(imagePath));
-            await System.IO.File.WriteAllTextAsync(imagePath, "fake image");
+            await File.WriteAllTextAsync(imagePath, "fake image");
 
             await _context.SaveChangesAsync();
 
             var result = await _controller.DeleteQuestion(2);
             Assert.That(result, Is.TypeOf<OkObjectResult>());
-            Assert.That(System.IO.File.Exists(imagePath), Is.False); // Ảnh đã bị xóa
+            Assert.That(File.Exists(imagePath), Is.False); // Ảnh đã bị xóa
         }
 
 
