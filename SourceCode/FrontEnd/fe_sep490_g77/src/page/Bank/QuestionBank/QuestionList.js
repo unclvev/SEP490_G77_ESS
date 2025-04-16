@@ -91,7 +91,40 @@ const QuestionList = () => {
       message.warning("⚠️ Vui lòng nhập đầy đủ thông tin câu hỏi!");
       return;
     }
-  
+
+    // Kiểm tra thêm cho từng loại câu hỏi
+    if (newQuestion.typeId === 1) {
+      // Trắc nghiệm
+      if (!newQuestion.correctAnswers[0]) {
+        toast.warning("⚠️ Vui lòng chọn đáp án đúng!");
+        return;
+      }
+      const nonEmptyAnswers = newQuestion.answers.filter(a => a.trim() !== "");
+      if (nonEmptyAnswers.length < 2) {
+        toast.warning("⚠️ Câu hỏi trắc nghiệm cần ít nhất 2 đáp án!");
+        return;
+      }
+    } 
+    else if (newQuestion.typeId === 2) {
+      // ✅ True/False với 4 ý
+      if (newQuestion.correctAnswers.length !== 4) {
+        toast.warning("⚠️ Câu hỏi True/False phải có đủ 4 ý!");
+        return;
+      }
+    } 
+    else if (newQuestion.typeId === 3) {
+      // Điền kết quả
+      const answer = newQuestion.correctAnswers[0];
+      if (!newQuestion.correctAnswers[0] || newQuestion.correctAnswers[0].length !== 4) {
+        toast.warning("⚠️ Đáp án điền kết quả phải có đúng 4 ký tự!");
+        return;
+      }
+      if (!/^[\d\-,]{4}$/.test(answer)) {
+        toast.warning("⚠️ Chỉ cho phép nhập số, dấu - và dấu , trong 4 ký tự!");
+        return;
+      }
+    }
+
     try {
       const requestData = {
         quescontent: newQuestion.quescontent,
@@ -175,7 +208,7 @@ const QuestionList = () => {
         {/* 🟢 Nút Export và Import */}
         <div className="flex justify-between mb-4">
           <Button type="default" icon={<DownloadOutlined />} onClick={handleExportExcel}>
-            Export Excel
+          📥 Tải File Mẫu (Import/Export)
           </Button>
           <Upload customRequest={handleImportExcel} showUploadList={false}>
             <Button type="primary" icon={<UploadOutlined />}>Import Excel</Button>

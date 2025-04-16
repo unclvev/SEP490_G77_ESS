@@ -13,6 +13,15 @@ using System.Text;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+builder.WebHost.ConfigureKestrel(serverOptions =>
+{
+    serverOptions.ListenAnyIP(7052);
+    //serverOptions.ListenAnyIP(7052, listenOptions =>
+    //{
+    //    listenOptions.UseHttps();
+    //});
+});
+
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
