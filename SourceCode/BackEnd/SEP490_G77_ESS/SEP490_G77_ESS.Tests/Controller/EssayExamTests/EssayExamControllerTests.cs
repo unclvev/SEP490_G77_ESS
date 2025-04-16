@@ -30,9 +30,9 @@ namespace SEP490_G77_ESS.Tests.Controller.EssayExamTests
             _context.Exams.Add(new Exam
             {
                 ExamId = 2,
-                Examname = "Midterm",
+                Examname = "Đề kiểm tra giữa kỳ",
                 Grade = "12",
-                Subject = "Math",
+                Subject = "Toán",
                 Classname = "12A1",
                 ExamType = "Essay",
                 AccId = 2,
@@ -143,7 +143,7 @@ namespace SEP490_G77_ESS.Tests.Controller.EssayExamTests
         public async Task SearchExamsByAccount_ValidInput_ReturnsResults()
         {
             Console.WriteLine("Search exams completed successfully.");
-            var result = await _controller.SearchExamsByAccount(2, "Midterm");
+            var result = await _controller.SearchExamsByAccount(2, "Đề kiểm tra giữa kỳ");
             Assert.That(result, Is.TypeOf<OkObjectResult>());
             var ok = result as OkObjectResult;
             var list = (ok?.Value as IEnumerable<object>)?.ToList();

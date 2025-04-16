@@ -33,7 +33,7 @@ namespace SEP490_G77_ESS.Tests.Controller.BankTests
                 new TypeQuestion { TypeId = 3, TypeName = "Fill-In" }
             );
 
-            _context.Levels.Add(new Level { LevelId = 1, Levelname = "Easy" });
+            _context.Levels.Add(new Level { LevelId = 1, Levelname = "Dễ" });
             _context.Questions.Add(new Question
             {
                 Quesid = 1,
