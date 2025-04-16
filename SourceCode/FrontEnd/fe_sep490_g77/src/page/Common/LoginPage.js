@@ -24,6 +24,8 @@ const LoginPage = () => {
     const handleLogin = async () => {
         try {
             const response = await login(credentials);
+            console.log(response);
+            console.log(credentials);
 
             //save to redux
             dispatch(setToken(response.data));
@@ -31,6 +33,8 @@ const LoginPage = () => {
             message.success('Login successful!');
             window.location.href = '/';
         } catch (error) {
+            console.log(error);
+            console.log(credentials);
             setErrorMessage('Tên đăng nhập hoặc mật khẩu không đúng');
             message.error('Invalid username or password');
         }

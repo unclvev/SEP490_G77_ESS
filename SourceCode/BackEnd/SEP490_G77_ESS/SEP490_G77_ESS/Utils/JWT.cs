@@ -1,4 +1,6 @@
-﻿using Microsoft.IdentityModel.Tokens;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using SEP490_G77_ESS.DTO.UserDTO;
 using SEP490_G77_ESS.Models;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -9,9 +11,11 @@ namespace SEP490_G77_ESS.Utils
     public class JWT
     {
         private readonly IConfiguration _configuration;
-        public JWT(IConfiguration configuration)
+        private readonly EssDbV11Context _context;
+        public JWT(IConfiguration configuration, EssDbV11Context context)
         {
             _configuration = configuration;
+            _context = context;
         }
 
         public static string? GetUserId(string token)
@@ -41,14 +45,30 @@ namespace SEP490_G77_ESS.Utils
             return JWT.GetUserId(token);
         }
 
-        public string CreateJWTToken(Account user, long role)
+        public string CreateJWTToken(Account user)
         {
+          
+
             List<Claim> claims = new List<Claim> {
                 new Claim("AccId", user.AccId.ToString()),
                 new Claim("AccName", user.Username.ToString()),
-                new Claim("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress", user.Email),
-                new Claim("http://schemas.microsoft.com/ws/2008/06/identity/claims/role", role.ToString())
+                new Claim("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress", user.Email)
             };
+            
+
+            foreach (var access in user.ResourceAccesses)
+            {
+                // Thêm claim role (RoleAccess.RoleName)
+                claims.Add(new Claim(ClaimTypes.Role, access.Role.RoleName));
+                claims.Add(new Claim("ResourceAccessId", access.ResourceAccessId.ToString()));
+
+                // Thêm thêm các quyền chi tiết
+                claims.Add(new Claim("RecourseType", access.ResourceType));
+                claims.Add(new Claim("canRead", access.Role.CanRead.ToString()));
+                claims.Add(new Claim("canModify", access.Role.CanModify.ToString()));
+                claims.Add(new Claim("canDelete", access.Role.CanDelete.ToString()));
+            }
+
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
                 _configuration.GetSection("AppSetting:Token").Value!));
@@ -57,7 +77,7 @@ namespace SEP490_G77_ESS.Utils
 
             var token = new JwtSecurityToken(
                     claims: claims,
-                    expires: DateTime.Now.AddMinutes(30),
+                    expires: DateTime.UtcNow.AddMinutes(3),
                     signingCredentials: creds
                 );
 

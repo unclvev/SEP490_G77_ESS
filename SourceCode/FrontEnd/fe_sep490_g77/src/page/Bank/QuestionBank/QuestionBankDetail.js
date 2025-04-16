@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Collapse, Dropdown, Input, Modal, Button, message, Skeleton } from "antd";
 import { MoreOutlined, EditOutlined, DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import axios from "axios";
-import { toast } from "react-toastify";
+
 const { Panel } = Collapse;
 
 const QuestionBankDetail = () => {
@@ -32,7 +32,7 @@ const QuestionBankDetail = () => {
         setBankInfo(response.data);
     } catch (error) {
         console.error("❌ Lỗi khi gọi API:", error);
-        toast.error("Không thể tải dữ liệu!");
+        message.error("Không thể tải dữ liệu!");
     }
 };
   /** ✅ Lấy danh sách Sections từ API */
@@ -41,7 +41,7 @@ const QuestionBankDetail = () => {
       const response = await axios.get(`https://localhost:7052/api/Bank/${bankId}/sections`);
       setSections(response.data);
     } catch (error) {
-      toast.error("Lỗi khi tải dữ liệu section!");
+      message.error("Lỗi khi tải dữ liệu section!");
     }
   };
 
@@ -66,7 +66,7 @@ const QuestionBankDetail = () => {
           : `https://localhost:7052/api/Bank/${currentSection.secid}/add-subsection`;
 
       await axios.post(url, { secname: sectionName });
-      toast.success("✅ Thêm section thành công!", 2); // 🟢 Thông báo UI thành công
+      message.success("✅ Thêm section thành công!", 2); // 🟢 Thông báo UI thành công
       setIsModalVisible(false);
       setSectionName("");
       fetchSections();
@@ -74,14 +74,14 @@ const QuestionBankDetail = () => {
       setIsModalVisible(false);
       setSectionName("");
     } catch (error) {
-      toast.error("Lỗi khi thêm section!");
+      message.error("Lỗi khi thêm section!");
     }
   };
 
   /** ✅ Sửa tên Section */
   const handleEditSection = async () => {
     if (!sectionName.trim()) {
-      toast.warning("Tên section không được để trống!");
+      message.warning("Tên section không được để trống!");
       return;
     }
     try {
@@ -90,11 +90,11 @@ const QuestionBankDetail = () => {
       });
 
       fetchSections();
-      toast.success("Cập nhật section thành công!");
+      message.success("Cập nhật section thành công!");
       setIsModalVisible(false);
       setSectionName("");
     } catch (error) {
-      toast.error("Lỗi khi cập nhật section!");
+      message.error("Lỗi khi cập nhật section!");
     }
   };
 
@@ -103,9 +103,9 @@ const QuestionBankDetail = () => {
     try {
       await axios.delete(`https://localhost:7052/api/Bank/section/${sectionId}`);
       fetchSections();
-      toast.success("Xóa section thành công!");
+      message.success("Xóa section thành công!");
     } catch (error) {
-      toast.error("Lỗi khi xóa section!");
+      message.error("Lỗi khi xóa section!");
     }
   };
 
