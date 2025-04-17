@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { QRCodeCanvas } from "qrcode.react";
 
-const Guideline = () => {
+const PreviewGenQR = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const printRef = useRef();
@@ -41,13 +41,13 @@ const Guideline = () => {
 
       const newPositions = qrList.map(() => ({
         leftQR: {
-          top: `${imgHeight * 0.22}px`,
-          left: `${imgWidth * 0.88}px`,
+          top: `${imgHeight * 0.16}px`,
+          left: `${imgWidth * 0.83}px`,
           position: "absolute",
         },
         rightQR: {
-          top: `${imgHeight * 0.10}px`,
-          left: `${imgWidth * 0.88}px`,
+          top: `${imgHeight * 0.07}px`,
+          left: `${imgWidth * 0.83}px`,
           position: "absolute",
         },
       }));
@@ -120,7 +120,6 @@ const Guideline = () => {
     printWindow.document.write(`
       <html>
         <head>
-          <title>Print QR Codes</title>
           <style>
             body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
             .page { position: relative; page-break-after: always; margin-bottom: 20px; }
@@ -277,4 +276,4 @@ const Guideline = () => {
   );
 };
 
-export default Guideline;
+export default PreviewGenQR;

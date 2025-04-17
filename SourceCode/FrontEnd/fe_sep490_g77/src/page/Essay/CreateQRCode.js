@@ -40,9 +40,9 @@ const GenQRCode = () => {
 
   const qrPositions = {
     A4: {
-      leftQR: { top: "23%", left: "86%", position: "absolute" },
-      rightQR: { top: "10%", left: "86%", position: "absolute" },
-      style: { width: "100px", height: "100px" },
+      leftQR: { top: "22%", left: "84%", position: "absolute" },
+      rightQR: { top: "8%", left: "84%", position: "absolute" },
+      style: { width: "80px", height: "80px" },
     },
     A3: {
       leftQR: { top: "9%", left: "84%", position: "absolute" },
@@ -107,7 +107,7 @@ const GenQRCode = () => {
   const generateQRCodes = () => {
     let qrList = [];
     for (let i = 0; i < parseInt(printCount); i++) {
-      let qrData = `${testName}_${className}_${gradeName}_${subjectName}_${examDate}_Code_${i+1}`;
+      let qrData = (i + 1).toString().padStart(7, '0');
       qrList.push({ id: i, qrContent: qrData });
     }
     return qrList;
