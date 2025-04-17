@@ -3,7 +3,10 @@ package com.example.essgrading.Activity;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.View;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -16,6 +19,7 @@ import androidx.drawerlayout.widget.DrawerLayout;
 import com.example.essgrading.Activity.Authentication.LoginActivity;
 import com.example.essgrading.Activity.Class.ClassListActivity;
 import com.example.essgrading.Activity.Test.TestListActivity;
+import com.example.essgrading.Interface.SearchHandler;
 import com.example.essgrading.R;
 import com.google.android.material.navigation.NavigationView;
 
@@ -25,6 +29,8 @@ public class BaseActivity extends AppCompatActivity {
     protected NavigationView navigationView;
     protected TextView headerTitle;
     protected TextView userEmail,userName; // Thêm biến cho email
+    protected EditText searchInput;
+    protected ImageView searchIcon;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -73,6 +79,61 @@ public class BaseActivity extends AppCompatActivity {
             menuIcon.setOnClickListener(v -> {
                 if (drawerLayout != null) {
                     drawerLayout.openDrawer(GravityCompat.START);
+                }
+            });
+        }
+        searchInput = findViewById(R.id.searchInput);
+        searchIcon = findViewById(R.id.searchIcon);
+
+        if (searchIcon != null) {
+            searchIcon.setOnClickListener(v -> {
+                if (searchInput.getVisibility() == View.GONE) {
+                    searchInput.setVisibility(View.VISIBLE);
+                    searchInput.requestFocus();
+                } else {
+                    searchInput.setText("");
+                    searchInput.setVisibility(View.GONE);
+                    if (this instanceof SearchHandler) {
+                        ((SearchHandler) this).onSearchTextChanged(""); // Reset lại data khi ẩn search
+                    }
+                }
+            });
+        }
+
+        if (searchInput != null) {
+            searchInput.addTextChangedListener(new TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {
+                    if (BaseActivity.this instanceof SearchHandler) {
+                        ((SearchHandler) BaseActivity.this).onSearchTextChanged(s.toString());
+                    }
+                }
+
+                @Override
+                public void afterTextChanged(Editable s) {}
+            });
+        }
+
+        headerTitle = findViewById(R.id.headerTitle);
+        searchInput = findViewById(R.id.searchInput);
+        searchIcon = findViewById(R.id.searchIcon);
+
+        if (searchIcon != null) {
+            searchIcon.setOnClickListener(v -> {
+                if (searchInput.getVisibility() == View.GONE) {
+                    searchInput.setVisibility(View.VISIBLE);
+                    headerTitle.setVisibility(View.GONE);  // Ẩn tiêu đề
+                    searchInput.requestFocus();
+                } else {
+                    searchInput.setText(""); // Clear nội dung tìm kiếm
+                    searchInput.setVisibility(View.GONE);
+                    headerTitle.setVisibility(View.VISIBLE);  // Hiện lại tiêu đề
+                    if (this instanceof SearchHandler) {
+                        ((SearchHandler) this).onSearchTextChanged("");
+                    }
                 }
             });
         }

@@ -11,6 +11,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.essgrading.API.ApiConfig;
 import com.example.essgrading.Activity.BaseActivity;
 import com.example.essgrading.Adapter.ScoreReportAdapter;
+import com.example.essgrading.Interface.SearchHandler;
 import com.example.essgrading.Model.ScoreModel;
 import com.example.essgrading.R;
 import com.example.essgrading.API.ApiService;
@@ -24,13 +25,13 @@ import retrofit2.Response;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
-public class ScoreReportActivity extends BaseActivity {
+public class ScoreReportActivity extends BaseActivity implements SearchHandler {
 
     private TextView txtMaxScore, txtMinScore, txtAverageScore;
     private Spinner spinnerThreshold;
     private RecyclerView recyclerViewScores;
     private ScoreReportAdapter scoreAdapter;
-    private List<ScoreModel> scoreList;
+    private List<ScoreModel> scoreList, searchScoreList;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -53,7 +54,8 @@ public class ScoreReportActivity extends BaseActivity {
 
         // Khởi tạo danh sách & Adapter
         scoreList = new ArrayList<>();
-        scoreAdapter = new ScoreReportAdapter(scoreList);
+        searchScoreList = new ArrayList<>();
+        scoreAdapter = new ScoreReportAdapter(searchScoreList); // dùng searchScoreList
         recyclerViewScores.setLayoutManager(new LinearLayoutManager(this));
         recyclerViewScores.setAdapter(scoreAdapter);
 
@@ -71,6 +73,7 @@ public class ScoreReportActivity extends BaseActivity {
                 if (response.isSuccessful() && response.body() != null) {
                     List<ScoreModel> responseList = response.body();
                     scoreList.clear();
+                    searchScoreList.clear();
 
                     double max = Double.MIN_VALUE;
                     double min = Double.MAX_VALUE;
@@ -89,6 +92,7 @@ public class ScoreReportActivity extends BaseActivity {
                     txtMinScore.setText("Thấp nhất: " + min);
                     txtAverageScore.setText("Điểm trung bình: " + avg);
 
+                    searchScoreList.addAll(scoreList); // rất quan trọng
                     scoreAdapter.notifyDataSetChanged();
                 }
             }
@@ -99,5 +103,22 @@ public class ScoreReportActivity extends BaseActivity {
                 t.printStackTrace();
             }
         });
+    }
+
+    // Xử lý sự kiện search text
+    @Override
+    public void onSearchTextChanged(String keyword) {
+        searchScoreList.clear();
+        if (keyword.isEmpty()) {
+            searchScoreList.addAll(scoreList);
+        } else {
+            for (ScoreModel item : scoreList) {
+                if (item.getStudentName().toLowerCase().contains(keyword.toLowerCase()) ||
+                        item.getStudentId().toLowerCase().contains(keyword.toLowerCase())) {
+                    searchScoreList.add(item);
+                }
+            }
+        }
+        scoreAdapter.notifyDataSetChanged();
     }
 }
