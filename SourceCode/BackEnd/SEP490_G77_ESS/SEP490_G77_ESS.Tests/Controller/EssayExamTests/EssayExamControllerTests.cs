@@ -307,5 +307,7 @@ namespace SEP490_G77_ESS.Tests.Controller.EssayExamTests
             var result = await _controller.DeleteExam(2);
             Assert.That(result, Is.TypeOf<OkObjectResult>());
         }
+        
+
     }
 }
