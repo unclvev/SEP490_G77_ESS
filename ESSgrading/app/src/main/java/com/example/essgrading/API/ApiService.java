@@ -25,6 +25,9 @@ public interface ApiService {
     @GET("api/Exam/allexam")
     Call<List<TestModel>> getAllExam();
 
+    @GET("api/Exam/accid/{accId}")
+    Call<List<TestModel>> getAllExamByAccId(@Path("accId") long accId);
+
     @POST("api/Login")
     Call<LoginResponse> login(@Body LoginRequest loginRequest);
 

@@ -27,7 +27,7 @@ public class LoginActivity extends AppCompatActivity {
     private EditText edtEmail, edtPassword;
     private Button btnLogin;
 
-    private String email, password, username;
+    private String email, password, username, accId;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -91,6 +91,7 @@ public class LoginActivity extends AppCompatActivity {
         editor.putString("jwtToken", token);
         editor.putString("userEmail", email);
         editor.putString("userName", username);
+        editor.putString("accId", accId);
         editor.apply();
     }
     private void checkIfLoggedIn() {
@@ -106,6 +107,7 @@ public class LoginActivity extends AppCompatActivity {
         try {
             DecodedJWT decodedJWT = JWT.decode(token);
             username = decodedJWT.getClaim("AccName").asString();
+            accId = decodedJWT.getClaim("AccId").asString();
         } catch (Exception e) {
             e.printStackTrace();
             Toast.makeText(this, "Lỗi giải mã token", Toast.LENGTH_SHORT).show();

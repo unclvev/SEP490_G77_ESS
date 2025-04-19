@@ -354,6 +354,17 @@ namespace SEP490_G77_ESS.Controllers.ExamManager
 
             return Ok(results);
         }
+
+        //get exams by accid
+        [HttpGet("accid/{accId}")]
+        public async Task<IActionResult> GetAllExamFromAccId(long accId)
+        {
+            var results = await _context.Exams
+                .Where(b => b.AccId == accId)
+                .ToListAsync();
+
+            return Ok(results);
+        }
     }
 
 }
