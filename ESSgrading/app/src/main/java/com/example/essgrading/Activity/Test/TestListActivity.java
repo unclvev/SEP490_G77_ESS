@@ -1,6 +1,7 @@
 package com.example.essgrading.Activity.Test;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.widget.Toast;
 
@@ -61,13 +62,16 @@ public class TestListActivity extends BaseActivity implements SearchHandler {
         recyclerViewTests.setLayoutManager(new LinearLayoutManager(this));
         recyclerViewTests.setAdapter(testAdapter);
 
+        SharedPreferences prefs = getSharedPreferences("UserPrefs", MODE_PRIVATE);
+        long accId = Long.parseLong(prefs.getString("accId", "0"));
+
         // Gọi API với Retrofit
         Retrofit retrofit = new Retrofit.Builder()
                 .baseUrl(ApiConfig.BASE_URL)
                 .addConverterFactory(GsonConverterFactory.create())
                 .build();
         ApiService apiService = retrofit.create(ApiService.class);
-        Call<List<TestModel>> call = apiService.getAllExam();
+        Call<List<TestModel>> call = apiService.getAllExamByAccId(accId);
         call.enqueue(new Callback<List<TestModel>>() {
             @Override
             public void onResponse(Call<List<TestModel>> call, Response<List<TestModel>> response) {
