@@ -16,6 +16,8 @@ import {
 import { useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-toastify";
+import { getGrades, getSubjects, getEssaysByAccount, deleteEssay, updateEssay } from '../../services/api';
+
 
 const { Search } = Input;
 const { Option } = Select;
@@ -40,8 +42,8 @@ const CreateEssayExam = () => {
   const fetchFilters = async () => {
     try {
       const [gradeRes, subjectRes] = await Promise.all([
-        axios.get("https://localhost:7052/api/essay/grades"),
-        axios.get("https://localhost:7052/api/essay/subjects"),
+        getGrades(),
+        getSubjects(),
       ]);
       setGradeOptions(gradeRes.data);
       setSubjectOptions(subjectRes.data);
@@ -58,8 +60,7 @@ const CreateEssayExam = () => {
       if (selectedSubject) params.subject = selectedSubject;
       if (searchText) params.keyword = searchText;
 
-      const url = `https://localhost:7052/api/essay/by-account/${accId}`;
-      const response = await axios.get(url, { params });
+      const response = await getEssaysByAccount(accId, params);
       setData(response.data);
       setCurrentPage(1);
     } catch (error) {
@@ -69,7 +70,7 @@ const CreateEssayExam = () => {
 
   const handleDelete = async (id) => {
     try {
-      await axios.delete(`https://localhost:7052/api/essay/delete/${id}`);
+      await deleteEssay(id);
       toast.success("Đã xoá đề");
       fetchData();
     } catch {
@@ -86,7 +87,7 @@ const CreateEssayExam = () => {
     };
 
     try {
-      await axios.put(`https://localhost:7052/api/essay/update/${editingExam.id}`, payload);
+      await updateEssay(editingExam.id, payload);
       toast.success("Cập nhật đề thành công");
       setEditModalOpen(false);
       fetchData();

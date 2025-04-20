@@ -3,6 +3,7 @@ import { UploadOutlined } from "@ant-design/icons";
 import axios from "axios";
 import { useState, useRef } from "react";
 import { useSearchParams,useParams } from "react-router-dom";
+import { saveStudentList } from '../../services/api';
 
 const ImportEssayPage = () => {
   const [searchParams] = useSearchParams();
@@ -37,9 +38,7 @@ const ImportEssayPage = () => {
     formData.append("examId", examid);
   
     try {
-      const response = await axios.post("https://localhost:7052/api/essay/savestudentlist", formData, {
-        headers: { "Content-Type": "multipart/form-data" }
-      });
+      const response = await saveStudentList(formData);
   
       message.success("Tải lên thành công!");
       setImportResult("Đã import " + response.data.length + " học sinh.");

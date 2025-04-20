@@ -3,7 +3,7 @@ import { Input, Select, Button, Form, message } from "antd";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-toastify";
-
+import { getGrades, getSubjects,createEssay} from '../../services/api';
 const { Option } = Select;
 
 const CreateNewEssayPage = () => {
@@ -17,9 +17,9 @@ const CreateNewEssayPage = () => {
 
   const fetchGradesSubjects = async () => {
     const [gradeRes, subjectRes] = await Promise.all([
-      axios.get("https://localhost:7052/api/essay/grades"),
-      axios.get("https://localhost:7052/api/essay/subjects"),
-    ]);
+            getGrades(),
+            getSubjects(),
+          ]);
     setGrades(gradeRes.data);
     setSubjects(subjectRes.data);
   };
@@ -31,7 +31,7 @@ const CreateNewEssayPage = () => {
         return;
       }
 
-      await axios.post(`https://localhost:7052/api/essay/create/${accId}`, values);
+      await createEssay(accId, values);
       toast.success("Tạo đề thành công!");
       navigate(`/essay?accid=${accId}`);
     } catch {

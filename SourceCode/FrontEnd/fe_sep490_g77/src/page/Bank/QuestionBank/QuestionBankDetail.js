@@ -4,6 +4,8 @@ import { Collapse, Dropdown, Input, Modal, Button, message, Skeleton } from "ant
 import { MoreOutlined, EditOutlined, DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import axios from "axios";
 import { toast } from "react-toastify";
+import { getBankById, getSectionsByBankId, addMainSection, addSubSection, editSection, deleteSection } from "../../../services/api"; 
+
 const { Panel } = Collapse;
 
 const QuestionBankDetail = () => {
@@ -27,7 +29,7 @@ const QuestionBankDetail = () => {
   const fetchBankInfo = async () => {
     try {
         console.log("🚀 Gọi API:", `https://localhost:7052/api/Bank/${bankId}`);
-        const response = await axios.get(`https://localhost:7052/api/Bank/${bankId}`);
+        const response = await getBankById(bankId);
         console.log("✅ API Response:", response.data);
         setBankInfo(response.data);
     } catch (error) {
@@ -38,7 +40,7 @@ const QuestionBankDetail = () => {
   /** ✅ Lấy danh sách Sections từ API */
   const fetchSections = async () => {
     try {
-      const response = await axios.get(`https://localhost:7052/api/Bank/${bankId}/sections`);
+      const response = await getSectionsByBankId(bankId);
       setSections(response.data);
     } catch (error) {
       toast.error("Lỗi khi tải dữ liệu section!");
@@ -60,12 +62,11 @@ const QuestionBankDetail = () => {
       return;
     }
     try {
-      const url =
-        modalType === "add-main"
-          ? `https://localhost:7052/api/Bank/${bankId}/add-section`
-          : `https://localhost:7052/api/Bank/${currentSection.secid}/add-subsection`;
-
-      await axios.post(url, { secname: sectionName });
+      if (modalType === "add-main") {
+        await addMainSection(bankId, { secname: sectionName });
+      } else {
+        await addSubSection(currentSection.secid, { secname: sectionName });
+      }
       toast.success("✅ Thêm section thành công!", 2); // 🟢 Thông báo UI thành công
       setIsModalVisible(false);
       setSectionName("");
@@ -85,9 +86,7 @@ const QuestionBankDetail = () => {
       return;
     }
     try {
-      await axios.put(`https://localhost:7052/api/Bank/section/${currentSection.secid}`, {
-        secname: sectionName,
-      });
+      await editSection(currentSection.secid, { secname: sectionName });
 
       fetchSections();
       toast.success("Cập nhật section thành công!");
@@ -101,7 +100,7 @@ const QuestionBankDetail = () => {
   /** ✅ Xóa Section */
   const handleDeleteSection = async (sectionId) => {
     try {
-      await axios.delete(`https://localhost:7052/api/Bank/section/${sectionId}`);
+      await deleteSection(sectionId);
       fetchSections();
       toast.success("Xóa section thành công!");
     } catch (error) {
@@ -114,7 +113,6 @@ const QuestionBankDetail = () => {
     navigate(`/question-list/${sectionId}`);
   };
 
-  /** ✅ Hiển thị danh sách Sections */
  /** ✅ Hiển thị danh sách Sections */
 const renderSections = (sections) => {
   return sections.map((section) => (

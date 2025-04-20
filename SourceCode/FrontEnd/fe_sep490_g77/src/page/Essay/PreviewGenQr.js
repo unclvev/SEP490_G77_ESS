@@ -79,7 +79,7 @@ const PreviewGenQR = () => {
         // Convert canvas to image
         const dataUrl = canvas.toDataURL("image/png");
         newImages[qrId] = dataUrl;
-        console.log(`✅ Đã chuyển QR #${qrId} thành ảnh`);
+        console.log(`Đã chuyển QR #${qrId} thành ảnh`);
         resolve(dataUrl);
       });
     });
@@ -89,7 +89,7 @@ const PreviewGenQR = () => {
     
     // Update state with all new images at once
     setQrImages(newImages);
-    console.log("🎉 Đã chuyển đổi tất cả QR thành ảnh:", Object.keys(newImages).length);
+    console.log("Đã chuyển đổi tất cả QR thành ảnh:", Object.keys(newImages).length);
     
     return newImages;
   };
@@ -97,7 +97,7 @@ const PreviewGenQR = () => {
   const handlePrint = async () => {
     if (!printRef.current) return;
   
-    console.log("🔄 Bắt đầu chuyển đổi QR code thành ảnh...");
+    console.log("Bắt đầu chuyển đổi QR code thành ảnh...");
     await convertCanvasToImage(); // Chuyển QR code thành ảnh trước khi in
     setIsPrintReady(true); // Signal that we're ready to print
   };
@@ -106,13 +106,13 @@ const PreviewGenQR = () => {
     const { leftQR, rightQR, style } = qrPosition || {};
     const allQrReady = qrList.every(qr => qrImages[qr.id]);
     if (!allQrReady) {
-      console.error("❌ Một số QR chưa được tạo thành ảnh, thử lại...");
+      console.error("Một số QR chưa được tạo thành ảnh, thử lại...");
       return alert("Một số mã QR chưa được tải xong, vui lòng thử lại!");
     }
   
-    console.log("✅ Tất cả ảnh QR đã sẵn sàng, tiến hành in...");
-    console.log("📊 QR Images:", qrImages);
-    console.log("📋 QR List:", qrList.map(qr => qr.id));
+    console.log("Tất cả ảnh QR đã sẵn sàng, tiến hành in...");
+    console.log("QR Images:", qrImages);
+    console.log("QR List:", qrList.map(qr => qr.id));
   
     const printWindow = window.open("", "_blank");
     printWindow.document.open();
