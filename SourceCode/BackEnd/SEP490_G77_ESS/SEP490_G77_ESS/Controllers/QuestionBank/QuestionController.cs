@@ -1,11 +1,9 @@
-﻿using ClosedXML.Excel;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SEP490_G77_ESS.DTO.BankdDTO;
 using SEP490_G77_ESS.Models;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace SEP490_G77_ESS.Controllers.QuestionBank
@@ -28,7 +26,7 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
             var questions = await _context.Questions
                 .Where(q => q.Secid == sectionId)
                 .Include(q => q.Type)
-                .Include(q => q.Mode)
+                .Include(q => q.Mode) // 🔹 Lấy tên Level dựa trên modeid
                 .ToListAsync();
 
             var result = questions.Select(q => new QuestionDto
@@ -37,20 +35,19 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
                 Quescontent = q.Quescontent,
                 Secid = q.Secid ?? 0,
                 TypeId = q.TypeId,
+             
                 Solution = q.Solution,
                 Modeid = q.Modeid ?? 0,
-                ImageUrl = q.ImageUrl,
-                Answers = (q.TypeId == 3) ? new List<string>() : q.AnswerContent?.Split(",").ToList() ?? new List<string>(),
+             
+                Answers = q.AnswerContent?.Split(",").ToList() ?? new List<string>(),
                 CorrectAnswers = _context.CorrectAnswers
                     .Where(a => a.Quesid == q.Quesid)
-                    .OrderBy(a => a.AnsId) // giữ đúng thứ tự cho True/False
                     .Select(a => a.Content)
                     .ToList(),
             }).ToList();
 
             return Ok(result);
         }
-
 
         [HttpGet("levels")]
         public async Task<ActionResult<IEnumerable<object>>> GetLevels()
@@ -71,9 +68,12 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
 
             return Ok(types);
         }
+
         [HttpPost("questions")]
         public async Task<IActionResult> CreateQuestion([FromBody] QuestionDto questionDto)
         {
+            Console.WriteLine($"🔍 Received Data: {System.Text.Json.JsonSerializer.Serialize(questionDto)}");
+
             if (string.IsNullOrEmpty(questionDto.Quescontent))
                 return BadRequest(new { message = "Nội dung câu hỏi không được để trống!" });
 
@@ -92,45 +92,27 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
                 Secid = questionDto.Secid,
                 TypeId = questionDto.TypeId,
                 Modeid = questionDto.Modeid,
-                Solution = questionDto.Solution,
-                ImageUrl = questionDto.ImageUrl
+                Solution = (questionDto.TypeId == 2 || questionDto.TypeId == 3) ? questionDto.Solution : null,
+
+                AnswerContent = questionDto.TypeId == 1 ? string.Join(",", questionDto.Answers) : null
             };
-
-            if (questionDto.TypeId == 1)
-            {
-                if (questionDto.CorrectAnswers.Count != 1)
-                    return BadRequest(new { message = "Câu hỏi trắc nghiệm chỉ được có một đáp án đúng!" });
-
-                question.AnswerContent = string.Join(",", questionDto.Answers);
-            }
-            else if (questionDto.TypeId == 2)
-            {
-                if (questionDto.CorrectAnswers.Count != 4)
-                    return BadRequest(new { message = "Câu hỏi Đúng/Sai phải có đúng 4 đáp án tương ứng với 4 ý!" });
-
-                question.AnswerContent = "True,False";
-            }
-            else if (questionDto.TypeId == 3)
-            {
-                if (questionDto.CorrectAnswers.Count != 1 || questionDto.CorrectAnswers[0].Length != 4)
-                    return BadRequest(new { message = "Câu hỏi điền kết quả phải có một đáp án đúng và đúng 4 ký tự!" });
-
-                question.AnswerContent = null;
-            }
 
             _context.Questions.Add(question);
             await _context.SaveChangesAsync();
 
-            foreach (var answer in questionDto.CorrectAnswers)
+            if (questionDto.TypeId == 1)
             {
-                _context.CorrectAnswers.Add(new CorrectAnswer
+                foreach (var correctAns in questionDto.CorrectAnswers)
                 {
-                    Content = answer,
-                    Quesid = question.Quesid
-                });
+                    _context.CorrectAnswers.Add(new CorrectAnswer
+                    {
+                        Content = correctAns,
+                        Quesid = question.Quesid
+                    });
+                }
+                await _context.SaveChangesAsync();
             }
 
-            await _context.SaveChangesAsync();
             return Ok(new { message = "Câu hỏi đã được thêm!", questionId = question.Quesid });
         }
 
@@ -205,9 +187,7 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
     .OrderBy(a => a.AnsId)
     .Select(a => a.Content)
     .ToList();
-                string correctAnswerStr = question.TypeId == 2
-     ? string.Join(";", corrects)  // chỉ chuyển , → ; khi typeId=2
-     : string.Join(",", corrects);
+                string correctAnswerStr = string.Join(",", corrects);
 
                 worksheet.Cell(row, 9).Value = correctAnswerStr;
 
@@ -447,14 +427,7 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
                     var answer4 = GetCellValueAsString(worksheet.Cell(row, 8));
 
                     // Đọc đáp án đúng từ cột 9
-                    // Đọc đáp án đúng từ cột 9
                     var correctAnswers = GetCellValueAsString(worksheet.Cell(row, 9));
-
-                    // Kiểm tra nếu là câu hỏi True/False, thay đổi dấu phân cách từ ";" thành ","
-                    if (typeId == 2)
-                    {
-                        correctAnswers = correctAnswers.Replace(";", ",");
-                    }
 
                     // Đọc URL ảnh từ cột 10
                     var imageCell = worksheet.Cell(row, 10);
@@ -727,51 +700,32 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
             }
             var question = await _context.Questions.FindAsync(id);
             if (question == null)
+            {
                 return NotFound(new { message = "Không tìm thấy câu hỏi!" });
+            }
 
             question.Quescontent = questionDto.Quescontent;
             question.Secid = questionDto.Secid;
             question.TypeId = questionDto.TypeId;
             question.Modeid = questionDto.Modeid;
-            question.Solution = questionDto.Solution;
-            question.ImageUrl = questionDto.ImageUrl;
+            question.Solution = (questionDto.TypeId == 2 || questionDto.TypeId == 3) ? questionDto.Solution : null;
 
-            _context.CorrectAnswers.RemoveRange(_context.CorrectAnswers.Where(a => a.Quesid == id));
+            question.AnswerContent = questionDto.TypeId == 1 ? string.Join(",", questionDto.Answers) : null;
+
+            _context.Questions.Update(question);
 
             if (questionDto.TypeId == 1)
             {
-                if (questionDto.CorrectAnswers.Count != 1)
-                    return BadRequest(new { message = "Câu hỏi trắc nghiệm chỉ được có một đáp án đúng!" });
+                var existingCorrectAnswers = _context.CorrectAnswers.Where(a => a.Quesid == id);
+                _context.CorrectAnswers.RemoveRange(existingCorrectAnswers);
 
-                question.AnswerContent = string.Join(",", questionDto.Answers);
-            }
-            else if (questionDto.TypeId == 2)
-            {
-                if (questionDto.CorrectAnswers.Count != 4)
-                    return BadRequest(new { message = "Câu hỏi Đúng/Sai phải có đúng 4 đáp án tương ứng với 4 ý!" });
-
-                question.AnswerContent = "True,False";
-            }
-            else if (questionDto.TypeId == 3)
-            {
-                if (questionDto.CorrectAnswers.Count != 1 || questionDto.CorrectAnswers[0].Length != 4)
-                    return BadRequest(new { message = "Câu hỏi điền kết quả phải có một đáp án đúng và đúng 4 ký tự!" });
-
-                question.AnswerContent = null;
-            }
-
-            foreach (var answer in questionDto.CorrectAnswers)
-            {
-                _context.CorrectAnswers.Add(new CorrectAnswer
+                foreach (var correctAns in questionDto.CorrectAnswers)
                 {
-                    Content = answer,
-                    Quesid = id
-                });
+                    _context.CorrectAnswers.Add(new CorrectAnswer { Content = correctAns, Quesid = id });
+                }
             }
 
-            _context.Questions.Update(question);
             await _context.SaveChangesAsync();
-
             return Ok(new { message = "Câu hỏi đã được cập nhật!" });
         }
 
@@ -837,26 +791,12 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
                 return NotFound(new { message = "Không tìm thấy câu hỏi!" });
             }
 
-            // ✅ Xóa ảnh nếu có
-            if (!string.IsNullOrEmpty(question.ImageUrl))
-            {
-                var imagePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", question.ImageUrl.TrimStart('/'));
-                if (System.IO.File.Exists(imagePath))
-                {
-                    System.IO.File.Delete(imagePath); // ✅ Xóa file ảnh khỏi server
-                }
-            }
-
-            // ✅ Xóa đáp án đúng
             var correctAnswers = _context.CorrectAnswers.Where(a => a.Quesid == id);
             _context.CorrectAnswers.RemoveRange(correctAnswers);
 
-            // ✅ Xóa câu hỏi
             _context.Questions.Remove(question);
             await _context.SaveChangesAsync();
-
             return Ok(new { message = "Đã xóa câu hỏi!" });
         }
-
     }
 }

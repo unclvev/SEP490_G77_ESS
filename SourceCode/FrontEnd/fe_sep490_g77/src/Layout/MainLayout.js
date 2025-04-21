@@ -1,24 +1,16 @@
-import React, { useState } from "react";
+import React from "react";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
 import Footer from "./Footer";
 
 const MainLayout = ({ children }) => {
-  const [collapsed, setCollapsed] = useState(true);
-
   return (
-    <div className="flex min-h-screen">
-      {/* Sidebar */}
-      <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} />
-
-      {/* Layout chính */}
-      <div
-        className={`flex flex-col transition-all duration-300 ${
-          collapsed ? "ml-16" : "ml-64"
-        } flex-1`}
-      >
-        <Header collapsed={collapsed} />
-        <main className="p-6 pt-3 flex-grow">{children}</main>
+    <div className="flex">
+      <Sidebar />
+      <div className="flex-1 min-h-screen ml-64">
+        <Header />
+        <main className="p-6">{children}</main>
+        <Footer />
       </div>
     </div>
   );
