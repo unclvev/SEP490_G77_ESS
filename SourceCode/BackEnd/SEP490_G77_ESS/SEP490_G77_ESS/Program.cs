@@ -43,6 +43,14 @@ builder.Services.AddHostedService<AccountCleanupService>();
 builder.Services.AddScoped<IAuthorizationHandler, ResourcePermissionHandler>();
 
 
+builder.WebHost.ConfigureKestrel(serverOptions =>
+{
+    serverOptions.ListenAnyIP(7052);
+    //serverOptions.ListenAnyIP(7052, listenOptions =>
+    //{
+    //    listenOptions.UseHttps();
+    //});
+});
 
 
 builder.Services.AddAuthorization(options =>

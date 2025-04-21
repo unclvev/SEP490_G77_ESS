@@ -24,15 +24,15 @@
             android:padding="8dp"/>
 
         <!-- Floating Action Button -->
-        <com.google.android.material.floatingactionbutton.FloatingActionButton
-            android:id="@+id/fabAddTest"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:src="@drawable/ic_add"
-            android:backgroundTint="@color/deepblue"
-            android:tint="@android:color/white"
-            android:layout_gravity="end|bottom"
-            android:layout_margin="16dp"/>
+<!--        <com.google.android.material.floatingactionbutton.FloatingActionButton-->
+<!--            android:id="@+id/fabAddTest"-->
+<!--            android:layout_width="wrap_content"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:src="@drawable/ic_add"-->
+<!--            android:backgroundTint="@color/deepblue"-->
+<!--            android:tint="@android:color/white"-->
+<!--            android:layout_gravity="end|bottom"-->
+<!--            android:layout_margin="16dp"/>-->
 
         <!-- Include Footer -->
         <include layout="@layout/footer" />

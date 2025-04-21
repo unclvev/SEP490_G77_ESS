@@ -1,7 +1,7 @@
 import axios from "axios";
-import { BASE_API, BASE_API_LOCAL } from "../share/urlbase";
+import { BASE_API_LOCAL } from "../share/urlbase";
 import store from "../redux-setup/store";
-import { logout } from "../redux-setup/action";
+import { setToken } from "../redux-setup/action";
 
 const Http = axios.create({
     baseURL: BASE_API_LOCAL,
@@ -40,8 +40,8 @@ Http.interceptors.response.use(
         // Prevent infinite refresh loops
         if (error.response?.status === 401 && originalRequest._retry) {
             // If we already tried to refresh, just logout
-            store.dispatch(logout());
-            window.location.href = '/login';
+            store.dispatch(setToken(null));
+            console.log("TOken hết hạn");
             return Promise.reject(error);
         }
 
@@ -56,8 +56,8 @@ Http.interceptors.response.use(
                     })
                     .catch(err => {
                         // If refresh fails, redirect to login
-                        store.dispatch(logout());
-                        window.location.href = '/login';
+                        store.dispatch(setToken(null));
+                        console.log("TOken hết hạn");
                         return Promise.reject(err);
                     });
             }
@@ -97,8 +97,8 @@ Http.interceptors.response.use(
             } catch (error) {
                 processQueue(error, null);
                 // Clear tokens and logout user
-                store.dispatch(logout());
-                window.location.href = '/login';
+                store.dispatch(setToken(null));
+                console.log("TOken hết hạn");
                 return Promise.reject(error);
             } finally {
                 isRefreshing = false;

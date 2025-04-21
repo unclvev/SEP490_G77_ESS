@@ -14,23 +14,68 @@
         <!-- Include Header -->
         <include layout="@layout/header" />
 
-        <!-- Camera Preview -->
-        <SurfaceView
-            android:id="@+id/cameraPreview"
+        <!-- Camera Preview + Marker Overlay -->
+        <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
-            android:background="@android:color/transparent"
-            android:elevation="4dp"
             android:layout_margin="16dp"
-            android:padding="8dp"/>
+            android:background="@android:color/transparent">
+
+            <!-- SurfaceView for Camera -->
+            <SurfaceView
+                android:id="@+id/cameraPreview"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@android:color/transparent" />
+
+            <!-- Marker Top Left -->
+            <View
+                android:id="@+id/markerTopLeft"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginStart="8dp"
+                android:layout_gravity="top|start"
+                android:background="@drawable/square_marker" />
+
+            <!-- Marker Top Right -->
+            <View
+                android:id="@+id/markerTopRight"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginEnd="8dp"
+                android:layout_gravity="top|end"
+                android:background="@drawable/square_marker" />
+
+            <!-- Marker Bottom Left -->
+            <View
+                android:id="@+id/markerBottomLeft"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:layout_marginBottom="8dp"
+                android:layout_marginStart="8dp"
+                android:layout_gravity="bottom|start"
+                android:background="@drawable/square_marker" />
+
+            <!-- Marker Bottom Right -->
+            <View
+                android:id="@+id/markerBottomRight"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:layout_marginBottom="8dp"
+                android:layout_marginEnd="8dp"
+                android:layout_gravity="bottom|end"
+                android:background="@drawable/square_marker" />
+        </FrameLayout>
 
         <!-- Nút Status -->
         <TextView
             android:id="@+id/btnStatus"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Chụp"
+            android:text="Căn 4 hình vuông vào 4 hình vuông đen 4 góc phiếu trả lời và ấn nút"
             android:textSize="16sp"
             android:background="@color/deepblue"
             android:textColor="@android:color/white"
