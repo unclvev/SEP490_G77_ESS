@@ -16,7 +16,7 @@ namespace SEP490_G77_ESS.Services
             _configuration = configuration;
         }
 
-        public virtual async Task SendVerificationEmailAsync(string toEmail, string verificationLink)
+        public async Task SendVerificationEmailAsync(string toEmail, string verificationLink)
         {
             var emailSettings = _configuration.GetSection("EmailSettings");
 

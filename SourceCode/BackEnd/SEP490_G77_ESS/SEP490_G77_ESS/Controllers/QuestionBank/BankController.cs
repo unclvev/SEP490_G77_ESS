@@ -416,8 +416,7 @@ namespace SEP490_G77_ESS.Controllers
             _context.SectionHierarchies.RemoveRange(sectionHierarchies);
 
             // ✅ Xóa toàn bộ dữ liệu trong BankAccess liên quan đến Bank
-            var bankAccesses = _context.BankAccesses.Where(ba => ba.Bankid == id);
-            _context.BankAccesses.RemoveRange(bankAccesses);
+            
 
             // ✅ Xóa ngân hàng câu hỏi
             _context.Banks.Remove(bank);
@@ -676,7 +675,8 @@ namespace SEP490_G77_ESS.Controllers
             var questionCounts = await _context.Questions
                 .Where(q => q.Secid != null && sections.Select(s => s.Secid).Contains(q.Secid.Value))
                 .GroupBy(q => q.Secid)
-                .Select(g => new {
+                .Select(g => new
+                {
                     Key = g.Key ?? 0,
                     Count = g.Count()
                 })
@@ -857,13 +857,13 @@ namespace SEP490_G77_ESS.Controllers
         }
 
 
-      
+
 
 
 
 
         // ✅ Cập nhật tên Section
-  [HttpPut("section/{sectionId}")]
+        [HttpPut("section/{sectionId}")]
         public async Task<IActionResult> UpdateSection(long sectionId, [FromBody] Section updatedSection)
         {
             var section = await _context.Sections.FindAsync(sectionId);
