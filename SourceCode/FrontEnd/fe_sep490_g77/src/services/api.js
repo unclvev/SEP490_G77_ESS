@@ -20,6 +20,12 @@ export const updateProfile = (data) => Http.put("/Profile/update", data);
   
 export const changePassword = (data) => Http.put("/Profile/changePassword", data);
 
+//bank-api
+
+export const loadGrade = () => Http.get("/Bank/grades")
+
+export const loadSubject = () => Http.get("/Bank/subjects")
+
 //exam-api
 
 export const createExam = (data) => Http.post("/ExamData/GenerateExam", data)
