@@ -4,9 +4,6 @@ import {
   Button,
   Space,
   Typography,
-  Radio,
-  Dropdown,
-  Menu,
   Modal,
   Select,
   Input,
@@ -16,13 +13,13 @@ import {
 import "@ant-design/v5-patch-for-react-19";
 import {
   LeftOutlined,
-  MoreOutlined,
   BarChartOutlined,
   FilePdfOutlined,
   DeleteOutlined,
   SaveOutlined,
   TeamOutlined,
   EditOutlined,
+  PlusOutlined,
 } from "@ant-design/icons";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import {
@@ -34,8 +31,9 @@ import {
 } from "../../services/api";
 import { saveAs } from "file-saver";
 import { toast } from "react-toastify";
-import { BlockMath } from "react-katex";
-import "katex/dist/katex.min.css";
+import QuestionCardV2 from "../../components/Exam/QuestionCardv2";
+import AddQuestionModal from "../../components/Exam/AddQuestionModel";
+import ImportStudentModal from "../../components/Exam/ImportStudent";
 
 const { Text, Title } = Typography;
 const { Option } = Select;
@@ -43,16 +41,15 @@ const { Option } = Select;
 const ExamDetail = () => {
   const [searchParams] = useSearchParams();
   const examid = searchParams.get("id");
+  const navigate = useNavigate();
+
   const [gradeOptions, setGradeOptions] = useState([]);
   const [subjectOptions, setSubjectOptions] = useState([]);
-  const navigate = useNavigate();
 
   const [initialPayload, setInitialPayload] = useState(null);
   const [isDirty, setIsDirty] = useState(false);
 
-  const [addModalVisible, setAddModalVisible] = useState(false);
-  const defaultNewQ = { Content: "", Type: "Multiple Choice", Answers: Array(4).fill({ Content: "", IsCorrect: false }) };
-  const [newQuestion, setNewQuestion] = useState(defaultNewQ);
+  const [questions, setQuestions] = useState([]);
 
   const [examInfo, setExamInfo] = useState({
     examName: "",
@@ -62,36 +59,37 @@ const ExamDetail = () => {
     creator: "",
     attempts: 0,
   });
-  const [questions, setQuestions] = useState([]);
-
   const [examCode, setExamCode] = useState("");
 
-  // States for editing exam name
+  const [addModalVisible, setAddModalVisible] = useState(false);
+
+  const [editNameModalVisible, setEditNameModalVisible] = useState(false);
   const [newExamName, setNewExamName] = useState("");
-  const handleEditName = () => {
-    setNewExamName(examInfo.examName);
-    Modal.confirm({
-      title: "Chỉnh sửa tên đề thi",
-      content: (
-        <Input
-          value={newExamName}
-          onChange={(e) => setNewExamName(e.target.value)}
-        />
-      ),
-      onOk: () => {
-        setExamInfo((prev) => ({ ...prev, examName: newExamName }));
-        toast.success("Đã cập nhật tên đề thi");
-      },
-    });
+
+  // --- Thêm state cho Import Student ---
+  const [importModalVisible, setImportModalVisible] = useState(false);
+
+  // --- Hàm thực thi import ---
+  const importStudents = async (studentList) => {
+    // try {
+    //   // Gọi API import, thay `importStudentApi` bằng hàm thực tế
+    //   await importStudentApi(examid, studentList);
+    //   toast.success("Import thành công!");
+    //   setImportModalVisible(false);
+    //   // Nếu cần reload dữ liệu, gọi lại fetchExam() ở đây
+    // } catch (error) {
+    //   console.error("Import thất bại", error);
+    //   toast.error("Import thất bại!");
+    // }
   };
 
+  // --- Fetch exam data ---
   useEffect(() => {
     const fetchExam = async () => {
       try {
         const { data } = await getExam(examid);
         const parsed = JSON.parse(data.examdata);
 
-        // 1. Set examInfo với đúng JSON từ parsed.exam
         setExamInfo({
           examName: parsed.exam.ExamName || "",
           grade: parsed.exam.Grade || "",
@@ -100,14 +98,12 @@ const ExamDetail = () => {
           creator: data.accId || "",
           attempts: data.attempts || 0,
         });
-
-        // 2. Set riêng examCode nếu có
         setExamCode(parsed.exam.ExamCode || "");
 
-        // 3. Load questions
+        // Load questions
         setQuestions(parsed.examdata.Questions || []);
 
-        // 4. Khởi tạo initialPayload để so sánh dirty
+        // Initialize payload for dirty-check
         setInitialPayload({
           exam: {
             ExamName: parsed.exam.ExamName,
@@ -123,6 +119,7 @@ const ExamDetail = () => {
     fetchExam();
   }, [examid]);
 
+  // --- Dirty check ---
   useEffect(() => {
     if (!initialPayload) return;
     const current = {
@@ -136,6 +133,7 @@ const ExamDetail = () => {
     setIsDirty(JSON.stringify(current) !== JSON.stringify(initialPayload));
   }, [examInfo, questions, initialPayload]);
 
+  // --- Load grade/subject options ---
   useEffect(() => {
     async function fetchOptions() {
       try {
@@ -149,34 +147,95 @@ const ExamDetail = () => {
     fetchOptions();
   }, []);
 
-  const renderContent = (content) =>
-    content.split("\n").map((line, idx) => {
-      const m = line.match(/\[MATH:([^\]]+)\]/);
-      if (m) return <BlockMath key={idx}>{m[1]}</BlockMath>;
-      return <p key={idx} dangerouslySetInnerHTML={{ __html: line }} />;
+  // --- Handlers for question-card interactions ---
+  const handleQuestionChange = (index, newContent) => {
+    setQuestions((prev) => {
+      const arr = [...prev];
+      arr[index] = { ...arr[index], Content: newContent };
+      return arr;
     });
-
-  const getCorrectAnswerLetter = (question) => {
-    if (!question?.Answers?.length) return "Chưa chọn";
-    const i = question.Answers.findIndex(
-      (a) => a.AnswerId === question.CorrectAnswerId
-    );
-    return i >= 0 ? String.fromCharCode(65 + i) : "Chưa chọn";
   };
 
-  // Handlers
-  const handleSave = async () => {
-    const gradeText =
-      gradeOptions.find((g) => g.gradeId === examInfo.grade)?.gradeLevel || "";
-    const subjectText =
-      subjectOptions.find((s) => s.subjectId === examInfo.subject)
-        ?.subjectName || "";
+  const handleAnswerChange = (qIndex, answerId, newContent) => {
+    setQuestions((prev) => {
+      const arr = [...prev];
+      arr[qIndex] = {
+        ...arr[qIndex],
+        Answers: arr[qIndex].Answers.map((a) =>
+          a.AnswerId === answerId ? { ...a, Content: newContent } : a
+        ),
+      };
+      return arr;
+    });
+  };
 
-    // 2) build payload với giá trị chữ
+  const handleCorrectChange = (qIdx, ansId) => {
+    setQuestions((prev) =>
+      prev.map((q, i) => {
+        if (i !== qIdx) return q;
+        return {
+          ...q,
+          CorrectAnswerId: ansId,
+          Answers: q.Answers.map((a) => ({
+            ...a,
+            IsCorrect: a.AnswerId === ansId,
+          })),
+        };
+      })
+    );
+  };
+
+  const handleAnswerDelete = (qIndex, answerId) => {
+    setQuestions((prev) => {
+      const arr = [...prev];
+      arr[qIndex] = {
+        ...arr[qIndex],
+        Answers: arr[qIndex].Answers.filter((a) => a.AnswerId !== answerId),
+      };
+      return arr;
+    });
+  };
+
+  const handleDeleteQuestion = (index) => {
+    setQuestions((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleMoveUp = (index) => {
+    if (index === 0) return;
+    setQuestions((prev) => {
+      const arr = [...prev];
+      [arr[index - 1], arr[index]] = [arr[index], arr[index - 1]];
+      return arr;
+    });
+  };
+
+  const handleMoveDown = (index) => {
+    if (index === questions.length - 1) return;
+    setQuestions((prev) => {
+      const arr = [...prev];
+      [arr[index + 1], arr[index]] = [arr[index], arr[index + 1]];
+      return arr;
+    });
+  };
+
+  // --- Save exam ---
+  const handleSave = async () => {
+    let gradeText = examInfo.grade;
+    let subjectText = examInfo.subject;
+
+    // Nếu vẫn là ID (số hoặc ID dạng string), thì đổi thành chữ
+    const foundGrade = gradeOptions.find((g) => g.gradeId === gradeText);
+    if (foundGrade) gradeText = foundGrade.gradeLevel;
+
+    const foundSubject = subjectOptions.find(
+      (s) => s.subjectId === subjectText
+    );
+    if (foundSubject) subjectText = foundSubject.subjectName;
+
     const payload = {
       Exam: {
         ExamName: examInfo.examName,
-        Grade: gradeText, // giờ là string, không phải id
+        Grade: gradeText,
         Subject: subjectText,
       },
       Examdata: {
@@ -184,45 +243,44 @@ const ExamDetail = () => {
       },
     };
 
+    console.log("Saving payload", JSON.stringify(payload, null, 2));
+
     try {
-      // 3) call the correct URL
       await updateExamData(examid, payload);
       toast.success("Đã lưu thay đổi!");
       setInitialPayload(payload);
       setIsDirty(false);
     } catch (err) {
-      console.error("Save failed:", err.response || err);
+      console.error(err);
       toast.error("Lưu thất bại!");
     }
   };
 
+  // --- Other controls ---
+  const handleEditName = () => {
+    setNewExamName(examInfo.examName);
+    setEditNameModalVisible(true);
+  };
+
+  const handleBack = () => navigate(-1);
+  const handlePrint = () => navigate(`/exam/print/${examid}`);
+  const handleStats = () => navigate(`/exam/analysis/${examid}`);
+  const handleDownloadTemplate = () => {
+    saveAs(
+      "https://drive.google.com/uc?export=download&id=19Gx-0qpRYEqIdOdQhAX5QamWIE30cF0O",
+      "template.pdf"
+    );
+    toast.success("Đã tải template thành công!");
+  };
   const handlePermissions = () => {
     Modal.info({
       title: "Phân quyền",
       content: "Chức năng phân quyền sẽ được triển khai sau.",
     });
   };
-
-  const handleGradeChange = (value) =>
-    setExamInfo((prev) => ({ ...prev, grade: value }));
-  const handleSubjectChange = (value) =>
-    setExamInfo((prev) => ({ ...prev, subject: value }));
-
-  const handleBack = () => navigate(-1);
-  const handlePrint = () => navigate(`/exam/print/${examid}`);
-  const handleStats = () => navigate(`/exam/analysis/${examid}`);
-
-  const handleDownloadTemplate = () => {
-    const url =
-      "https://drive.google.com/uc?export=download&id=19Gx-0qpRYEqIdOdQhAX5QamWIE30cF0O";
-    saveAs(url, "template.pdf");
-    toast.success("Đã tải template thành công!");
-  };
-
   const handleDeleteExam = () => {
     Modal.confirm({
-      title: "Xác nhận",
-      content: "Bạn có chắc chắn muốn xóa đề thi này?",
+      title: "Xác nhận xóa đề thi",
       onOk: async () => {
         try {
           await delExam(examid);
@@ -235,75 +293,7 @@ const ExamDetail = () => {
     });
   };
 
-  const handleAddQuestion = async () => {
-    const filteredAnswers = newQuestion.Answers.filter((a) => a.Content.trim());
-    const newQ = {
-      QuestionId: Date.now(), // temp ID
-      Content: newQuestion.Content,
-      Type: newQuestion.Type,
-      Answers: filteredAnswers,
-    };
-    const updatedQuestions = [...questions, newQ];
-    const payload = { Exam: { ExamName: examInfo.examName, Grade: examInfo.grade, Subject: examInfo.subject }, Examdata: { Questions: updatedQuestions } };
-    try {
-      await updateExamData(examid, payload);
-      setQuestions(updatedQuestions);
-      toast.success("Đã thêm câu hỏi!");
-      setInitialPayload(payload);
-      setIsDirty(false);
-      setAddModalVisible(false);
-    } catch (err) {
-      console.error("Add question failed:", err.response?.data);
-      toast.error("Không thể thêm câu hỏi");
-    }
-  };
-
-  const handleMoveUp = (index) => {
-    if (index === 0) return;
-    setQuestions((prev) => {
-      const newQs = [...prev];
-      [newQs[index - 1], newQs[index]] = [newQs[index], newQs[index - 1]];
-      return newQs;
-    });
-  };
-
-  const handleMoveDown = (index) => {
-    if (index === questions.length - 1) return;
-    setQuestions((prev) => {
-      const newQs = [...prev];
-      [newQs[index + 1], newQs[index]] = [newQs[index], newQs[index + 1]];
-      return newQs;
-    });
-  };
-
-  const renderQuestionMenu = (index) => (
-    <Menu>
-      <Menu.Item
-        onClick={() => {
-          /* edit question */
-        }}
-      >
-        Chỉnh sửa
-      </Menu.Item>
-      <Menu.Item
-        danger
-        onClick={() => {
-          /* delete question */
-        }}
-      >
-        Xóa
-      </Menu.Item>
-      <Menu.Item onClick={() => handleMoveUp(index)} disabled={index === 0}>
-        Di chuyển lên
-      </Menu.Item>
-      <Menu.Item
-        onClick={() => handleMoveDown(index)}
-        disabled={index === questions.length - 1}
-      >
-        Di chuyển xuống
-      </Menu.Item>
-    </Menu>
-  );
+  const handleImportStudent = () => {};
 
   return (
     <div
@@ -319,7 +309,7 @@ const ExamDetail = () => {
         style={{
           background: "#fff",
           borderBottom: "1px solid #ddd",
-          padding: "10px 20px",
+          padding: 16,
           display: "flex",
           alignItems: "center",
         }}
@@ -327,12 +317,11 @@ const ExamDetail = () => {
         <Button
           icon={<LeftOutlined />}
           onClick={handleBack}
-          style={{ marginRight: 10 }}
+          style={{ marginRight: 12 }}
         />
         <Title level={4} style={{ margin: 0 }}>
-          {examInfo.examName}
+          Thông tin đề thi
         </Title>
-        <Button type="text" icon={<EditOutlined />} onClick={handleEditName} />
       </div>
 
       <div style={{ flex: 1, display: "flex" }}>
@@ -345,73 +334,76 @@ const ExamDetail = () => {
             padding: 20,
           }}
         >
-          <div
-            style={{ display: "flex", alignItems: "center", marginBottom: 12 }}
-          >
-            <Title level={5} style={{ margin: 0, flex: 1 }}>
+          <Space align="center" style={{ marginBottom: 16 }}>
+            <Title level={4} style={{ margin: 0 }}>
               {examInfo.examName}
             </Title>
-            <Button
-              type="text"
-              icon={<EditOutlined />}
-              onClick={handleEditName}
-            />
-          </div>
+            <Button icon={<EditOutlined />} onClick={handleEditName} />
+          </Space>
 
-          {/* Grade & Subject */}
           <Card size="small" title="Exam Info" style={{ marginBottom: 16 }}>
             <Row gutter={16}>
               <Col span={12}>
-                <Typography.Text strong>Grade</Typography.Text>
+                <Text strong>Grade</Text>
                 <Select
                   value={examInfo.grade}
-                  onChange={handleGradeChange}
-                  placeholder="Select grade"
-                  style={{ width: "100%", marginTop: 4 }}
+                  onChange={(value) =>
+                    setExamInfo((prev) => ({ ...prev, grade: value }))
+                  }
                   options={gradeOptions.map((g) => ({
                     label: g.gradeLevel,
                     value: g.gradeId,
                   }))}
+                  style={{ width: "100%", marginTop: 8 }}
                 />
               </Col>
               <Col span={12}>
-                <Typography.Text strong>Subject</Typography.Text>
+                <Text strong>Subject</Text>
                 <Select
                   value={examInfo.subject}
-                  onChange={handleSubjectChange}
-                  placeholder="Select subject"
-                  style={{ width: "100%", marginTop: 4 }}
+                  onChange={(value) =>
+                    setExamInfo((prev) => ({ ...prev, subject: value }))
+                  }
                   options={subjectOptions.map((s) => ({
                     label: s.subjectName,
                     value: s.subjectId,
                   }))}
+                  style={{ width: "100%", marginTop: 8 }}
                 />
               </Col>
             </Row>
-
-            {/* → Input tách riêng cho Exam Code ← */}
-            <Row style={{ marginTop: 16 }}>
-              <Col span={24}>
-                <Typography.Text strong>Exam Code</Typography.Text>
-                <Input
-                  value={examCode}
-                  onChange={(e) => setExamCode(e.target.value)}
-                  placeholder="Enter exam code"
-                  style={{ width: "100%", marginTop: 4 }}
-                />
-              </Col>
-            </Row>
+            <div style={{ marginTop: 16 }}>
+              <Text strong>Exam Code</Text>
+              <Input
+                value={examCode}
+                onChange={(e) => setExamCode(e.target.value)}
+                placeholder="Enter exam code"
+                style={{ marginTop: 8 }}
+              />
+            </div>
           </Card>
 
-          <div style={{ marginBottom: 16, color: "#888" }}>
+          <div style={{ marginBottom: 24, color: "#666" }}>
             Ngày tạo: {examInfo.createdAt}
             <br />
             Người tạo: {examInfo.creator}
             <br />
-            Số lượt làm: {examInfo.attempts}
+            <b>Tổng số câu hỏi: {questions.length}</b> {/* 👈 thêm dòng này */}
           </div>
 
-          <Space direction="vertical" style={{ width: "100%" }}>
+          <Space direction="vertical" style={{ width: "100%" }} size="middle">
+            <Button
+              block
+              icon={<PlusOutlined />}
+              onClick={() => setAddModalVisible(true)}
+            >
+              Thêm câu hỏi
+            </Button>
+
+            <Button block icon={<PlusOutlined />} onClick={handleImportStudent}>
+              Import danh sách học sinh
+            </Button>
+
             <Button block icon={<BarChartOutlined />} onClick={handlePrint}>
               In PDF
             </Button>
@@ -428,7 +420,7 @@ const ExamDetail = () => {
               icon={<FilePdfOutlined />}
               onClick={handleDownloadTemplate}
             >
-              Tải mẫu phiếu trắc nghiệm
+              Tải mẫu
             </Button>
             <Button block icon={<BarChartOutlined />} onClick={handleStats}>
               Thống kê
@@ -455,64 +447,73 @@ const ExamDetail = () => {
             </div>
           ) : (
             questions.map((q, idx) => (
-              <Card
+              <QuestionCardV2
                 key={q.QuestionId}
-                style={{
-                  marginBottom: 20,
-                  borderRadius: 8,
-                  boxShadow: "0 2px 5px rgba(0,0,0,0.1)",
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                  }}
-                >
-                  <Text strong>{`Câu ${idx + 1}`}</Text>
-                  <Dropdown
-                    overlay={renderQuestionMenu(idx)}
-                    trigger={["click"]}
-                  >
-                    <MoreOutlined style={{ cursor: "pointer", fontSize: 18 }} />
-                  </Dropdown>
-                </div>
-
-                <Card style={{ border: "1px solid #ddd", margin: "10px 0" }}>
-                  {renderContent(q.Content)}
-                </Card>
-
-                <Card style={{ border: "1px solid #ddd" }}>
-                  <Radio.Group>
-                    <Space direction="vertical">
-                      {q.Answers.map((ans, i) => (
-                        <Radio key={ans.AnswerId} disabled>
-                          <Text strong>{`${String.fromCharCode(
-                            65 + i
-                          )}.`}</Text>
-                          <Text
-                            style={{
-                              marginLeft: 8,
-                              fontWeight: ans.IsCorrect ? "bold" : "normal",
-                            }}
-                          >
-                            {ans.Content}
-                          </Text>
-                        </Radio>
-                      ))}
-                    </Space>
-                  </Radio.Group>
-                </Card>
-
-                <Text
-                  style={{ color: "green", fontWeight: "bold" }}
-                >{`Đáp án: ${getCorrectAnswerLetter(q)}`}</Text>
-              </Card>
+                question={q}
+                index={idx}
+                totalQuestions={questions.length}
+                onQuestionChange={handleQuestionChange}
+                onAnswerChange={handleAnswerChange}
+                onCorrectChange={handleCorrectChange}
+                onAnswerDelete={handleAnswerDelete}
+                onDelete={handleDeleteQuestion}
+                onMoveUp={handleMoveUp}
+                onMoveDown={handleMoveDown}
+              />
             ))
           )}
         </div>
       </div>
+      <AddQuestionModal
+        visible={addModalVisible}
+        onClose={() => setAddModalVisible(false)}
+        onAdd={(newQuestion) => {
+          setQuestions((prev) => [
+            ...prev,
+            {
+              QuestionId: Date.now(), // ID tạm (có thể đổi random hơn nếu cần)
+              Content: newQuestion.Content,
+              Type: newQuestion.Type, // Thường là "Multiple Choice"
+              Answers: newQuestion.Answers.map((ans, idx) => ({
+                AnswerId: Date.now() + idx + 1, // Tạo ID riêng cho mỗi đáp án
+                Content: ans.Content,
+                IsCorrect: ans.IsCorrect,
+              })),
+              ImageUrl: newQuestion.ImageUrl || "", // nếu có ảnh
+              CorrectAnswerId:
+                newQuestion.Answers.find((a) => a.IsCorrect)?.AnswerId || null,
+            },
+          ]);
+          setAddModalVisible(false);
+        }}
+      />
+
+      <Modal
+        title="Chỉnh sửa tên đề thi"
+        open={editNameModalVisible}
+        onCancel={() => setEditNameModalVisible(false)}
+        onOk={() => {
+          setExamInfo((prev) => ({ ...prev, examName: newExamName }));
+          setEditNameModalVisible(false);
+        }}
+      >
+        <Input
+          value={newExamName}
+          onChange={(e) => setNewExamName(e.target.value)}
+          placeholder="Nhập tên đề thi mới"
+        />
+      </Modal>
+
+      <ImportStudentModal
+        visible={importModalVisible}
+        examId={examid}
+        importStudents={importStudents}
+        onImportSuccess={() => {
+          toast.success("Import thành công!");
+          // nếu cần reload dữ liệu
+        }}
+        onClose={() => setImportModalVisible(false)}
+      />
     </div>
   );
 };

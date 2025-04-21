@@ -2,13 +2,11 @@ import React, { useState, useRef } from "react";
 import { Button, Input, Table, Modal, message, Upload } from "antd";
 import { UploadOutlined } from "@ant-design/icons";
 import axios from "axios";
-import * as XLSX from "xlsx";
-import { v4 as uuidv4 } from "uuid";
 
 const ExamSetting = () => {
   // State lưu thông tin đề thi
   const [examData, setExamData] = useState({
-    ExamId: 1,
+    ExamId: 90030,
     ExamName: "Đề thi thử nghiệm câu hỏi",
     Grade: "10",
     Subject: "Math",
@@ -16,26 +14,7 @@ const ExamSetting = () => {
     ExamType: "Multiple Choice",
     Examdata: {
       Questions: [
-        {
-          QuestionId: 40009,
-          Content: "Thương của 36 chia cho 6 là bao nhiêu?",
-          Type: "Multiple Choice",
-          Answers: [
-            { AnswerId: 30009, Content: "6", IsCorrect: true },
-            { AnswerId: 30010, Content: "7", IsCorrect: false },
-            { AnswerId: 30011, Content: "8", IsCorrect: false },
-            { AnswerId: 30012, Content: "9", IsCorrect: false }
-          ]
-        },
-        {
-          QuestionId: 40018,
-          Content: "Tổng của 9 và 10 là 19.",
-          Type: "Short Answer",
-          Answers: [
-            { AnswerId: 30018, Content: "True", IsCorrect: true },
-            { AnswerId: 30019, Content: "False", IsCorrect: false }
-          ]
-        }
+        
       ]
     }
   });

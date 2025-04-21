@@ -26,7 +26,7 @@ const createEditorState = (text) => {
   return EditorState.createWithContent(contentState);
 };
 
-const QuestionCard = ({ question, index, onQuestionChange, onAnswerChange, onCorrectChange, onAnswerDelete, onDelete, onMoveUp, onMoveDown, totalQuestions }) => {
+const QuestionCardV2 = ({ question, index, onQuestionChange, onAnswerChange, onCorrectChange, onAnswerDelete, onDelete, onMoveUp, onMoveDown, totalQuestions }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [editorState, setEditorState] = useState(createEditorState(question.Content));
   const [modalAnswers, setModalAnswers] = useState([]);
@@ -152,4 +152,4 @@ const QuestionCard = ({ question, index, onQuestionChange, onAnswerChange, onCor
   );
 };
 
-export default QuestionCard;
+export default QuestionCardV2;

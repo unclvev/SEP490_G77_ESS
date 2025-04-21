@@ -22,9 +22,45 @@ export const changePassword = (data) => Http.put("/Profile/changePassword", data
 
 //bank-api
 
-export const loadGrade = () => Http.get("/Bank/grades")
 
-export const loadSubject = () => Http.get("/Bank/subjects")
+
+export const loadGrade = () => Http.get("/Bank/grades");
+
+export const loadSubject = () => Http.get("/Bank/subjects");
+
+export const loadCurriculums = () => Http.get("/Bank/curriculums");
+
+export const createBank = (accId, data) => Http.post(`/Bank/generate/${accId}`, data);
+
+export const getBankInfo = (bankId) => Http.get(`/Bank/default/${bankId}`);
+
+export const getBankSections = (bankId) => Http.get(`/Bank/default/${bankId}/sections`);
+
+export const getQuestionsBySection = (sectionId) => Http.get(`/Bank/default/${sectionId}/questions`);
+
+export const getQuestionTypes = () => Http.get(`/Question/types`);
+
+export const getLevels = () => Http.get(`/Question/levels`);
+
+export const getUserBanks = (accId, filters = {}) => Http.get(`/Bank/account/${accId}`, { params: filters });
+
+export const getESSBanks = (filters = {}) => Http.get(`/Bank/default-banks`, { params: filters });
+
+export const updateBankName = (bankId, data) => Http.put(`/Bank/${bankId}/name`, data);
+
+export const deleteBank     = (bankId) => Http.delete(`/Bank/${bankId}`);
+
+export const getBankInfoById = (bankId) => Http.get(`/Bank/${bankId}`);
+
+export const getBankSectionsById = (bankId) => Http.get(`/Bank/${bankId}/sections`);
+
+export const addMainSection = (bankId, data) => Http.post(`/Bank/${bankId}/add-section`, data);
+
+export const addSubSection = (sectionId, data) => Http.post(`/Bank/${sectionId}/add-subsection`, data);
+
+export const updateSection = (sectionId, data) => Http.put(`/Bank/section/${sectionId}`, data);
+
+export const deleteSection = (sectionId) => Http.delete(`/Bank/section/${sectionId}`);
 
 //exam-api
 
@@ -58,15 +94,46 @@ export const getExamResults = (examid) => Http.get(`/Analysis/${examid}`)
 
 export const exportExcel = (examid) => Http.get(`/Analysis/export/${examid}`, { responseType: 'blob' })
 
+//essay-api
+
+export const getGrades = () => Http.get("/essay/grades");
+
+
+export const getSubjects = () => Http.get("/essay/subjects");
+
+
+export const getEssaysByAccount = (accId, params) => Http.get(`/essay/by-account/${accId}`, { params });
+
+
+export const deleteEssay = (id) => Http.delete(`/essay/delete/${id}`);
+
+
+export const createEssay = (accId, data) => Http.post(`/essay/create/${accId}`, data);
+
+
+export const updateEssay = (id, data) => Http.put(`/essay/update/${id}`, data);
+
+
+export const saveStudentList = (formData) => Http.post("/essay/savestudentlist", formData, {
+  headers: { "Content-Type": "multipart/form-data" }})
+
+
 //question-api
 
-export const createQuestion = () => Http.get("/")
 
-export const getQuestions = () => Http.get("/")
+export const createQuestion = (data) => Http.post(`/Question/questions`, data);
 
-export const getQuestion = () => Http.get("/")
+export const updateQuestion = (quesid, data) => Http.put(`/Question/questions/${quesid}`, data);
 
-export const delQuestion = () => Http.delete("/")
+export const deleteQuestion = (quesid) => Http.delete(`/Question/questions/${quesid}`);
 
-export const updateQuestion = () => Http.put("/")
+export const exportQuestionsExcel = (sectionId) => Http.get(`/Question/${sectionId}/export-excel`, { responseType: 'blob' });
+
+export const importQuestionsExcel = (sectionId, formData) =>
+  Http.post(`/Question/${sectionId}/import-excel`, formData, {
+    headers: { "Content-Type": "multipart/form-data" }
+  });
+
+export const uploadQuestionImage = (base64Image) =>
+  Http.post(`/Question/upload-image-base64`, { base64Image });
 

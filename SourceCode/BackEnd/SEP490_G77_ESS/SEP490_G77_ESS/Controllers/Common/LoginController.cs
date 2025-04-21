@@ -32,7 +32,7 @@ namespace SEP490_G77_ESS.Controllers.Common
             }
 
             // Tạo JWT với thông tin user và role (ở đây role truyền vào là 1, có thể thay đổi theo nhu cầu)
-            var jwtToken = _jwt.CreateJWTToken(userLogin, 1);
+            var jwtToken = _jwt.CreateJWTToken(userLogin);
 
             // Nếu muốn sử dụng refresh token, tạo và thiết lập cho người dùng
             //var refreshToken = GenerateRefreshToken();

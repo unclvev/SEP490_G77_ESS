@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from "react-router-dom";
 import { getExam } from "../../services/api";
 import { Button } from 'antd';
-import { BlockMath } from 'react-katex';
+import { BlockMath, InlineMath } from 'react-katex';
 import 'katex/dist/katex.min.css';
 
 const PrintPreview = () => {
@@ -10,6 +10,15 @@ const PrintPreview = () => {
   const navigate = useNavigate();
   const [examInfo, setExamInfo] = useState(null);
   const [questions, setQuestions] = useState([]);
+
+  // Các dòng tiêu đề editable
+  const [schoolHeader, setSchoolHeader] = useState("BỘ GIÁO DỤC VÀ ĐÀO TẠO");
+  const [examTitle, setExamTitle] = useState("ĐỀ THI CHÍNH THỨC");
+  const [examNote, setExamNote] = useState("(Đề thi có 05 trang)");
+  const [mainTitle, setMainTitle] = useState("KỲ THI TỐT NGHIỆP TRUNG HỌC PHỔ THÔNG NĂM 2024");
+  const [subjectName, setSubjectName] = useState("Bài thi: TOÁN");
+  const [examDuration, setExamDuration] = useState("Thời gian làm bài: 90 phút, không kể thời gian phát đề");
+  const [examCode, setExamCode] = useState("101");
 
   useEffect(() => {
     (async () => {
@@ -29,75 +38,93 @@ const PrintPreview = () => {
     })();
   }, [id]);
 
-  useEffect(() => {
-    if (examInfo) {
-      // delay để KaTeX render xong rồi in
-      setTimeout(() => window.print(), 500);
-    }
-  }, [examInfo]);
+  const alphabetLabels = ["A", "B", "C", "D", "E", "F"];
 
-  // Tách nội dung câu hỏi thành spans/BlockMath, để render inline
   const renderInlineContent = (content) => {
     const tokens = content.split(/(\[MATH:[^\]]+\])/);
     return tokens.map((tok, i) => {
       const m = tok.match(/^\[MATH:([^\]]+)\]$/);
-      if (m) return <BlockMath key={i}>{m[1]}</BlockMath>;
+      if (m) return <InlineMath key={i}>{m[1]}</InlineMath>;
       return <span key={i} dangerouslySetInnerHTML={{ __html: tok }} />;
     });
   };
-
-  const alphabetLabels = ["A", "B", "C", "D", "E", "F"];
 
   return (
     <div
       className="p-8 bg-white"
       style={{ fontFamily: 'Times New Roman', fontSize: '10pt' }}
     >
-      {/* Toolbar chỉ hiện trên màn hình, ẩn khi in */}
+      {/* Toolbar chỉ hiện khi xem, ẩn khi in */}
       <div className="flex justify-between items-center mb-6 print:hidden">
         <Button onClick={() => navigate(-1)}>← Quay lại</Button>
         <Button type="primary" onClick={() => window.print()}>In PDF</Button>
       </div>
 
+      {/* Thông tin phần đầu */}
       <div className="flex justify-between mb-4">
-    <div className="text-left" style={{ width: '45%' }}>
-      <p style={{ margin: 0, fontWeight: 'bold' }}>BỘ GIÁO DỤC VÀ ĐÀO TẠO</p>
-      <p style={{ margin: 0, fontWeight: 'bold' }}>ĐỀ THI CHÍNH THỨC</p>
-      <p style={{ margin: 0 }}><em>(Đề thi có 05 trang)</em></p>
-    </div>
-    <div className="text-center" style={{ width: '45%' }}>
-      <p style={{ margin: 0, fontWeight: 'bold' }}>KỲ THI TỐT NGHIỆP TRUNG HỌC PHỔ THÔNG NĂM 2024</p>
-      <p style={{ margin: 0, fontWeight: 'bold' }}>Bài thi: TOÁN</p>
-      <p style={{ margin: 0 }}><em>Thời gian làm bài: 90 phút, không kể thời gian phát đề</em></p>
-    </div>
-  </div>
+        <div className="text-left" style={{ width: '45%' }}>
+          <input
+            value={schoolHeader}
+            onChange={(e) => setSchoolHeader(e.target.value)}
+            style={{ margin: 0, fontWeight: 'bold', border: 'none', width: '100%' }}
+          />
+          <input
+            value={examTitle}
+            onChange={(e) => setExamTitle(e.target.value)}
+            style={{ margin: 0, fontWeight: 'bold', border: 'none', width: '100%' }}
+          />
+          <input
+            value={examNote}
+            onChange={(e) => setExamNote(e.target.value)}
+            style={{ margin: 0, fontStyle: 'italic', border: 'none', width: '100%' }}
+          />
+        </div>
+        <div className="text-center" style={{ width: '45%' }}>
+          <input
+            value={mainTitle}
+            onChange={(e) => setMainTitle(e.target.value)}
+            style={{ margin: 0, fontWeight: 'bold', textAlign: 'center', border: 'none', width: '100%' }}
+          />
+          <input
+            value={subjectName}
+            onChange={(e) => setSubjectName(e.target.value)}
+            style={{ margin: 0, fontWeight: 'bold', textAlign: 'center', border: 'none', width: '100%' }}
+          />
+          <input
+            value={examDuration}
+            onChange={(e) => setExamDuration(e.target.value)}
+            style={{ margin: 0, fontStyle: 'italic', textAlign: 'center', border: 'none', width: '100%' }}
+          />
+        </div>
+      </div>
 
-  {/* Dòng thông tin thí sinh */}
-  <div className="flex justify-between items-start mb-6">
-    <div>
-      <p style={{ marginBottom: '4px' }}>
-        Họ, tên thí sinh: ...............................................................
-      </p>
-      <p style={{ marginBottom: '4px' }}>
-        Số báo danh: ...............................................................
-      </p>
-    </div>
-    <div className="border border-black px-2 py-1" style={{ fontWeight: 'bold' }}>
-      Mã đề thi 101
-    </div>
-  </div>
-
-      
+      {/* Thông tin thí sinh */}
+      <div className="flex justify-between items-start mb-6">
+        <div>
+          <p style={{ marginBottom: '4px' }}>
+            Họ, tên thí sinh: ...............................................................
+          </p>
+          <p style={{ marginBottom: '4px' }}>
+            Số báo danh: ...............................................................
+          </p>
+        </div>
+        <div className="border border-black px-2 py-1" style={{ fontWeight: 'bold' }}>
+          Mã đề thi
+          <input
+            value={examCode}
+            onChange={(e) => setExamCode(e.target.value)}
+            style={{ width: 40, textAlign: 'center', border: 'none', fontWeight: 'bold' }}
+          />
+        </div>
+      </div>
 
       {/* Nội dung câu hỏi */}
       <main>
         {questions.map((q, idx) => {
-          // Kiểm tra độ dài đáp án để quyết định hướng xếp
           const isHorizontal = q.Answers.every(a => a.Content.length <= 40);
 
           return (
             <section key={q.QuestionId} className="mb-6">
-              {/* Dòng “Câu X: [câu hỏi]” */}
               <div className="flex flex-wrap items-start mb-2">
                 <span className="font-semibold mr-2" style={{ minWidth: '2rem' }}>
                   Câu {idx + 1}:
@@ -107,7 +134,6 @@ const PrintPreview = () => {
                 </div>
               </div>
 
-              {/* Đáp án */}
               <div
                 className={`ml-6 ${
                   isHorizontal
@@ -120,7 +146,7 @@ const PrintPreview = () => {
                     <span className="font-semibold mr-1">
                       {alphabetLabels[i]}.
                     </span>
-                    <span dangerouslySetInnerHTML={{ __html: ans.Content }} />
+                    <div>{renderInlineContent(ans.Content)}</div>
                   </div>
                 ))}
               </div>
@@ -128,6 +154,16 @@ const PrintPreview = () => {
           );
         })}
       </main>
+
+      {/* CSS để in đẹp */}
+      <style>{`
+        @media print {
+          input {
+            border: none !important;
+            outline: none !important;
+          }
+        }
+      `}</style>
     </div>
   );
 };

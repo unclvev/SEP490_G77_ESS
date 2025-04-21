@@ -39,13 +39,13 @@ namespace SEP490_G77_ESS.Controllers.Common
                     {
                         Email = payload.Email,
                         Username = payload.Name,
-                        Roleid = 1
+                       
                     };
                     _context.Accounts.Add(user);
                     await _context.SaveChangesAsync();
                 }
 
-                var jwtToken = _jwt.CreateJWTToken(user, (long)user.Roleid);
+                var jwtToken = _jwt.CreateJWTToken(user);
                 return Ok(new { jwt = jwtToken });
             }
             catch (Exception ex)

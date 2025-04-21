@@ -32,6 +32,8 @@ import CreateNewEssayPage from "./page/Essay/CreateNewEssayPage.js";
 import TempComponent from "./page/TempComponent/temp.js";
 import ExamSelect from "./page/Exam/ExamSelect.js";
 import ExamCreation3T from "./page/Exam/ExamMCQ3tMatrix.js";
+import PrintPreview from "./page/Exam/PrintPreview.js";
+import ExamSetting from "./page/Exam/ExamSetting.js";
 
 function App() {
   return (
@@ -64,6 +66,7 @@ function App() {
 
           <Route path="/exam/preview/:examid" element={<MainLayout><ExamPreview /></MainLayout>} />
           <Route path="/exam/analysis/:examId" element={<MainLayout><Analysis /></MainLayout>} />
+          <Route path="/exam/print/:id" element={<PrintPreview />} />
 
           <Route path="/essay/genqr" element={<MainLayout><GenQRCode></GenQRCode></MainLayout>}/>
           <Route path="/essay/preview-gen-qr" element={<MainLayout><PreviewGenQR></PreviewGenQR></MainLayout>}/>
@@ -71,8 +74,8 @@ function App() {
           <Route path="/essay" element={<MainLayout><CreateEssayExam></CreateEssayExam></MainLayout>}/>
           <Route path="/exam/matrix3t" element={<MainLayout><ExamCreation3T/></MainLayout>}></Route>
           <Route path="/exam/select" element={<MainLayout><ExamSelect/></MainLayout>}></Route>
-
-          <Route path="/temp" element={<TempComponent/>}></Route>
+          
+          <Route path="/temp" element={<ExamSetting/>}></Route>
           
           <Route path="/essay/create" element={<MainLayout><CreateNewEssayPage /></MainLayout>} />
         </Routes>

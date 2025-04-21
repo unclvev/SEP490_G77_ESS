@@ -26,8 +26,8 @@ const QuestionBankDetail = () => {
   /** ✅ Lấy thông tin ngân hàng câu hỏi */
   const fetchBankInfo = async () => {
     try {
-        console.log("🚀 Gọi API:", `https://localhost:7052/api/Bank/${bankId}`);
-        const response = await axios.get(`https://localhost:7052/api/Bank/${bankId}`);
+        console.log("🚀 Gọi API:", `http://localhost:7052/api/Bank/${bankId}`);
+        const response = await axios.get(`http://localhost:7052/api/Bank/${bankId}`);
         console.log("✅ API Response:", response.data);
         setBankInfo(response.data);
     } catch (error) {
@@ -38,7 +38,7 @@ const QuestionBankDetail = () => {
   /** ✅ Lấy danh sách Sections từ API */
   const fetchSections = async () => {
     try {
-      const response = await axios.get(`https://localhost:7052/api/Bank/${bankId}/sections`);
+      const response = await axios.get(`http://localhost:7052/api/Bank/${bankId}/sections`);
       setSections(response.data);
     } catch (error) {
       toast.error("Lỗi khi tải dữ liệu section!");
@@ -62,8 +62,8 @@ const QuestionBankDetail = () => {
     try {
       const url =
         modalType === "add-main"
-          ? `https://localhost:7052/api/Bank/${bankId}/add-section`
-          : `https://localhost:7052/api/Bank/${currentSection.secid}/add-subsection`;
+          ? `http://localhost:7052/api/Bank/${bankId}/add-section`
+          : `http://localhost:7052/api/Bank/${currentSection.secid}/add-subsection`;
 
       await axios.post(url, { secname: sectionName });
       toast.success("✅ Thêm section thành công!", 2); // 🟢 Thông báo UI thành công
@@ -85,7 +85,7 @@ const QuestionBankDetail = () => {
       return;
     }
     try {
-      await axios.put(`https://localhost:7052/api/Bank/section/${currentSection.secid}`, {
+      await axios.put(`http://localhost:7052/api/Bank/section/${currentSection.secid}`, {
         secname: sectionName,
       });
 
@@ -101,7 +101,7 @@ const QuestionBankDetail = () => {
   /** ✅ Xóa Section */
   const handleDeleteSection = async (sectionId) => {
     try {
-      await axios.delete(`https://localhost:7052/api/Bank/section/${sectionId}`);
+      await axios.delete(`http://localhost:7052/api/Bank/section/${sectionId}`);
       fetchSections();
       toast.success("Xóa section thành công!");
     } catch (error) {

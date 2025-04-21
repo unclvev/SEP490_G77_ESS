@@ -28,10 +28,12 @@ namespace SEP490_G77_ESS.Controllers.RBAC.Bank
             }
 
             var users = await _context.Accounts
-                .Where(u => u.Email.Contains(search) || u.Phone.Contains(search))
+                .Where(u => (u.Email != null && u.Email.Contains(search))
+                        || (u.Phone != null && u.Phone.Contains(search)))
                 .Take(10)
                 .Select(u => new GetUserDTO
                 {
+                    AccId = u.AccId,
                     Name = u.Username,
                     Email = u.Email
                 })
@@ -42,67 +44,92 @@ namespace SEP490_G77_ESS.Controllers.RBAC.Bank
 
 
         [HttpPost("InviteUser")]
-        public async Task<IActionResult> InviteUser([FromBody] InviteUserDTO dto)
+        public async Task<IActionResult> InviteUser([FromBody] InviteUserRequest request)
         {
             var claimAccId = User.FindFirst("AccId")?.Value;
             if (string.IsNullOrEmpty(claimAccId))
             {
                 return Unauthorized();
             }
-            var bank = await _context.Banks.FirstOrDefaultAsync(b => b.BankId == dto.BankId
-                                                                  && b.Accid == long.Parse(claimAccId));
+            var checkOwer = await _context.ResourceAccesses.FirstOrDefaultAsync();
 
-            var existingInvitation = await _context.BankAccesses
-             .FirstOrDefaultAsync(ba => ba.Bankid == dto.BankId && ba.Accid == dto.UserId);
-            if (existingInvitation != null)
+            var bank = await _context.Banks.FirstOrDefaultAsync(b => b.BankId == request.Resource.ResourceId);
+            if (bank == null)
             {
-                return BadRequest("Người dùng đã được mời hoặc đã có quyền truy cập vào ngân hàng.");
+                return NotFound("Ngân hàng không tồn tại.");
             }
-            var bankAccess = new BankAccess
+
+
+            var existingAccess = await _context.ResourceAccesses
+                                               .FirstOrDefaultAsync(r => r.ResourceId == request.Resource.ResourceId
+                                                                                         && r.Accid == request.Resource.Accid);
+
+            if (existingAccess != null)
             {
-                Bankid = dto.BankId,
-                Accid = dto.UserId,
-                Canedit = dto.CanEdit,
-                Canview = dto.CanEdit || dto.CanView,
-                Role = "Collaborator"
+                return Conflict("Người dùng đã được mời trước đó.");
+            }
+
+            var roleAc = new RoleAccess
+            {
+                RoleName = request.AccessRole.RoleName,
+                CanRead = request.AccessRole.CanRead,
+                CanModify = request.AccessRole.CanModify,
+                CanDelete = request.AccessRole.CanDelete
+            };
+            _context.RoleAccesses.Add(roleAc);
+
+            await _context.SaveChangesAsync();
+            // Tạo quyền truy cập cho người dùng mới
+
+
+            var roleId = roleAc.Roleid;
+            var accessRec = new ResourceAccess
+            {
+                ResourceType = request.Resource.ResourceType,
+                ResourceId = request.Resource.ResourceId,
+                Accid = request.Resource.Accid,
+                RoleId = roleId,
+                IsOwner = false
             };
 
-
-            _context.BankAccesses.Add(bankAccess);
+            _context.ResourceAccesses.Add(accessRec);
             await _context.SaveChangesAsync();
-            return Ok("Người dùng đã được mời thành công vào ngân hàng.");
+            return Ok("Người dùng đã được mời thành công.");
         }
 
-        [HttpGet("Member/{bankId}")]
-        public async Task<IActionResult> GetInvitedUsers(long bankId)
+
+        [HttpGet("Member/{bankId}/{resourceType}")]
+        public async Task<IActionResult> GetInvitedUsers(long bankId, string resourceType)
         {
             var claimAccId = User.FindFirst("AccId")?.Value;
             if (string.IsNullOrEmpty(claimAccId))
             {
                 return Unauthorized();
             }
+
             long currentUserId = long.Parse(claimAccId);
 
+            // Kiểm tra xem người dùng có phải là chủ ngân hàng không
             var bank = await _context.Banks.FirstOrDefaultAsync(b => b.BankId == bankId && b.Accid == currentUserId);
             if (bank == null)
             {
-                return Forbid("Bạn không có quyền truy cập danh sách mời của bank này.");
+                return Unauthorized("Bạn không có quyền truy cập danh sách mời của ngân hàng này.");
             }
 
-            var invitedUsers = await _context.BankAccesses
-                                              .Where(ba => ba.Bankid == bankId && ba.Accid != bank.Accid)
-                                              .Join(_context.Accounts,
-                                                    ba => ba.Accid,
-                                                    a => a.AccId,
-                                                    (ba, a) => new InvitedUserDTO
-                                                    {
-                                                        UserId = a.AccId,
-                                                        Name = a.Username,
-                                                        Email = a.Email,
-                                                        CanEdit = ba.Canedit,
-                                                        CanView = ba.Canview
-                                                    })
-                                              .ToListAsync();
+            // Lấy danh sách các người dùng đã được mời vào ngân hàng
+            var invitedUsers = await _context.ResourceAccesses
+                                             .Where(ra => ra.ResourceId == bankId && ra.ResourceType == resourceType)
+                                             .Join(_context.Accounts, ra => ra.Accid, acc => acc.AccId, (ra, acc) => new
+                                             {
+                                                 Accid = acc.AccId,
+                                                 Username = acc.Username,
+                                                 Email = acc.Email,
+                                                 Phone = acc.Phone,
+                                                 Role = ra.Role.RoleName,
+                                             })
+                                             .ToListAsync();
+
+            // Trả về danh sách người dùng đã được mời
             return Ok(invitedUsers);
         }
 
@@ -114,32 +141,38 @@ namespace SEP490_G77_ESS.Controllers.RBAC.Bank
             {
                 return Unauthorized();
             }
+
             long currentUserId = long.Parse(claimAccId);
 
-            // Kiểm tra xem currentUser có phải là chủ ngân hàng hay không
-            var ownerAccess = await _context.BankAccesses
-                .FirstOrDefaultAsync(ba => ba.Bankid == bankId && ba.Accid == currentUserId && ba.Role == "Owner");
-
-            if (ownerAccess == null)
+            // Kiểm tra xem người dùng có phải là chủ ngân hàng không
+            var bank = await _context.Banks.FirstOrDefaultAsync(b => b.BankId == bankId && b.Accid == currentUserId);
+            if (bank == null)
             {
-                return Forbid("Chỉ chủ ngân hàng mới có thể cập nhật quyền.");
+                return Unauthorized("Bạn không có quyền cập nhật quyền truy cập cho ngân hàng này.");
             }
 
-            // Tìm quyền truy cập của người cần cập nhật
-            var userAccess = await _context.BankAccesses
-                .FirstOrDefaultAsync(ba => ba.Bankid == bankId && ba.Accid == userId);
+            // Kiểm tra xem người dùng có trong ngân hàng này hay không
+            var resourceAccess = await _context.ResourceAccesses
+                .FirstOrDefaultAsync(ra => ra.ResourceId == bankId && ra.Accid == userId);
 
-            if (userAccess == null)
+            if (resourceAccess == null)
             {
-                return NotFound("Không tìm thấy người dùng này trong ngân hàng.");
+                return NotFound("Người dùng không tồn tại trong ngân hàng này.");
             }
 
-            userAccess.Canedit = dto.CanEdit;
-            userAccess.Canview = dto.CanEdit || dto.CanView;
+            // Cập nhật vai trò của người dùng
+            var roleUpdate = await _context.RoleAccesses.FirstOrDefaultAsync(r => r.Roleid == resourceAccess.RoleId);
+            roleUpdate.RoleName = dto.RoleName;
+            roleUpdate.CanModify = dto.CanModify;
+            roleUpdate.CanRead = dto.CanRead;
+            roleUpdate.CanDelete = dto.CanDelete;
 
+            // Lưu các thay đổi vào cơ sở dữ liệu
             await _context.SaveChangesAsync();
+
             return Ok("Quyền truy cập đã được cập nhật.");
         }
+
 
         [HttpDelete("remove/{bankId}/{userId}")]
         public async Task<IActionResult> RemoveUser(long bankId, long userId)
@@ -149,30 +182,40 @@ namespace SEP490_G77_ESS.Controllers.RBAC.Bank
             {
                 return Unauthorized();
             }
+
             long currentUserId = long.Parse(claimAccId);
 
-            // Kiểm tra xem currentUser có phải là chủ ngân hàng hay không
-            var ownerAccess = await _context.BankAccesses
-                .FirstOrDefaultAsync(ba => ba.Bankid == bankId && ba.Accid == currentUserId && ba.Role == "Owner");
-
-            if (ownerAccess == null)
+            // Kiểm tra xem người dùng có phải là chủ ngân hàng không
+            var bank = await _context.Banks.FirstOrDefaultAsync(b => b.BankId == bankId && b.Accid == currentUserId);
+            if (bank == null)
             {
-                return Forbid("Chỉ chủ ngân hàng mới có thể xóa thành viên.");
+                return Unauthorized("Bạn không có quyền xóa thành viên khỏi ngân hàng này.");
             }
 
-            // Tìm quyền truy cập của người cần xóa
-            var userAccess = await _context.BankAccesses
-                .FirstOrDefaultAsync(ba => ba.Bankid == bankId && ba.Accid == userId);
+            // Kiểm tra xem người dùng có trong ngân hàng này hay không
+            var resourceAccess = await _context.ResourceAccesses
+                .FirstOrDefaultAsync(ra => ra.ResourceId == bankId && ra.Accid == userId);
 
-            if (userAccess == null)
+            if (resourceAccess == null)
             {
-                return NotFound("Không tìm thấy người dùng này trong ngân hàng.");
+                return NotFound("Người dùng không tồn tại trong ngân hàng này.");
+            }
+            var roleAccess = await _context.RoleAccesses.FirstOrDefaultAsync(ra => ra.Roleid == resourceAccess.RoleId);
+            if (roleAccess != null)
+            {
+                // Xóa chức danh (role) của người dùng khỏi bảng RoleAccesses
+                _context.RoleAccesses.Remove(roleAccess);
             }
 
-            _context.BankAccesses.Remove(userAccess);
+            // Xóa quyền truy cập của người dùng khỏi ngân hàng
+            _context.ResourceAccesses.Remove(resourceAccess);
+
+            // Lưu các thay đổi vào cơ sở dữ liệu
             await _context.SaveChangesAsync();
+
             return Ok("Thành viên đã được xóa.");
         }
+
 
 
 

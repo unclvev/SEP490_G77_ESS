@@ -26,7 +26,7 @@ const EssQuestionList = () => {
   const fetchQuestions = async () => {
     try {
       const response = await axios.get(
-        `https://localhost:7052/api/Bank/default/${sectionId}/questions`
+        `http://localhost:7052/api/Bank/default/${sectionId}/questions`
       );
       setQuestions(response.data || []);
     } catch (error) {
@@ -39,7 +39,7 @@ const EssQuestionList = () => {
 
   const fetchQuestionTypes = async () => {
     try {
-      const res = await axios.get("https://localhost:7052/api/Question/types");
+      const res = await axios.get("http://localhost:7052/api/Question/types");
       setQuestionTypes(res.data || []);
     } catch {
       toast.error("Không thể tải loại câu hỏi!");
@@ -48,7 +48,7 @@ const EssQuestionList = () => {
 
   const fetchLevels = async () => {
     try {
-      const res = await axios.get("https://localhost:7052/api/Question/levels");
+      const res = await axios.get("http://localhost:7052/api/Question/levels");
       setLevels(res.data || []);
     } catch {
       toast.error("Không thể tải độ khó!");
@@ -121,7 +121,7 @@ const EssQuestionList = () => {
                             <img
                               src={question.imageUrl.startsWith("http")
                                 ? question.imageUrl
-                                : `https://localhost:7052${question.imageUrl}`}
+                                : `http://localhost:7052${question.imageUrl}`}
                               alt="Question"
                               className="max-w-full max-h-64 object-contain"
                             />

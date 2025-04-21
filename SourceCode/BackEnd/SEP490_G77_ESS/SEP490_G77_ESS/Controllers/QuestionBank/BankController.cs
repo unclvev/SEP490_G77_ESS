@@ -415,9 +415,7 @@ namespace SEP490_G77_ESS.Controllers
                 .Where(sh => sectionIds.Contains(sh.AncestorId) || sectionIds.Contains(sh.DescendantId));
             _context.SectionHierarchies.RemoveRange(sectionHierarchies);
 
-            // ✅ Xóa toàn bộ dữ liệu trong BankAccess liên quan đến Bank
-            var bankAccesses = _context.BankAccesses.Where(ba => ba.Bankid == id);
-            _context.BankAccesses.RemoveRange(bankAccesses);
+
 
             // ✅ Xóa ngân hàng câu hỏi
             _context.Banks.Remove(bank);

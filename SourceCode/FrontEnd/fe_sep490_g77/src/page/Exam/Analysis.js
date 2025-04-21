@@ -57,6 +57,7 @@ const Analysis = () => {
         try {
           const response = await getExamResults(examId);
           const data = response.data || [];
+          console.log(data[0]);
           const rsubject = await getSubjectNameById(data[0].subject);
 
           setScoreData(data);
