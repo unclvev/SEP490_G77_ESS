@@ -23,6 +23,19 @@
                 return;
             }
 
+            // Check if user is owner of the resource
+            var isOwner = await _db.ResourceAccesses
+                .AnyAsync(ra =>
+                    ra.Accid == userId &&
+                    ra.ResourceType == requirement.ResourceType &&
+                    ra.IsOwner == true);
+
+            if (isOwner)
+            {
+                context.Succeed(requirement);
+                return;
+            }
+
             // Query ResourceAccess join RoleAccess
             var hasPermission = await _db.ResourceAccesses
                 .Include(ra => ra.Role)
