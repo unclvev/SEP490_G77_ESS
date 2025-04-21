@@ -13,7 +13,7 @@
         android:background="@color/light_gray">
 
         <!-- Include Header -->
-        <include layout="@layout/header" />
+        <include layout="@layout/header2" />
 
         <!-- Thống kê điểm -->
         <LinearLayout

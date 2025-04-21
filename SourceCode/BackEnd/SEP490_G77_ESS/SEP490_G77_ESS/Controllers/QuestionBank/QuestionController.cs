@@ -165,7 +165,25 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
             worksheet.Cell(1, 10).Value = "Image URL";
 
             int row = 2;
+            // ✅ Luôn thêm dòng ví dụ mẫu trước (row 2)
+            worksheet.Cell(row, 1).Value = "[MATH:\\sqrt{4}]";
+            worksheet.Cell(row, 2).Value = 1; // Trắc nghiệm
+            worksheet.Cell(row, 3).Value = 1; // Mức độ
+            worksheet.Cell(row, 4).Value = "Phép cộng cơ bản.";
+            worksheet.Cell(row, 5).Value = "1";
+            worksheet.Cell(row, 6).Value = "2";
+            worksheet.Cell(row, 7).Value = "3";
+            worksheet.Cell(row, 8).Value = "4";
+            worksheet.Cell(row, 9).Value = "2";
+            worksheet.Cell(row, 10).FormulaA1 = "=IMAGE(\"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTE7X1Jz2BfKDUhA738FQCZwEiOC_S_DBefuA&s\")";
+
+
+            worksheet.Row(row).Height = 100;
+            worksheet.Column(10).Width = 30;
+
+            row++; // Bắt đầu từ dòng 3 cho câu hỏi thật
             var correctAnswers = await _context.CorrectAnswers.ToListAsync();
+            var baseUrl = $"{Request.Scheme}://{Request.Host}";
 
             foreach (var question in section.Questions)
             {
@@ -192,20 +210,38 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
                 worksheet.Cell(row, 9).Value = correctAnswerStr;
 
 
-                worksheet.Cell(row, 10).Value = question.ImageUrl ?? "";
+                if (!string.IsNullOrEmpty(question.ImageUrl))
+                {
+                    string fullImageUrl = question.ImageUrl.StartsWith("http")
+     ? question.ImageUrl
+     : baseUrl + question.ImageUrl;
+                    worksheet.Cell(row, 10).FormulaA1 = $"IMAGE(\"{fullImageUrl}\")";
+
+                    // 👉 Đặt chiều cao hàng
+                    worksheet.Row(row).Height = 100;
+
+                    // 👉 Đặt chiều rộng cột (nếu chưa đặt)
+                    worksheet.Column(10).Width = 30; // Điều chỉnh theo tỷ lệ mong muốn
+
+                }
+                else
+                {
+                    worksheet.Cell(row, 10).Value = "";
+                }
+
                 row++;
             }
 
             // ✅ Sheet hướng dẫn
             var guideSheet = workbook.Worksheets.Add("Import Guide");
             guideSheet.Cell(1, 1).Value = "HƯỚNG DẪN IMPORT EXCEL";
-            guideSheet.Cell(2, 1).Value = "1. Question Content: Nội dung câu hỏi (dùng [MATH:...] cho công thức).";
+            guideSheet.Cell(2, 1).Value = "1. Question Content: Nội dung câu hỏi. Nếu có công thức toán học, cần giữ nguyên định dạng [MATH:...] (tham khảo công thức tại đây: https://www.mathvn.com/2021/09/latex-co-ban-cach-go-cac-cong-thuc-ki.html)";
             guideSheet.Cell(3, 1).Value = "2. Type ID: Loại câu hỏi (1: Trắc nghiệm, 2: True/False, 3: Điền kết quả).";
-            guideSheet.Cell(4, 1).Value = "3. Mode ID: Mức độ khó.";
-            guideSheet.Cell(5, 1).Value = "4. Solution: Giải thích (cho phép có [MATH:...]).";
+            guideSheet.Cell(4, 1).Value = "3. Mode ID: Mức độ khó.(1: Nhận biết, 2: Thổng hiểu, 3: Vận dụng )";
+            guideSheet.Cell(5, 1).Value = "4. Solution: Giải thích cho câu hỏi).";
             guideSheet.Cell(6, 1).Value = "5-8. Answer 1–4: Các đáp án trắc nghiệm, mỗi ô 1 đáp án.";
-            guideSheet.Cell(7, 1).Value = "9. Correct Answers: Đáp án đúng (phân tách bằng ',', hỗ trợ [MATH:...]).";
-            guideSheet.Cell(8, 1).Value = "10. Image URL: Link ảnh đã upload (không bắt buộc).";
+            guideSheet.Cell(7, 1).Value = "9. Correct Answers: Đáp án đúng (phân tách bằng ',', với dạng đúng sai thì các đáp án cách nhau bằng dấu ; với nhập đáp án thì phải gõ đủ 4 ký tự bao gồm dấu - và ,).";
+            guideSheet.Cell(8, 1).Value = "10. Image URL: gõ công thức ảnh theo ví dụ có sẵn (không bắt buộc).";
 
             guideSheet.Protect().AllowElement(XLSheetProtectionElements.SelectLockedCells);
 
@@ -412,7 +448,25 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
                     var correctAnswers = GetCellValueAsString(worksheet.Cell(row, 9));
 
                     // Đọc URL ảnh từ cột 10
-                    var imageUrl = GetCellValueAsString(worksheet.Cell(row, 10));
+                    var imageCell = worksheet.Cell(row, 10);
+                    string imageUrl = null;
+
+                    if (imageCell.HasFormula)
+                    {
+                        var formula = imageCell.FormulaA1; // Ví dụ: =IMAGE("https://.../abc.png", 1, "desc", 100, 100)
+
+                        var match = Regex.Match(formula, "IMAGE\\([\"'](?<url>.*?)[\"']", RegexOptions.IgnoreCase);
+
+                        if (match.Success)
+                        {
+                            imageUrl = match.Groups["url"].Value;
+                        }
+                    }
+                    else
+                    {
+                        imageUrl = GetCellValueAsString(imageCell); // fallback nếu là text thường
+                    }
+
 
                     // Tạo chuỗi answers từ các cột riêng lẻ
                     List<string> answersList = new List<string>();
@@ -643,6 +697,25 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
         [HttpPut("questions/{id}")]
         public async Task<IActionResult> UpdateQuestion(long id, [FromBody] QuestionDto questionDto)
         {
+            if (string.IsNullOrWhiteSpace(questionDto.Quescontent))
+            {
+                return BadRequest("Question content must not be empty!");
+            }
+
+            if (questionDto.Secid == null || questionDto.Secid <= 0)
+            {
+                return BadRequest("Invalid Section ID!");
+            }
+
+            if (questionDto.TypeId <= 0 || !_context.TypeQuestions.Any(t => t.TypeId == questionDto.TypeId))
+            {
+                return BadRequest("Invalid question type!");
+            }
+
+            if (questionDto.Modeid <= 0 || !_context.Levels.Any(m => m.LevelId == questionDto.Modeid))
+            {
+                return BadRequest("Invalid difficulty level!");
+            }
             var question = await _context.Questions.FindAsync(id);
             if (question == null)
                 return NotFound(new { message = "Không tìm thấy câu hỏi!" });
@@ -692,7 +765,7 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
 
             return Ok(new { message = "Câu hỏi đã được cập nhật!" });
         }
-    
+
 
         [HttpPost("upload-image-base64")]
         public IActionResult UploadBase64Image([FromBody] Base64ImageDto dto)
@@ -742,7 +815,7 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
             public string Base64Image { get; set; }
         }
 
-
+        
 
 
         // ✅ Xóa câu hỏi

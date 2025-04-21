@@ -1,6 +1,7 @@
 package com.example.essgrading.Activity.Test;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.widget.Toast;
 
@@ -11,6 +12,7 @@ import com.example.essgrading.API.ApiConfig;
 import com.example.essgrading.API.ApiService;
 import com.example.essgrading.Activity.BaseActivity;
 import com.example.essgrading.Adapter.TestAdapter;
+import com.example.essgrading.Interface.SearchHandler;
 import com.example.essgrading.Model.ScoreModel;
 import com.example.essgrading.Model.TestModel;
 import com.example.essgrading.R;
@@ -29,12 +31,12 @@ import retrofit2.Response;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
-public class TestListActivity extends BaseActivity {
+public class TestListActivity extends BaseActivity implements SearchHandler {
 
     private RecyclerView recyclerViewTests;
     private FloatingActionButton fabAddTest;
     private TestAdapter testAdapter;
-    private List<TestModel> testList;
+    private List<TestModel> testList, searchList;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,10 +46,10 @@ public class TestListActivity extends BaseActivity {
         setHeaderTitle("Trắc nghiệm");
 
         recyclerViewTests = findViewById(R.id.recyclerViewTests);
-        fabAddTest = findViewById(R.id.fabAddTest);
 
         testList = new ArrayList<>();
-        testAdapter = new TestAdapter(this, testList, selectedTest -> {
+        searchList = new ArrayList<>();
+        testAdapter = new TestAdapter(this, searchList, selectedTest -> {
             Intent intent = new Intent(TestListActivity.this, TestOptionActivity.class);
             intent.putExtra("testId", selectedTest.getId());
             intent.putExtra("testTitle", selectedTest.getTitle());
@@ -60,13 +62,16 @@ public class TestListActivity extends BaseActivity {
         recyclerViewTests.setLayoutManager(new LinearLayoutManager(this));
         recyclerViewTests.setAdapter(testAdapter);
 
+        SharedPreferences prefs = getSharedPreferences("UserPrefs", MODE_PRIVATE);
+        long accId = Long.parseLong(prefs.getString("accId", "0"));
+
         // Gọi API với Retrofit
         Retrofit retrofit = new Retrofit.Builder()
                 .baseUrl(ApiConfig.BASE_URL)
                 .addConverterFactory(GsonConverterFactory.create())
                 .build();
         ApiService apiService = retrofit.create(ApiService.class);
-        Call<List<TestModel>> call = apiService.getAllExam();
+        Call<List<TestModel>> call = apiService.getAllExamByAccId(accId);
         call.enqueue(new Callback<List<TestModel>>() {
             @Override
             public void onResponse(Call<List<TestModel>> call, Response<List<TestModel>> response) {
@@ -93,6 +98,8 @@ public class TestListActivity extends BaseActivity {
                                 formattedDate,
                                 Arrays.asList("001", "002", "003")));
                     }
+                    searchList.clear();
+                    searchList.addAll(testList);
                     testAdapter.notifyDataSetChanged();
 
                     Toast.makeText(TestListActivity.this, "Tải dữ liệu thành công!", Toast.LENGTH_SHORT).show();
@@ -107,5 +114,19 @@ public class TestListActivity extends BaseActivity {
                 t.printStackTrace();
             }
         });
+    }
+    @Override
+    public void onSearchTextChanged(String keyword) {
+        searchList.clear();
+        if (keyword.isEmpty()) {
+            searchList.addAll(testList);
+        } else {
+            for (TestModel item : testList) {
+                if (item.getTitle().toLowerCase().contains(keyword.toLowerCase())) {
+                    searchList.add(item);
+                }
+            }
+        }
+        testAdapter.notifyDataSetChanged();
     }
 }

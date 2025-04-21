@@ -1,5 +1,5 @@
 import { LeftOutlined } from "@ant-design/icons";
-import { Button, Card, Checkbox, Table, Tabs } from "antd";
+import { Button, Card, Table, Tabs } from "antd";
 import { React, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -25,12 +25,12 @@ const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#DC143C"];
 const columns = [
   { title: "STT", dataIndex: "order", key: "order", width: 60, render: (_, __, index) => index + 1 },
   { title: "SBD", dataIndex: "studentId", key: "studentId" },
-  { title: "Họ và tên", dataIndex: "name", key: "name" },
+  { title: "Họ và tên", dataIndex: "name", key: "name", sorter: (a, b) => a.name.localeCompare(b.name) },
   { title: "Lớp học", dataIndex: "class", key: "class" },
   { title: "Mã đề thi", dataIndex: "examCode", key: "examCode" },
   { title: "Thời gian vào điểm", dataIndex: "time", key: "time" },
   { title: "Điểm số", dataIndex: "score", key: "score" },
-  { title: "Xếp hạng", dataIndex: "rank", key: "rank" },
+  { title: "Xếp hạng", dataIndex: "rank", key: "rank", sorter: (a, b) => a.rank - b.rank },
 ];
 const top5Columns = [
   { title: "Họ và tên", dataIndex: "name", key: "name" },
@@ -135,20 +135,14 @@ const Analysis = () => {
   
     const handleExportExcel = async () => {
       try {
-        // Gọi hàm exportExcel từ api.js để lấy file Excel
         const response = await exportExcel(examId);
-  
-        // Nếu response trả về status OK
         if (response.status === 200) {
-          // Tạo blob từ response data
           const blob = new Blob([response.data], {
             type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
           });
-          
-          // Tạo link tải file và tự động click vào để tải
           const link = document.createElement("a");
           link.href = URL.createObjectURL(blob);
-          link.download = "BangDiem.xlsx";  // Đặt tên cho file tải xuống
+          link.download = "BangDiem.xlsx";
           link.click();
         } else {
           toast.error("Không thể tải file Excel");
@@ -158,11 +152,16 @@ const Analysis = () => {
         toast.error("Lỗi khi xuất file Excel");
       }
     };
-  // Sắp xếp theo điểm từ cao xuống thấp để xếp hạng
-  const rankedData = [...scoreData].sort((a, b) => b.score - a.score).map((student, index) => ({
-    ...student,
-    rank: index + 1,
-  }));
+
+    const rankedData = [...scoreData]
+    .sort((a, b) => b.score - a.score)
+    .map((student, index, arr) => {
+      let rank = index + 1;
+      if (index > 0 && arr[index - 1].score === student.score) {
+        rank = index;
+      }
+      return { ...student, rank };
+    });
 
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
@@ -194,9 +193,8 @@ const Analysis = () => {
         <Card>
           <h3 className="font-semibold mb-2">Xuất dữ liệu</h3>
           <div className="flex flex-col gap-2">
-            <Checkbox checked>Phân tích cơ bản</Checkbox>
-            <Checkbox checked>Bảng điểm</Checkbox>
-            <Checkbox checked>Biểu đồ</Checkbox>
+            <div>- Phân tích cơ bản</div>
+            <div>- Bảng điểm</div>
             {/* <Checkbox checked>Tỉ lệ đúng/sai theo câu hỏi</Checkbox> */}
           </div>
           <Button type="primary" className="mt-4 w-full" onClick={() => handleExportExcel(examId)}>
@@ -211,11 +209,16 @@ const Analysis = () => {
           {/* Tab Bảng điểm */}
           <Tabs.TabPane tab="Bảng điểm" key="2">
             <div className="p-4">
-              <Table columns={columns} dataSource={rankedData} pagination={false} />
-            </div>
-          </Tabs.TabPane>
+                <Table 
+                  columns={columns} 
+                  dataSource={rankedData} 
+                  pagination={false} 
+                  rowKey="studentId" 
+                />
+              </div>
+            </Tabs.TabPane>
 
-          {/* Tab Biểu đồ */}
+            {/* Tab Biểu đồ */}
           <Tabs.TabPane tab="Thống kê" key="1">
             {/*biểu đồ cột*/}
             <div className="grid grid-cols-2 gap-4 text-sm">
@@ -240,9 +243,6 @@ const Analysis = () => {
             {/*biểu đồ đường*/}
             <div className="grid grid-cols-2 gap-4 text-sm">
               <p><strong>2. BIỂU ĐỒ ĐƯỜNG THỐNG KÊ SỐ HỌC SINH THEO ĐIỂM SỐ CỤ THỂ</strong></p>
-            </div>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <p>(có làm tròn)</p>
             </div>
             <div className="p-4">
               <ResponsiveContainer width="100%" height={300}>

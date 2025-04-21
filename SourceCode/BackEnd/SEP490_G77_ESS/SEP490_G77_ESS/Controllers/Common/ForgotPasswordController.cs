@@ -26,6 +26,15 @@ namespace SEP490_G77_ESS.Controllers.Common
         [HttpGet("forgot-password")]
         public async Task<IActionResult> ForgotPassword([FromQuery] string email)
         {
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                return BadRequest(new { message = "Email không được để trống" });
+            }
+
+            if (!IsValidEmail(email))
+            {
+                return BadRequest(new { message = "Email không hợp lệ" });
+            }
             var account = await _context.Accounts.FirstOrDefaultAsync(u => u.Email == email);
             if (account == null)
             {
@@ -40,6 +49,19 @@ namespace SEP490_G77_ESS.Controllers.Common
 
             await _context.SaveChangesAsync();
             return Ok(new { message = "Vui lòng kiểm tra email để xác thực và đặt lại mật khẩu." });
+        }
+
+        private bool IsValidEmail(string email)
+        {
+            try
+            {
+                var addr = new System.Net.Mail.MailAddress(email);
+                return addr.Address == email;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         [HttpGet("verify-email-for-password")]
