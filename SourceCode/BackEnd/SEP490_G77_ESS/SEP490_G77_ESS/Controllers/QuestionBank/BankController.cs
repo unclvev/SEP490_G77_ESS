@@ -24,8 +24,16 @@ namespace SEP490_G77_ESS.Controllers
 
         // ✅ Lấy danh sách ngân hàng câu hỏi
         [HttpGet("account/{accid}")]
+        [Authorize(Policy = "BankRead")]
         public async Task<ActionResult<IEnumerable<object>>> GetBanksByAccount(long accid)
         {
+            var accessibleBankIds = await _context.ResourceAccesses
+                                                    .Where(ra =>
+                                                        ra.Accid == accid &&
+                                                        ra.ResourceType == "Bank" &&
+                                                        ra.Role.CanRead == true)
+                                                    .Select(ra => ra.ResourceId)
+                                                    .ToListAsync();
             var banks = await _context.Banks
                 .Where(b => b.Accid == accid) // Chỉ lấy bank thuộc account này
                 .Include(b => b.GradeId)
@@ -128,8 +136,8 @@ namespace SEP490_G77_ESS.Controllers
         //}
 
         // ✅ Cập nhật chỉ Bankname
-        [Authorize(Policy = "RequireModifyPermission")]
         [HttpPut("{id}/name")]
+        [Authorize(Policy = "BankModify")]
         public async Task<IActionResult> UpdateBankName(long id, [FromBody] Bank bank)
         {
             if (string.IsNullOrEmpty(bank.Bankname))

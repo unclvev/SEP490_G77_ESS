@@ -1,6 +1,8 @@
 ﻿using APIGateWay.config;
+using AspNetCoreRateLimit;
 using AuthenticationService.Utils;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -11,6 +13,15 @@ using Swashbuckle.AspNetCore.Filters;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
+
+
+
+
+builder.Services.AddOptions();
+builder.Services.AddMemoryCache();
+builder.Services.Configure<IpRateLimitOptions>(builder.Configuration.GetSection("IpRateLimiting"));
+builder.Services.AddInMemoryRateLimiting();
+builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
 
 // Add services to the container.
 
@@ -29,31 +40,46 @@ builder.Services.AddSwaggerGen(options =>
     options.OperationFilter<SecurityRequirementsOperationFilter>();
 });
 builder.Services.AddHostedService<AccountCleanupService>();
+builder.Services.AddScoped<IAuthorizationHandler, ResourcePermissionHandler>();
+
+
+
 
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy("RequireReadPermissionBank", policy =>
-    {
-        policy.RequireClaim("canRead", "True");
-    });
+    // === Bank ===
+    options.AddPolicy("BankRead", policy =>
+        policy.Requirements.Add(new ResourcePermissionRequirement("Bank", "Read")));
+    options.AddPolicy("BankModify", policy =>
+        policy.Requirements.Add(new ResourcePermissionRequirement("Bank", "Modify")));
+    options.AddPolicy("BankDelete", policy =>
+        policy.Requirements.Add(new ResourcePermissionRequirement("Bank", "Delete")));
+
+    // === Exam ===
+    options.AddPolicy("ExamRead", policy =>
+        policy.Requirements.Add(new ResourcePermissionRequirement("Exam", "Read")));
+    options.AddPolicy("ExamModify", policy =>
+        policy.Requirements.Add(new ResourcePermissionRequirement("Exam", "Modify")));
+    options.AddPolicy("ExamDelete", policy =>
+        policy.Requirements.Add(new ResourcePermissionRequirement("Exam", "Delete")));
+
+    // === Grade ===
+    options.AddPolicy("GradeRead", policy =>
+        policy.Requirements.Add(new ResourcePermissionRequirement("Grade", "Read")));
+    options.AddPolicy("GradeModify", policy =>
+        policy.Requirements.Add(new ResourcePermissionRequirement("Grade", "Modify")));
+    options.AddPolicy("GradeDelete", policy =>
+        policy.Requirements.Add(new ResourcePermissionRequirement("Grade", "Delete")));
+
+    // === Analysis ===
+    options.AddPolicy("AnalysisRead", policy =>
+        policy.Requirements.Add(new ResourcePermissionRequirement("Analysis", "Read")));
+    options.AddPolicy("AnalysisModify", policy =>
+        policy.Requirements.Add(new ResourcePermissionRequirement("Analysis", "Modify")));
+    options.AddPolicy("AnalysisDelete", policy =>
+        policy.Requirements.Add(new ResourcePermissionRequirement("Analysis", "Delete")));
 });
-builder.Services.AddAuthorization(options =>
-{
-    options.AddPolicy("RequireModifyPermissionBank", policy =>
-    {
-        policy.RequireClaim("Bank", "True");
-        policy.RequireClaim("canModify", "True");
-        policy.RequireClaim("canRead", "True");
-    });
-});
-builder.Services.AddAuthorization(options =>
-{
-    options.AddPolicy("RequireDeletePermission", policy =>
-    {
-        policy.RequireClaim("canRead", "True");
-        policy.RequireClaim("canDelete", "True");
-    });
-});
+
 
 // Add services to the container.
 builder.Services.AddCors(options =>
@@ -98,6 +124,8 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseCors("AllowAllOrigins");
+
+app.UseIpRateLimiting();
 
 app.UseAuthentication();
 

@@ -54,21 +54,6 @@ namespace SEP490_G77_ESS.Utils
                 new Claim("AccName", user.Username.ToString()),
                 new Claim("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress", user.Email)
             };
-            
-
-            foreach (var access in user.ResourceAccesses)
-            {
-                // Thêm claim role (RoleAccess.RoleName)
-                claims.Add(new Claim(ClaimTypes.Role, access.Role.RoleName));
-                claims.Add(new Claim("ResourceAccessId", access.ResourceAccessId.ToString()));
-
-                // Thêm thêm các quyền chi tiết
-                claims.Add(new Claim("RecourseType", access.ResourceType));
-                claims.Add(new Claim("canRead", access.Role.CanRead.ToString()));
-                claims.Add(new Claim("canModify", access.Role.CanModify.ToString()));
-                claims.Add(new Claim("canDelete", access.Role.CanDelete.ToString()));
-            }
-
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
                 _configuration.GetSection("AppSetting:Token").Value!));
@@ -77,7 +62,7 @@ namespace SEP490_G77_ESS.Utils
 
             var token = new JwtSecurityToken(
                     claims: claims,
-                    expires: DateTime.UtcNow.AddMinutes(3),
+                    expires: DateTime.UtcNow.AddHours(1),
                     signingCredentials: creds
                 );
 
