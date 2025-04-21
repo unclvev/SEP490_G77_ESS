@@ -23,11 +23,11 @@ builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>()
 
 builder.WebHost.ConfigureKestrel(serverOptions =>
 {
-    //serverOptions.ListenAnyIP(7052);
-    serverOptions.ListenAnyIP(7052, listenOptions =>
-    {
-        listenOptions.UseHttps();
-    });
+    serverOptions.ListenAnyIP(7052);
+    //serverOptions.ListenAnyIP(7052, listenOptions =>
+    //{
+    //    listenOptions.UseHttps();
+    //});
 });
 // Add services to the container.
 

@@ -7,15 +7,20 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Matrix;
 import android.hardware.Camera;
 import android.os.Bundle;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
+import android.view.View;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
+
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+
 import com.example.essgrading.API.ApiConfig;
 import com.example.essgrading.API.ApiService;
 import com.example.essgrading.Activity.BaseActivity;
@@ -32,7 +37,10 @@ import okhttp3.MultipartBody;
 import okhttp3.OkHttpClient;
 import okhttp3.RequestBody;
 import okhttp3.ResponseBody;
-import retrofit2.*;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
 public class GradingActivity extends BaseActivity implements SurfaceHolder.Callback {
@@ -42,6 +50,8 @@ public class GradingActivity extends BaseActivity implements SurfaceHolder.Callb
     private SurfaceHolder surfaceHolder;
     private Camera camera;
     private TextView btnStatus;
+    private ImageView snapshotView;
+    private boolean isProcessing = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -50,11 +60,9 @@ public class GradingActivity extends BaseActivity implements SurfaceHolder.Callb
         setupDrawer();
         setHeaderTitle("Chấm điểm");
 
-        Intent intent = getIntent();
-        String selectedExCode = intent.getStringExtra("selectedExCode");
-
         cameraView = findViewById(R.id.cameraPreview);
         btnStatus = findViewById(R.id.btnStatus);
+        snapshotView = findViewById(R.id.snapshotView);
 
         surfaceHolder = cameraView.getHolder();
         surfaceHolder.addCallback(this);
@@ -63,30 +71,48 @@ public class GradingActivity extends BaseActivity implements SurfaceHolder.Callb
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
             openCamera();
         } else {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, CAMERA_PERMISSION_REQUEST_CODE);
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.CAMERA}, CAMERA_PERMISSION_REQUEST_CODE);
         }
 
         btnStatus.setOnClickListener(v -> {
-            if (camera != null){
-                btnStatus.setEnabled(false); // Vô hiệu hóa nút
+            if (camera != null && !isProcessing) {
+                isProcessing = true;
+                btnStatus.setEnabled(false);
                 camera.takePicture(null, null, pictureCallback);
             }
         });
     }
 
-    private final Camera.PictureCallback pictureCallback = (data, camera) -> {
-        btnStatus.setText("📷 Đang xử lý...");
+    private final Camera.PictureCallback pictureCallback = (data, cam) -> {
+        // Rotate and display snapshot for 'freeze' effect
+        runOnUiThread(() -> {
+            Bitmap raw = BitmapFactory.decodeByteArray(data, 0, data.length);
+            Matrix matrix = new Matrix();
+            matrix.postRotate(90);
+            Bitmap freezeBitmap = Bitmap.createBitmap(raw, 0, 0,
+                    raw.getWidth(), raw.getHeight(), matrix, true);
+            snapshotView.setImageBitmap(freezeBitmap);
+            snapshotView.setVisibility(View.VISIBLE);
+            btnStatus.setText("📷 Đang xử lý...");
+        });
 
+        // Process upload in background
         new Thread(() -> {
             try {
-                Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
                 ByteArrayOutputStream stream = new ByteArrayOutputStream();
-//                bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream);
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 60, stream); // nén ở mức 60%
+                Bitmap raw = BitmapFactory.decodeByteArray(data, 0, data.length);
+                Matrix matrix = new Matrix();
+                matrix.postRotate(90);
+                Bitmap bitmap = Bitmap.createBitmap(raw, 0, 0,
+                        raw.getWidth(), raw.getHeight(), matrix, true);
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 60, stream);
                 byte[] imageBytes = stream.toByteArray();
 
-                RequestBody requestFile = RequestBody.create(MediaType.parse("image/png"), imageBytes);
-                MultipartBody.Part body = MultipartBody.Part.createFormData("image", "scan.png", requestFile);
+                RequestBody requestFile = RequestBody.create(
+                        MediaType.parse("image/jpeg"), imageBytes);
+                MultipartBody.Part body = MultipartBody.Part.createFormData(
+                        "image", "scan.jpg", requestFile);
 
                 OkHttpClient client = new OkHttpClient.Builder()
                         .connectTimeout(60, TimeUnit.SECONDS)
@@ -106,49 +132,52 @@ public class GradingActivity extends BaseActivity implements SurfaceHolder.Callb
                 call.enqueue(new Callback<>() {
                     @Override
                     public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
-                        runOnUiThread(() -> {
-                            try {
-                                if (response.isSuccessful() && response.body() != null) {
-                                    String result = response.body().string();
-                                    JSONObject json = new JSONObject(result);
-                                    JSONArray qr = json.getJSONArray("qr_content");
-                                    String score = json.getString("score");
-                                    String code = json.getString("student_code");
-                                    Toast.makeText(GradingActivity.this, "Thành công",LENGTH_SHORT).show();
-                                    btnStatus.setText("✅ Mã QR: " + qr.getString(0) + "\nĐiểm: " + score + "\nSBD: " + code + "\n📷Ấn để chụp tiếp");
-                                    btnStatus.setEnabled(true);
-
-                                } else {
-                                    btnStatus.setText("❌ Lỗi phản hồi: " + response.code() + "\n📷Ấn để chụp tiếp");
-                                    btnStatus.setEnabled(true); // Kích hoạt lại
-                                }
-                            } catch (Exception e) {
-                                btnStatus.setText("❌ Lỗi đọc kết quả" + "\n📷Ấn để chụp tiếp");
-                                btnStatus.setEnabled(true); // Kích hoạt lại
-                                e.printStackTrace();
-                            }
-                        });
+                        runOnUiThread(() -> handleResult(response, null));
                     }
 
                     @Override
                     public void onFailure(Call<ResponseBody> call, Throwable t) {
-                        runOnUiThread(() -> {
-                            btnStatus.setText("❌ Gửi ảnh thất bại");
-                            t.printStackTrace();
-                        });
+                        runOnUiThread(() -> handleResult(null, t));
                     }
                 });
 
             } catch (Exception e) {
-                runOnUiThread(() -> {
-                    btnStatus.setText("❌ Lỗi xử lý ảnh");
-                    e.printStackTrace();
-                });
-            } finally {
-//                runOnUiThread(() -> camera.startPreview());
+                runOnUiThread(() -> handleResult(null, e));
             }
         }).start();
     };
+
+    private void handleResult(Response<ResponseBody> response, Throwable error) {
+        if (error != null) {
+            btnStatus.setText("❌ Gửi ảnh thất bại\n📷Ấn để chụp tiếp");
+        } else if (response != null && response.isSuccessful() && response.body() != null) {
+            try {
+                String result = response.body().string();
+                JSONObject json = new JSONObject(result);
+                JSONArray qr = json.getJSONArray("qr_content");
+                String score = json.getString("score");
+                String code = json.getString("student_code");
+                Toast.makeText(this, "Thành công", LENGTH_SHORT).show();
+                btnStatus.setText("✅ Mã QR: " + qr.getString(0) +
+                        "\nĐiểm: " + score + "\nSBD: " + code +
+                        "\n📷Ấn để chụp tiếp");
+            } catch (Exception e) {
+                btnStatus.setText("❌ Lỗi đọc kết quả\n📷Ấn để chụp tiếp");
+                e.printStackTrace();
+            }
+        } else {
+            int code = response != null ? response.code() : -1;
+            btnStatus.setText("❌ Lỗi phản hồi: " + code + "\n📷Ấn để chụp tiếp");
+        }
+
+        // Reset preview and UI
+        if (camera != null) {
+            camera.startPreview();
+        }
+        snapshotView.setVisibility(View.GONE);
+        btnStatus.setEnabled(true);
+        isProcessing = false;
+    }
 
     private void openCamera() {
         try {
