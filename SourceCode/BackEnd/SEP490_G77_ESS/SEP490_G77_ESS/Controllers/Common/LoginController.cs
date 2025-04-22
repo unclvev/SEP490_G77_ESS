@@ -33,9 +33,14 @@ namespace SEP490_G77_ESS.Controllers.Common
                   .ThenInclude(ra => ra.Role)
                 .FirstOrDefault(x => x.Email == loginDto.Username);
 
+
             if (user == null || !_passwordHandler.VerifyPassword(loginDto.Password, user.Userpass))
                 return Unauthorized(new { message = "Sai tên đăng nhập hoặc mật khẩu" });
 
+            if (user.IsActive == 0)
+            {
+                return Unauthorized(new { message = "Tài khoản đã bị chưa xác thực" });
+            }
             // Tạo accessToken và refreshToken
             var accessToken = _jwt.CreateJWTToken(user);
             var refreshTokenEntity = GenerateRefreshToken();
