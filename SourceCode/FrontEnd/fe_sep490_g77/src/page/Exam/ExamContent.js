@@ -68,20 +68,7 @@ const ExamDetail = () => {
 
   // --- Thêm state cho Import Student ---
   const [importModalVisible, setImportModalVisible] = useState(false);
-
-  // --- Hàm thực thi import ---
-  const importStudents = async (studentList) => {
-    // try {
-    //   // Gọi API import, thay `importStudentApi` bằng hàm thực tế
-    //   await importStudentApi(examid, studentList);
-    //   toast.success("Import thành công!");
-    //   setImportModalVisible(false);
-    //   // Nếu cần reload dữ liệu, gọi lại fetchExam() ở đây
-    // } catch (error) {
-    //   console.error("Import thất bại", error);
-    //   toast.error("Import thất bại!");
-    // }
-  };
+  const [importedStudents, setImportedStudents] = useState([]);
 
   // --- Fetch exam data ---
   useEffect(() => {
@@ -293,7 +280,14 @@ const ExamDetail = () => {
     });
   };
 
-  const handleImportStudent = () => {};
+  const handleImportStudent = () => {
+    setImportModalVisible(true);
+  };
+
+  const handleImportSuccess = (students) => {
+    setImportedStudents(students);
+    toast.success(`Đã import ${students.length} học sinh!`);
+  };
 
   return (
     <div
@@ -507,11 +501,7 @@ const ExamDetail = () => {
       <ImportStudentModal
         visible={importModalVisible}
         examId={examid}
-        importStudents={importStudents}
-        onImportSuccess={() => {
-          toast.success("Import thành công!");
-          // nếu cần reload dữ liệu
-        }}
+        onImportSuccess={handleImportSuccess}
         onClose={() => setImportModalVisible(false)}
       />
     </div>

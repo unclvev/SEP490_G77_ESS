@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Modal, Button, Upload, message } from 'antd';
 import { InboxOutlined } from '@ant-design/icons';
+import { saveStudentList } from '../../services/api';
 
 const { Dragger } = Upload;
 
@@ -9,10 +10,15 @@ const { Dragger } = Upload;
  *  - visible (bool)
  *  - examId (string|number)
  *  - onClose () => void
- *  - onImportSuccess () => void
- *  - importStudents (examId, formData) async function
+ *  - onImportSuccess (students: array) => void
+ *  - importStudents (formData) async function
  */
-export default function ImportStudentModal({ visible, examId, onClose, onImportSuccess, importStudents }) {
+export default function ImportStudentModal({
+  visible,
+  examId,
+  onClose,
+  onImportSuccess,
+}) {
   const [fileList, setFileList] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -25,15 +31,21 @@ export default function ImportStudentModal({ visible, examId, onClose, onImportS
       message.error('Vui lòng chọn file trước khi lưu');
       return;
     }
+
     const file = fileList[0].originFileObj;
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('examId', examId);
+
     setLoading(true);
     try {
-      await importStudents(examId, formData);
-      message.success('Import thành công!');
+      // importStudents phải trả về { data: [...] }
+      const response = await saveStudentList(formData);
+      console.log(response);
+      const students = response.data;
+      message.success(`Import thành công: ${students.length} học sinh`);
       setFileList([]);
-      onImportSuccess();
+      onImportSuccess(students);
       onClose();
     } catch (err) {
       console.error(err);
