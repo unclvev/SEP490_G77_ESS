@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using SEP490_G77_ESS.Models;
 using SEP490_G77_ESS.DTO.BankdDTO;
 using ClosedXML.Excel;
+using Microsoft.AspNetCore.Authorization;
 
 namespace SEP490_G77_ESS.Controllers
 {
@@ -24,16 +25,35 @@ namespace SEP490_G77_ESS.Controllers
         // ✅ Lấy danh sách ngân hàng câu hỏi
         [HttpGet("account/{accid}")]
         public async Task<ActionResult<IEnumerable<object>>> GetBanksByAccount(
-     long accid, [FromQuery] string query = "", [FromQuery] string grade = "", [FromQuery] string subject = "", [FromQuery] string curriculum = "")
+    long accid,
+    [FromQuery] string query = "",
+    [FromQuery] string grade = "",
+    [FromQuery] string subject = "",
+    [FromQuery] string curriculum = "")
         {
+            // 1. Xác định danh sách bankId được share cho user này (IsOwner hoặc CanRead)
+            var sharedBankIds = _context.ResourceAccesses
+                .Where(ra =>
+                    ra.Accid == accid &&
+                    ra.ResourceType == "Bank" &&
+                    // bạn có thể check sử dụng Include + ra.Role.CanRead nếu cần
+                    (ra.IsOwner == true || ra.Role.CanRead == true)
+                )
+                .Select(ra => ra.ResourceId);
+
+            // 2. Build query: lấy tất cả Bank mà accid == userId (owner) OR nằm trong sharedBankIds
             var banksQuery = _context.Banks
-                .Where(b => b.Accid == accid)
+                .Where(b =>
+                    b.Accid == accid ||
+                    sharedBankIds.Contains(b.BankId)
+                )
                 .Include(b => b.Grade)
                 .Include(b => b.Subject)
                 .Include(b => b.Curriculum)
                 .Include(b => b.Sections)
                 .AsQueryable();
 
+            // 3. Áp filter search như cũ
             if (!string.IsNullOrEmpty(query))
                 banksQuery = banksQuery.Where(b => b.Bankname.Contains(query));
 
@@ -46,24 +66,25 @@ namespace SEP490_G77_ESS.Controllers
             if (!string.IsNullOrEmpty(curriculum))
                 banksQuery = banksQuery.Where(b => b.Curriculum.CurriculumName.Contains(curriculum));
 
+            // 4. Project kết quả và trả về
             var banks = await banksQuery
                 .OrderByDescending(b => b.CreateDate)
                 .Select(b => new
                 {
                     b.BankId,
                     b.Bankname,
-                    Totalquestion = _context.Questions
+                    TotalQuestion = _context.Questions
                         .Count(q => q.Secid != null && b.Sections.Any(s => s.Secid == q.Secid)),
                     b.CreateDate,
                     Grade = b.Grade != null ? b.Grade.GradeLevel : "Không xác định",
                     Subject = b.Subject != null ? b.Subject.SubjectName : "Không xác định",
                     Curriculum = b.Curriculum != null ? b.Curriculum.CurriculumName : "Không xác định"
                 })
-                .OrderByDescending(b => b.CreateDate)
                 .ToListAsync();
 
             return Ok(banks);
         }
+
         [HttpGet("default-banks")]
         public async Task<IActionResult> GetDefaultBanks(
             [FromQuery] string grade = "",
@@ -345,6 +366,7 @@ namespace SEP490_G77_ESS.Controllers
 
         // ✅ Cập nhật chỉ Bankname
         [HttpPut("{id}/name")]
+        [Authorize(Policy = "BankModify")]
         public async Task<IActionResult> UpdateBankName(long id, [FromBody] Bank bank)
         {
             if (string.IsNullOrEmpty(bank.Bankname))
@@ -415,7 +437,8 @@ namespace SEP490_G77_ESS.Controllers
                 .Where(sh => sectionIds.Contains(sh.AncestorId) || sectionIds.Contains(sh.DescendantId));
             _context.SectionHierarchies.RemoveRange(sectionHierarchies);
 
-
+            // ✅ Xóa toàn bộ dữ liệu trong BankAccess liên quan đến Bank
+            
 
             // ✅ Xóa ngân hàng câu hỏi
             _context.Banks.Remove(bank);
@@ -674,7 +697,8 @@ namespace SEP490_G77_ESS.Controllers
             var questionCounts = await _context.Questions
                 .Where(q => q.Secid != null && sections.Select(s => s.Secid).Contains(q.Secid.Value))
                 .GroupBy(q => q.Secid)
-                .Select(g => new {
+                .Select(g => new
+                {
                     Key = g.Key ?? 0,
                     Count = g.Count()
                 })
@@ -855,13 +879,13 @@ namespace SEP490_G77_ESS.Controllers
         }
 
 
-      
+
 
 
 
 
         // ✅ Cập nhật tên Section
-  [HttpPut("section/{sectionId}")]
+        [HttpPut("section/{sectionId}")]
         public async Task<IActionResult> UpdateSection(long sectionId, [FromBody] Section updatedSection)
         {
             var section = await _context.Sections.FindAsync(sectionId);

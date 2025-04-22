@@ -39,7 +39,7 @@ namespace SEP490_G77_ESS.Controllers.Common
                     {
                         Email = payload.Email,
                         Username = payload.Name,
-                       
+                        
                     };
                     _context.Accounts.Add(user);
                     await _context.SaveChangesAsync();

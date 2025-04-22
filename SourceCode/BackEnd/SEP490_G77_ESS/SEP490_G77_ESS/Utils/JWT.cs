@@ -47,7 +47,7 @@ namespace SEP490_G77_ESS.Utils
 
         public string CreateJWTToken(Account user)
         {
-
+          
 
             List<Claim> claims = new List<Claim> {
                 new Claim("AccId", user.AccId.ToString()),

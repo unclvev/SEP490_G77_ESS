@@ -59,9 +59,9 @@ namespace SEP490_G77_ESS.Controllers.RBAC.Bank
                 return NotFound("Ngân hàng không tồn tại.");
             }
 
-
+            
             var existingAccess = await _context.ResourceAccesses
-                                               .FirstOrDefaultAsync(r => r.ResourceId == request.Resource.ResourceId
+                                               .FirstOrDefaultAsync(r => r.ResourceId == request.Resource.ResourceId 
                                                                                          && r.Accid == request.Resource.Accid);
 
             if (existingAccess != null)
@@ -108,7 +108,7 @@ namespace SEP490_G77_ESS.Controllers.RBAC.Bank
             }
 
             long currentUserId = long.Parse(claimAccId);
-
+           
             // Kiểm tra xem người dùng có phải là chủ ngân hàng không
             var bank = await _context.Banks.FirstOrDefaultAsync(b => b.BankId == bankId && b.Accid == currentUserId);
             if (bank == null)
@@ -165,7 +165,7 @@ namespace SEP490_G77_ESS.Controllers.RBAC.Bank
             roleUpdate.RoleName = dto.RoleName;
             roleUpdate.CanModify = dto.CanModify;
             roleUpdate.CanRead = dto.CanRead;
-            roleUpdate.CanDelete = dto.CanDelete;
+            roleUpdate.CanDelete = dto.CanDelete;    
 
             // Lưu các thay đổi vào cơ sở dữ liệu
             await _context.SaveChangesAsync();
