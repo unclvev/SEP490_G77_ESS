@@ -365,6 +365,28 @@ namespace SEP490_G77_ESS.Controllers.ExamManager
 
             return Ok(results);
         }
+
+        ////get mcq exams by accid
+        //[HttpGet("mcq/accid/{accId}")]
+        //public async Task<IActionResult> GetAllMCQExamFromAccId(long accId)
+        //{
+        //    var results = await _context.Exams
+        //        .Where(b => b.AccId == accId)
+        //        .ToListAsync();
+
+        //    return Ok(results);
+        //}
+
+        ////get essay exams by accid
+        //[HttpGet("essay/accid/{accId}")]
+        //public async Task<IActionResult> GetAllEssayExamFromAccId(long accId)
+        //{
+        //    var results = await _context.Exams
+        //        .Where(b => b.AccId == accId)
+        //        .ToListAsync();
+
+        //    return Ok(results);
+        //}
     }
 
 }

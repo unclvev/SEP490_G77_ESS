@@ -1,8 +1,12 @@
 package com.example.essgrading.API;
 
+import android.content.Context;
+import com.example.essgrading.MyApplication; // Giả sử bạn có Application class tên MyApplication
+import com.example.essgrading.R;
+
 public class ApiConfig {
-    //192.168.1.4 là địa chỉ IPv4 của wifi nhé mn, vào wifi property của máy tính rồi xem
-    //giả lập thì chạy kiểu khác, khuyến cáo không giả lập nhé
-    public static final String BASE_URL = "http://192.168.1.12:7052/";
-    public static final String UPLOAD_URL = "http://192.168.1.12:5000/";
+    private static Context context = MyApplication.getContext();
+
+    public static final String BASE_URL = context.getString(R.string.base_url);
+    public static final String UPLOAD_URL = context.getString(R.string.upload_url);
 }
