@@ -193,6 +193,10 @@ const QuestionBank = () => {
       await axios.put(`http://localhost:7052/api/Bank/${editingBank.bankId}/name`, {
         bankId: editingBank.bankId,
         bankname: newBankName
+      }, {
+        headers: {
+          'Authorization': `Bearer ${token.token}`
+        }
       });
   
       toast.success("✅ Cập nhật tên ngân hàng thành công!", 2);

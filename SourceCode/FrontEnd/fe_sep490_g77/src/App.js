@@ -34,6 +34,7 @@ import ExamSelect from "./page/Exam/ExamSelect.js";
 import ExamCreation3T from "./page/Exam/ExamMCQ3tMatrix.js";
 import PrintPreview from "./page/Exam/PrintPreview.js";
 import ExamSetting from "./page/Exam/ExamSetting.js";
+import ManagerPage from "./page/Manager/ManagerPage";
 
 function App() {
   return (
@@ -49,7 +50,8 @@ function App() {
           <Route path="/profile" element={<Profile /> } />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/MainLayout2" element={<MainLayout2 />} />
+          <Route path="/manager" element={<ManagerPage />} />
+
           {/* Các trang khác bọc trong MainLayout */}
           <Route path="/question-bank" element={<MainLayout><QuestionBank /></MainLayout>} />
           <Route path="/question-bank-detail/:bankId" element={<MainLayout><QuestionBankDetail /></MainLayout>} />
