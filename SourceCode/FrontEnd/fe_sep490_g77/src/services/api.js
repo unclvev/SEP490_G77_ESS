@@ -1,6 +1,44 @@
 import Http from "./http";
 
+
+export const searchUserToInvite = (query) =>
+  Http.get("/Manager/SearchUserToInvite", { params: { search: query } })
+    .then((response) => response.data);
+
+
+export const inviteUser = async (payload) => Http.post("/Manager/InviteUser", payload)
+  .then((response) => response.data)
+  .catch((error) => {
+    throw new Error(error.response?.data?.message || "Invite user failed");
+  });
+  
+  export const getMembers = (bankId, resourceType) =>
+    Http.get(`/Manager/Member/${bankId}/${resourceType}`)
+      .then((response) => response.data)
+      .catch((error) => {
+        throw new Error(error.response?.data?.message || "Get members failed");
+      });
+  export const removeUser = (bankId, accId) =>
+    Http.delete(`/Manager/remove/${bankId}/${accId}`)
+      .then((response) => response.data)
+      .catch((error) => {
+          throw new Error(error.response?.data?.message || "Remove user failed");
+      });
+      export const updateRole = (bankId, accId, data) =>
+        Http.put(`/Manager/UpdateRole/${bankId}/${accId}`, data, {
+          headers: {
+            "Content-Type": "application/json"
+          }
+        })
+          .then((response) => response.data)
+          .catch((error) => {
+            throw new Error(error.response?.data?.message || "Update role failed");
+          });
+      
+
 //auth-api
+
+export const googleLogin = (data) => Http.post('/AuthGoogle/GoogleLogin', data);
 
 export const register = (data) => Http.post("/Register", data)
 

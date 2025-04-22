@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { jwtDecode } from "jwt-decode";
+import {jwtDecode} from "jwt-decode";
+
 import { setToken } from "../redux-setup/action";
+
+
 
 
 const Header = ({ collapsed }) => {
@@ -10,13 +13,16 @@ const Header = ({ collapsed }) => {
   const token = useSelector((state) => state.token);
   const dispatch = useDispatch();
 
+
   useEffect(() => {
     if (token) {
       try {
-        const decoded = jwtDecode(token.token);
-        const emailClaim = decoded["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"];
+        const raw = typeof token === "string" ? token : token.token;
+        const decoded = jwtDecode(raw);            // ← dùng named fn
+        const emailClaim =
+          decoded["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"]
+          || decoded.email;
         setEmail(emailClaim || "No Email");
-        // Thiết lập avatar dựa trên email
         setAvatar(`https://api.dicebear.com/6.x/initials/svg?seed=${emailClaim}`);
       } catch (error) {
         console.error("Invalid Token", error);
@@ -29,6 +35,7 @@ const Header = ({ collapsed }) => {
     }
   }, [token]);
 
+
   const handleLogout = () => {
     // Xóa token khỏi redux store
     dispatch(setToken(null));
@@ -39,6 +46,7 @@ const Header = ({ collapsed }) => {
     window.location.href = "/login";
   };
 
+
   return (
     <div
       className={`bg-white shadow-md p-4 flex justify-between items-center left-0 right-0 z-10 transition-all duration-300 ${
@@ -47,15 +55,16 @@ const Header = ({ collapsed }) => {
     >
       {/* Logo và tên hệ thống bên trái */}
       <div className="flex items-center">
-        <img 
-          src="/logo.png" 
-          alt="ESS Logo" 
+        <img
+          src="/logo.png"
+          alt="ESS Logo"
           className="w-10 h-10 rounded-full mr-2"
         />
         <span className="font-semibold text-lg text-gray-700">
           ESS - Hệ thống hỗ trợ thi cử
         </span>
       </div>
+
 
       {/* Khu vực User hoặc Login/Register */}
       <div className="flex items-center">
@@ -94,5 +103,6 @@ const Header = ({ collapsed }) => {
     </div>
   );
 };
+
 
 export default Header;

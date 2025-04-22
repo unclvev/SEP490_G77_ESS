@@ -129,7 +129,7 @@ const isMountedRef = useRef(true);
 
   const fetchQuestions = async () => {
     try {
-      const response = await axios.get(`https://localhost:7052/api/Question/questions?sectionId=${sectionId}`);
+      const response = await axios.get(`http://localhost:7052/api/Question/questions?sectionId=${sectionId}`);
       setQuestions(response.data);
     } catch (error) {
       if (!isMountedRef.current) return;
@@ -139,7 +139,7 @@ const isMountedRef = useRef(true);
 
   const fetchQuestionTypes = async () => {
     try {
-      const response = await axios.get(`https://localhost:7052/api/Question/types`);
+      const response = await axios.get(`http://localhost:7052/api/Question/types`);
       setQuestionTypes(response.data);
     } catch (error) {
       if (!isMountedRef.current) return;
@@ -149,7 +149,7 @@ const isMountedRef = useRef(true);
 
   const fetchLevels = async () => {
     try {
-      const response = await axios.get(`https://localhost:7052/api/Question/levels`);
+      const response = await axios.get(`http://localhost:7052/api/Question/levels`);
       setLevels(response.data);
     } catch (error) {
       if (!isMountedRef.current) return;

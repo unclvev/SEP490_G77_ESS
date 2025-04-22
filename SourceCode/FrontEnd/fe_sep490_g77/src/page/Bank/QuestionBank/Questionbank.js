@@ -70,7 +70,7 @@ const QuestionBank = () => {
   const fetchBanks = async () => {
     setLoading(true);
     try {
-      let url = `https://localhost:7052/api/Bank/account/${accid}?`;
+      let url = `http://localhost:7052/api/Bank/account/${accid}?`;
       if (searchQuery) url += `query=${searchQuery}&`;
       if (selectedGrade) url += `grade=${selectedGrade}&`;
       if (selectedSubject) url += `subject=${selectedSubject}&`;
@@ -90,7 +90,7 @@ const QuestionBank = () => {
   const fetchDefaultBanks = async () => {
     setLoadingDefaultBanks(true);
     try {
-      let url = `https://localhost:7052/api/Bank/default-banks?`;
+      let url = `http://localhost:7052/api/Bank/default-banks?`;
       if (defaultSearchQuery) url += `query=${defaultSearchQuery}&`;
       if (selectedGrade) url += `grade=${selectedGrade}&`;
       if (selectedSubject) url += `subject=${selectedSubject}&`;
@@ -112,7 +112,7 @@ const QuestionBank = () => {
 
   const fetchGrades = async () => {
     try {
-      const res = await axios.get('https://localhost:7052/api/Bank/grades');
+      const res = await axios.get('http://localhost:7052/api/Bank/grades');
       setGrades(res.data);
     } catch (error) {
       console.error("Error fetching grades:", error);
@@ -121,7 +121,7 @@ const QuestionBank = () => {
 
   const fetchSubjects = async () => {
     try {
-      const res = await axios.get('https://localhost:7052/api/Bank/subjects');
+      const res = await axios.get('http://localhost:7052/api/Bank/subjects');
       setSubjects(res.data);
     } catch (error) {
       console.error("Error fetching subjects:", error);
@@ -130,7 +130,7 @@ const QuestionBank = () => {
 
   const fetchCurriculums = async () => {
     try {
-      const res = await axios.get('https://localhost:7052/api/Bank/curriculums');
+      const res = await axios.get('http://localhost:7052/api/Bank/curriculums');
       setCurriculums(res.data);
     } catch (error) {
       console.error("Error fetching curriculums:", error);
@@ -190,9 +190,13 @@ const QuestionBank = () => {
       return;
     }
     try {
-      await axios.put(`https://localhost:7052/api/Bank/${editingBank.bankId}/name`, {
+      await axios.put(`http://localhost:7052/api/Bank/${editingBank.bankId}/name`, {
         bankId: editingBank.bankId,
         bankname: newBankName
+      }, {
+        headers: {
+          'Authorization': `Bearer ${token.token}`
+        }
       });
   
       toast.success("✅ Cập nhật tên ngân hàng thành công!", 2);
