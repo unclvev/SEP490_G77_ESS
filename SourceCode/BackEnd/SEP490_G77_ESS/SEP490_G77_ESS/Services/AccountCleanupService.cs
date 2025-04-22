@@ -25,7 +25,7 @@ namespace SEP490_G77_ESS.Services
                 using (var scope = _scopeFactory.CreateScope())
                 {
                     var context = scope.ServiceProvider.GetRequiredService<EssDbV11Context>();
-                    var expirationTime = DateTime.Now.AddMinutes(-5);
+                    var expirationTime = DateTime.Now.AddMinutes(-15);
                     var expiredAccounts = context.Accounts
                         .Where(u => u.IsActive == 0 && u.Datejoin < expirationTime)
                         .ToList();
