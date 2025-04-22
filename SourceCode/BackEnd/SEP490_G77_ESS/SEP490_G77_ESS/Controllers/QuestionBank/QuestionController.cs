@@ -407,6 +407,7 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
                 while (!worksheet.Cell(row, 1).IsEmpty())
                 {
                     var quesContent = worksheet.Cell(row, 1).GetString().Trim();
+                    quesContent = ConvertMathPlaceholdersToHtml(quesContent);
                     if (string.IsNullOrEmpty(quesContent))
                     {
                         row++;
@@ -570,6 +571,13 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
                             if (string.IsNullOrWhiteSpace(correctAnswers) || correctAnswers.Length != 4)
                             {
                                 errors.Add($"Dòng {row}: Đáp án cho câu hỏi điền kết quả phải có đúng 4 ký tự");
+                                row++;
+                                continue;
+                            }
+                            // 🆕 Thêm validate regex chỉ nhận số, dấu , và dấu -
+                            if (!Regex.IsMatch(correctAnswers, @"^[\d\-,]{4}$"))
+                            {
+                                errors.Add($"Dòng {row}: Đáp án chỉ được chứa số, dấu - hoặc dấu , và phải đúng 4 ký tự");
                                 row++;
                                 continue;
                             }
@@ -824,7 +832,18 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
             public string Base64Image { get; set; }
         }
 
-        
+        private string ConvertMathPlaceholdersToHtml(string content)
+        {
+            if (string.IsNullOrWhiteSpace(content))
+                return content;
+
+            // Dùng Regex tìm tất cả [MATH:...] và thay bằng <span class="katex-math" data-formula="...">...</span>
+            return Regex.Replace(content, @"\[MATH:(.+?)\]", match =>
+            {
+                var formula = match.Groups[1].Value;
+                return $"<span class=\"katex-math\" data-formula=\"{formula}\">$$ {formula} $$</span>";
+            });
+        }
 
 
         // ✅ Xóa câu hỏi

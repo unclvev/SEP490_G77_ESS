@@ -333,9 +333,9 @@ namespace SEP490_G77_ESS.Controllers.ExamManager
 
 
         [HttpGet("subject-name/{subjectId}")]
-        public async Task<IActionResult> GetSubjectNameById(long subjectId)
+        public async Task<IActionResult> GetSubjectNameById(string subjectId)
         {
-            var subject = await _context.Subjects.FindAsync(subjectId);
+            var subject = await _context.Subjects.Where(s => s.SubjectName == subjectId).FirstOrDefaultAsync();
             if (subject == null)
             {
                 return NotFound(new { message = "Không tìm thấy môn học với ID đã cho." });

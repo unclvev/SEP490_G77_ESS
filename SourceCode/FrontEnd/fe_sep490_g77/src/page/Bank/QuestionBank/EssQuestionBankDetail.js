@@ -32,7 +32,7 @@ const EssQuestionBankDetail = () => {
   // ✅ Lấy danh sách Sections của ngân hàng
   const fetchSections = async () => {
     try {
-      const response = await axios.get(`https://localhost:7052/api/Bank/default/${bankId}/sections`);
+      const response = await axios.get(`http://localhost:7052/api/Bank/default/${bankId}/sections`);
       setSections(response.data);
     } catch (error) {
       toast.error("Lỗi khi tải dữ liệu section!");

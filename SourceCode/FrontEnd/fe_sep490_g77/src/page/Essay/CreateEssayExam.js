@@ -16,6 +16,8 @@ import {
 import { useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-toastify";
+import { useSelector } from 'react-redux';
+import { jwtDecode } from "jwt-decode"
 
 const { Search } = Input;
 const { Option } = Select;
@@ -23,7 +25,6 @@ const { Option } = Select;
 const CreateEssayExam = () => {
   const [data, setData] = useState([]);
   const [searchParams] = useSearchParams();
-  const accId = searchParams.get("accid");
   const [searchText, setSearchText] = useState("");
   const [selectedGrade, setSelectedGrade] = useState("");
   const [selectedSubject, setSelectedSubject] = useState("");
@@ -37,11 +38,27 @@ const CreateEssayExam = () => {
   const pageSize = 8;
   const navigate = useNavigate();
 
+
+  let accId = -1;
+  const token = useSelector((state) => state.token);
+
+    accId = searchParams.get("accid") || localStorage.getItem("accid"); // Mặc định cũ
+
+    // Nếu token tồn tại, giải mã để lấy AccId
+    if (token) {
+        try {
+            const decoded = jwtDecode(token.token);
+            accId = decoded.AccId || accId; // Ưu tiên lấy từ token nếu có
+        } catch (error) {
+            console.error("Invalid token", error);
+        }
+    }
+
   const fetchFilters = async () => {
     try {
       const [gradeRes, subjectRes] = await Promise.all([
-        axios.get("https://localhost:7052/api/essay/grades"),
-        axios.get("https://localhost:7052/api/essay/subjects"),
+        axios.get("http://localhost:7052/api/essay/grades"),
+        axios.get("http://localhost:7052/api/essay/subjects"),
       ]);
       setGradeOptions(gradeRes.data);
       setSubjectOptions(subjectRes.data);
@@ -58,7 +75,7 @@ const CreateEssayExam = () => {
       if (selectedSubject) params.subject = selectedSubject;
       if (searchText) params.keyword = searchText;
 
-      const url = `https://localhost:7052/api/essay/by-account/${accId}`;
+      const url = `http://localhost:7052/api/essay/by-account/${accId}`;
       const response = await axios.get(url, { params });
       setData(response.data);
       setCurrentPage(1);
@@ -69,7 +86,7 @@ const CreateEssayExam = () => {
 
   const handleDelete = async (id) => {
     try {
-      await axios.delete(`https://localhost:7052/api/essay/delete/${id}`);
+      await axios.delete(`http://localhost:7052/api/essay/delete/${id}`);
       toast.success("Đã xoá đề");
       fetchData();
     } catch {
@@ -86,7 +103,7 @@ const CreateEssayExam = () => {
     };
 
     try {
-      await axios.put(`https://localhost:7052/api/essay/update/${editingExam.id}`, payload);
+      await axios.put(`http://localhost:7052/api/essay/update/${editingExam.id}`, payload);
       toast.success("Cập nhật đề thành công");
       setEditModalOpen(false);
       fetchData();

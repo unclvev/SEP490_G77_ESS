@@ -482,9 +482,9 @@ const saveEditedFormula = () => {
 
       let response;
       if (currentQuestion) {
-        response = await axios.put(`https://localhost:7052/api/Question/questions/${currentQuestion.quesid}`, requestData);
+        response = await axios.put(`http://localhost:7052/api/Question/questions/${currentQuestion.quesid}`, requestData);
       } else {
-        response = await axios.post(`https://localhost:7052/api/Question/questions`, requestData);
+        response = await axios.post(`http://localhost:7052/api/Question/questions`, requestData);
       }
 
       toast.success("✅ Lưu câu hỏi thành công!");
@@ -507,7 +507,7 @@ const saveEditedFormula = () => {
 
   const handleDelete = async (quesid) => {
     try {
-      await axios.delete(`https://localhost:7052/api/Question/questions/${quesid}`);
+      await axios.delete(`http://localhost:7052/api/Question/questions/${quesid}`);
       toast.success("Xóa câu hỏi thành công!");
       fetchQuestions();
     } catch (error) {
@@ -516,7 +516,7 @@ const saveEditedFormula = () => {
   };
 
   const handleExportExcel = () => {
-    window.location.href = `https://localhost:7052/api/Question/${sectionId}/export-excel`;
+    window.location.href = `http://localhost:7052/api/Question/${sectionId}/export-excel`;
   };
 
   const handleImportExcel = async ({ file }) => {
@@ -524,7 +524,7 @@ const saveEditedFormula = () => {
     formData.append("file", file);
 
     try {
-      const response = await axios.post(`https://localhost:7052/api/Question/${sectionId}/import-excel`, formData, {
+      const response = await axios.post(`http://localhost:7052/api/Question/${sectionId}/import-excel`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
@@ -845,7 +845,7 @@ const renderMathInput = () => {
                       <img 
                        src={question.imageUrl.startsWith("http") 
                         ? question.imageUrl 
-                        : `https://localhost:7052${question.imageUrl}`}
+                        : `http://localhost:7052${question.imageUrl}`}
                         alt="Question image" 
                         className="max-w-full max-h-64 object-contain" 
                       />
@@ -1065,14 +1065,14 @@ const renderMathInput = () => {
       try {
         const base64Image = reader.result;
 
-        const response = await axios.post('https://localhost:7052/api/Question/upload-image-base64', {
+        const response = await axios.post('http://localhost:7052/api/Question/upload-image-base64', {
           base64Image
         });
 
         let imageUrl = response.data.imageUrl;
 
         if (imageUrl && imageUrl.startsWith("/")) {
-          imageUrl = `https://localhost:7052${imageUrl}`;
+          imageUrl = `http://localhost:7052${imageUrl}`;
         }
         setNewQuestion(prev => ({
           ...prev,

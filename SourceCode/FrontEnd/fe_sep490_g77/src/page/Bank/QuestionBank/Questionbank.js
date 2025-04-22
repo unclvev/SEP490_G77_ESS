@@ -103,7 +103,7 @@ const QuestionBank = () => {
       setTotalDefaultBanks(filteredBanks.length);
     } catch (error) {
       console.error("Error fetching default banks:", error);
-      message.error('❌ Lỗi khi tải dữ liệu ngân hàng đề của ESS!');
+   
     } finally {
       setLoadingDefaultBanks(false);
     }
@@ -219,7 +219,7 @@ const QuestionBank = () => {
 
   const confirmDeleteBank = async () => {
     try {
-      await axios.delete(`https://localhost:7052/api/Bank/${deletingBank.bankId}`);
+      await axios.delete(`http://localhost:7052/api/Bank/${deletingBank.bankId}`);
       
       toast.success("✅ Xóa ngân hàng câu hỏi thành công!", 2);
       setIsDeleteModalOpen(false);
@@ -459,7 +459,7 @@ showSizeChanger={false}
       
 <Modal
       title="Lỗi tải dữ liệu"
-      open={loadingDefaultBanks && defaultBanks.length === 0}
+      open={loadingDefaultBanks === 0 && defaultBanks.length === 0}
       onOk={() => setLoadingDefaultBanks(false)}
       onCancel={() => setLoadingDefaultBanks(false)}
       okText="OK"
