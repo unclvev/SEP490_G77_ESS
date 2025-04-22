@@ -22,7 +22,7 @@ const EssQuestionBankDetail = () => {
   // ✅ Lấy thông tin ngân hàng câu hỏi
   const fetchBankInfo = async () => {
     try {
-      const response = await axios.get(`https://localhost:7052/api/Bank/default/${bankId}`);
+      const response = await axios.get(`http://localhost:7052/api/Bank/default/${bankId}`);
       setBankInfo(response.data);
     } catch (error) {
       toast.error("Không thể tải dữ liệu ngân hàng!");

@@ -41,7 +41,7 @@ const CreateQuestionBank = () => {
 
     const fetchGrades = async () => {
       try {
-        const response = await axios.get("https://localhost:7052/api/Bank/grades");
+        const response = await axios.get("http://localhost:7052/api/Bank/grades");
         setGrades(response.data || []);
       } catch (error) {
         toast.error("Lỗi khi tải danh sách Khối học.");
@@ -50,7 +50,7 @@ const CreateQuestionBank = () => {
 
     const fetchSubjects = async () => {
       try {
-        const response = await axios.get("https://localhost:7052/api/Bank/subjects");
+        const response = await axios.get("http://localhost:7052/api/Bank/subjects");
         setSubjects(response.data || []);
       } catch (error) {
         toast.error("Lỗi khi tải danh sách Môn học.");
@@ -59,7 +59,7 @@ const CreateQuestionBank = () => {
 
     const fetchCurriculums = async () => {
       try {
-        const response = await axios.get("https://localhost:7052/api/Bank/curriculums");
+        const response = await axios.get("http://localhost:7052/api/Bank/curriculums");
         setCurriculums(response.data || []);
       } catch (error) {
         toast.error("Lỗi khi tải danh sách Chương trình học.");
@@ -91,7 +91,7 @@ const CreateQuestionBank = () => {
       };
 
       // ✅ Gửi accid vào API
-      const response = await axios.post(`https://localhost:7052/api/Bank/generate/${accid}`, requestData);
+      const response = await axios.post(`http://localhost:7052/api/Bank/generate/${accid}`, requestData);
 
       if (response.status === 200) {
         toast.success(`✅ Ngân hàng câu hỏi "${response.data.bankName}" đã được tạo thành công!`);
