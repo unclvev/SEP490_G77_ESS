@@ -46,10 +46,13 @@ export const login = (data) => Http.post("/Login", data)
 
 export const forgotPassword = (data) =>
     Http.get("/ForgotPassword/forgot-password", { params: data });
-export const resetPassword = (params) => {
-    return Http.post("/ForgotPassword/reset-password", null, { params });
-  };
-  
+
+export const resetPassword = ({ token, newPassword }) => {
+  return Http.post("/ForgotPassword/reset-password", { 
+    token, 
+    newPassword 
+  });
+};
   
 //profile-api
 export const getProfile = () => Http.get("/Profile/info");

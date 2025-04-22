@@ -28,12 +28,18 @@ import {
   loadGrade,
   loadSubject,
   updateExamData,
+  searchUserToInvite,
+  inviteUser,
+  getMembers,
+  removeUser,
 } from "../../services/api";
 import { saveAs } from "file-saver";
 import { toast } from "react-toastify";
 import QuestionCardV2 from "../../components/Exam/QuestionCardv2";
 import AddQuestionModal from "../../components/Exam/AddQuestionModel";
 import ImportStudentModal from "../../components/Exam/ImportStudent";
+import InviteUserModal from "../Manager/components/InviteUserModal";
+import ListMemberModal from "../Manager/components/ListMemberModal";
 
 const { Text, Title } = Typography;
 const { Option } = Select;
@@ -69,6 +75,10 @@ const ExamDetail = () => {
   // --- Thêm state cho Import Student ---
   const [importModalVisible, setImportModalVisible] = useState(false);
   const [importedStudents, setImportedStudents] = useState([]);
+
+  // Add new state variables for invite functionality
+  const [inviteModalVisible, setInviteModalVisible] = useState(false);
+  const [listMemberModalVisible, setListMemberModalVisible] = useState(false);
 
   // --- Fetch exam data ---
   useEffect(() => {
@@ -260,10 +270,7 @@ const ExamDetail = () => {
     toast.success("Đã tải template thành công!");
   };
   const handlePermissions = () => {
-    Modal.info({
-      title: "Phân quyền",
-      content: "Chức năng phân quyền sẽ được triển khai sau.",
-    });
+    setInviteModalVisible(true);
   };
   const handleDeleteExam = () => {
     Modal.confirm({
@@ -503,6 +510,20 @@ const ExamDetail = () => {
         examId={examid}
         onImportSuccess={handleImportSuccess}
         onClose={() => setImportModalVisible(false)}
+      />
+
+      <InviteUserModal
+        visible={inviteModalVisible}
+        onClose={() => setInviteModalVisible(false)}
+        bankId={examid}
+        resourceType="exam"
+      />
+
+      <ListMemberModal
+        visible={listMemberModalVisible}
+        onClose={() => setListMemberModalVisible(false)}
+        bankId={examid}
+        resourceType="exam"
       />
     </div>
   );

@@ -3,8 +3,8 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
 import { message } from 'antd';
-import { login, googleLogin } from '../../services/api';  // ← import thêm googleLogin
-import { useSelector, useDispatch } from 'react-redux';
+import { login, googleLogin } from '../../services/api';
+import { useDispatch } from 'react-redux';
 import { setToken } from '../../redux-setup/action';
 import { EyeOutlined, EyeInvisibleOutlined } from '@ant-design/icons';
 
@@ -13,31 +13,44 @@ const LoginPage = () => {
   const [credentials, setCredentials] = useState({ username: '', password: '' });
   const [errorMessage, setErrorMessage] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   // Xử lý đăng nhập thông thường
   const handleLogin = async () => {
+    if (loading) return;
+    setLoading(true);
     try {
       const response = await login(credentials);
       dispatch(setToken(response.data));
       localStorage.setItem('jwt', response.data.jwt);
-      message.success('Login successful!');
-      window.location.href = '/';
+      message.success('Login successful!', 2, () => {
+        setLoading(false);
+        window.location.href = '/';
+      });
     } catch (error) {
       setErrorMessage('Tên đăng nhập hoặc mật khẩu không đúng');
-      message.error('Invalid username or password');
+      message.error('Invalid username or password', 2, () => {
+        setLoading(false);
+      });
     }
   };
 
   // Xử lý đăng nhập bằng Google
   const handleGoogleLogin = async credentialResponse => {
+    if (loading) return;
+    setLoading(true);
     try {
       const res = await googleLogin({ token: credentialResponse.credential });
       dispatch(setToken(res.data));
       localStorage.setItem('jwt', res.data.jwt);
-      message.success('Google login successful!');
-      window.location.href = '/';
+      message.success('Google login successful!', 2, () => {
+        setLoading(false);
+        window.location.href = '/';
+      });
     } catch (error) {
-      message.error('Google login failed');
+      message.error('Google login failed', 2, () => {
+        setLoading(false);
+      });
     }
   };
 
@@ -62,6 +75,7 @@ const LoginPage = () => {
               className="w-full px-3 py-2 border border-gray-300 rounded-full mb-4"
               value={credentials.username}
               onChange={e => setCredentials({ ...credentials, username: e.target.value })}
+              disabled={loading}
             />
 
             <div className="relative mb-4">
@@ -71,24 +85,26 @@ const LoginPage = () => {
                 className="w-full px-3 py-2 border border-gray-300 rounded-full"
                 value={credentials.password}
                 onChange={e => setCredentials({ ...credentials, password: e.target.value })}
+                disabled={loading}
               />
               <span
                 className="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer text-gray-500"
-                onClick={() => setShowPassword(!showPassword)}
+                onClick={() => loading || setShowPassword(!showPassword)}
               >
                 {showPassword ? <EyeOutlined /> : <EyeInvisibleOutlined />}
               </span>
             </div>
 
-            {errorMessage && (
-              <div className="text-red-500 text-sm mb-4">{errorMessage}</div>
-            )}
-
             <button
               onClick={handleLogin}
-              className="w-full bg-blue-600 text-white py-2 rounded-full hover:bg-blue-700 mb-4"
+              disabled={loading}
+              className={`w-full py-2 rounded-full mb-4 text-white ${
+                loading
+                  ? 'bg-gray-400 cursor-not-allowed'
+                  : 'bg-blue-600 hover:bg-blue-700'
+              }`}
             >
-              Đăng nhập
+              {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
             </button>
 
             <div className="flex items-center mb-4">
@@ -100,6 +116,7 @@ const LoginPage = () => {
             <GoogleLogin
               onSuccess={handleGoogleLogin}
               onError={() => message.error('Google login failed')}
+              disabled={loading}
             />
 
             <div className="flex justify-center items-center mt-4">

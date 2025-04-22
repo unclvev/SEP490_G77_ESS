@@ -402,6 +402,7 @@ namespace SEP490_G77_ESS.Controllers
 
         // ✅ Xóa ngân hàng câu hỏi
         [HttpDelete("{id}")]
+        [Authorize(Policy = "BankDelete")]
         public async Task<IActionResult> DeleteBank(long id)
         {
             var bank = await _context.Banks
