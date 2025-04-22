@@ -25,7 +25,7 @@ namespace SEP490_G77_ESS.Controllers.Common
             _jwt = jwt;
         }
 
-        [HttpPost("api/GoogleLogin")]
+        [HttpPost("GoogleLogin")]
         public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginDto request)
         {
             try
@@ -46,7 +46,7 @@ namespace SEP490_G77_ESS.Controllers.Common
                 }
 
                 var jwtToken = _jwt.CreateJWTToken(user);
-                return Ok(new { jwt = jwtToken });
+                return Ok(new { token = jwtToken });
             }
             catch (Exception ex)
             {
