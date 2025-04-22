@@ -48,7 +48,7 @@ namespace SEP490_G77_ESS.Controllers.Common
 
             return Ok(new
             {
-                accessToken,
+                token = accessToken,
                 refreshToken = refreshTokenEntity.Token,
                 expiresIn = 15 * 60
             });
