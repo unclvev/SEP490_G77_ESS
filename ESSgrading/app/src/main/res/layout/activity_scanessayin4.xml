@@ -14,23 +14,38 @@
         <!-- Include Header -->
         <include layout="@layout/header" />
 
-        <!-- Camera Preview -->
-        <SurfaceView
-            android:id="@+id/cameraPreview"
+        <!-- Camera Preview + Overlay -->
+        <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
-            android:background="@android:color/transparent"
-            android:elevation="4dp"
             android:layout_margin="16dp"
-            android:padding="8dp"/>
+            android:elevation="4dp">
+
+            <!-- Live camera -->
+            <SurfaceView
+                android:id="@+id/cameraPreview"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@android:color/transparent"
+                android:padding="8dp" />
+
+            <!-- Snapshot overlay để đóng băng -->
+            <ImageView
+                android:id="@+id/snapshotView"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:visibility="gone"
+                android:adjustViewBounds="true"
+                android:scaleType="fitCenter" />
+        </FrameLayout>
 
         <!-- Nút Status -->
         <TextView
             android:id="@+id/btnStatus"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Status"
+            android:text="Chụp"
             android:textSize="16sp"
             android:background="@color/deepblue"
             android:textColor="@android:color/white"
@@ -52,5 +67,4 @@
         android:layout_gravity="start"
         app:headerLayout="@layout/nav_header"
         app:menu="@menu/drawer_menu"/>
-
 </androidx.drawerlayout.widget.DrawerLayout>

@@ -28,23 +28,23 @@
                 android:id="@+id/btnMultipleChoice"
                 android:layout_width="300dp"
                 android:layout_height="wrap_content"
-                android:text="Bài kiểm tra trắc nghiệm"
+                android:text="Bài kiểm tra"
                 android:drawableLeft="@drawable/ic_key"
                 android:backgroundTint="@color/deepblue"
                 android:textColor="@android:color/white"
                 android:padding="10dp"
                 android:layout_margin="10dp"/>
 
-            <Button
-                android:id="@+id/btnEssay"
-                android:layout_width="300dp"
-                android:layout_height="wrap_content"
-                android:text="Bài kiểm tra tự luận"
-                android:drawableLeft="@drawable/ic_key"
-                android:backgroundTint="@color/deepblue"
-                android:textColor="@android:color/white"
-                android:padding="10dp"
-                android:layout_margin="10dp"/>
+<!--            <Button-->
+<!--                android:id="@+id/btnEssay"-->
+<!--                android:layout_width="300dp"-->
+<!--                android:layout_height="wrap_content"-->
+<!--                android:text="Bài kiểm tra tự luận"-->
+<!--                android:drawableLeft="@drawable/ic_key"-->
+<!--                android:backgroundTint="@color/deepblue"-->
+<!--                android:textColor="@android:color/white"-->
+<!--                android:padding="10dp"-->
+<!--                android:layout_margin="10dp"/>-->
         </LinearLayout>
 
         <!-- Include Footer -->

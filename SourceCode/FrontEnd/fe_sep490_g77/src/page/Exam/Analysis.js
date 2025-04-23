@@ -1,5 +1,5 @@
 import { LeftOutlined } from "@ant-design/icons";
-import { Button, Card, Checkbox, Table, Tabs } from "antd";
+import { Button, Card, Table, Tabs } from "antd";
 import { React, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -25,12 +25,12 @@ const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#DC143C"];
 const columns = [
   { title: "STT", dataIndex: "order", key: "order", width: 60, render: (_, __, index) => index + 1 },
   { title: "SBD", dataIndex: "studentId", key: "studentId" },
-  { title: "Họ và tên", dataIndex: "name", key: "name" },
+  { title: "Họ và tên", dataIndex: "name", key: "name", sorter: (a, b) => a.name.localeCompare(b.name) },
   { title: "Lớp học", dataIndex: "class", key: "class" },
   { title: "Mã đề thi", dataIndex: "examCode", key: "examCode" },
   { title: "Thời gian vào điểm", dataIndex: "time", key: "time" },
   { title: "Điểm số", dataIndex: "score", key: "score" },
-  { title: "Xếp hạng", dataIndex: "rank", key: "rank" },
+  { title: "Xếp hạng", dataIndex: "rank", key: "rank", sorter: (a, b) => a.rank - b.rank },
 ];
 const top5Columns = [
   { title: "Họ và tên", dataIndex: "name", key: "name" },
@@ -57,6 +57,7 @@ const Analysis = () => {
         try {
           const response = await getExamResults(examId);
           const data = response.data || [];
+          console.log(data[0]);
           const rsubject = await getSubjectNameById(data[0].subject);
 
           setScoreData(data);
@@ -66,7 +67,7 @@ const Analysis = () => {
           setCreatedate(data[0].examCreatedDate);
 
           // ==== Tính biểu đồ cột (chartData) ====
-          const ranges = ["0-3", "3-6", "6-7", "7-8", "8-10"];
+          const ranges = ["<3", ">=3 & <6", ">=6 & <7", ">=7 & <8", "8 - 10"];
           const chartCount = [0, 0, 0, 0, 0];
           data.forEach(s => {
             const score = s.score;
@@ -79,31 +80,30 @@ const Analysis = () => {
           const newChartData = ranges.map((r, i) => ({ range: r, count: chartCount[i] }));
           setChartData(newChartData);
     
-          // ==== Tính biểu đồ đường (lineChartData): điểm làm tròn ====
+          // Tính biểu đồ đường (lineChartData)
           const scoreMap = {};
           data.forEach(s => {
-            const rounded = Math.round(s.score);
-            scoreMap[rounded] = (scoreMap[rounded] || 0) + 1;
+            const score = s.score;
+            scoreMap[score] = (scoreMap[score] || 0) + 1;
           });
           const lineData = Object.entries(scoreMap)
-            .map(([score, count]) => ({ score: parseInt(score), students: count }))
+            .map(([score, count]) => ({ score: parseFloat(score), students: count }))
             .sort((a, b) => a.score - b.score);
           setLineChartData(lineData);
-    
           // ==== Tính biểu đồ tròn (pieChartData) ====
           const pieStat = {
-            "Xuất sắc (>9)": 0,
-            "Giỏi (8 - 9)": 0,
-            "Khá (6.5 - 8)": 0,
-            "Trung bình (5 - 6.5)": 0,
+            "Xuất sắc (>=9)": 0,
+            "Giỏi (>=8 & <9)": 0,
+            "Khá (>=6.5 &  <8)": 0,
+            "Trung bình (>=5 & <6.5)": 0,
             "Dưới trung bình (<5)": 0,
           };
           data.forEach(s => {
             const score = s.score;
-            if (score > 9) pieStat["Xuất sắc (>9)"]++;
-            else if (score >= 8) pieStat["Giỏi (8 - 9)"]++;
-            else if (score >= 6.5) pieStat["Khá (6.5 - 8)"]++;
-            else if (score >= 5) pieStat["Trung bình (5 - 6.5)"]++;
+            if (score >= 9) pieStat["Xuất sắc (>=9)"]++;
+            else if (score >= 8) pieStat["Giỏi (>=8 & <9)"]++;
+            else if (score >= 6.5) pieStat["Khá (>=6.5 &  <8)"]++;
+            else if (score >= 5) pieStat["Trung bình (>=5 & <6.5)"]++;
             else pieStat["Dưới trung bình (<5)"]++;
           });
           const pieData = Object.entries(pieStat).map(([name, value]) => ({ name, value }));
@@ -136,20 +136,14 @@ const Analysis = () => {
   
     const handleExportExcel = async () => {
       try {
-        // Gọi hàm exportExcel từ api.js để lấy file Excel
         const response = await exportExcel(examId);
-  
-        // Nếu response trả về status OK
         if (response.status === 200) {
-          // Tạo blob từ response data
           const blob = new Blob([response.data], {
             type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
           });
-          
-          // Tạo link tải file và tự động click vào để tải
           const link = document.createElement("a");
           link.href = URL.createObjectURL(blob);
-          link.download = "BangDiem.xlsx";  // Đặt tên cho file tải xuống
+          link.download = "BangDiem.xlsx";
           link.click();
         } else {
           toast.error("Không thể tải file Excel");
@@ -159,11 +153,16 @@ const Analysis = () => {
         toast.error("Lỗi khi xuất file Excel");
       }
     };
-  // Sắp xếp theo điểm từ cao xuống thấp để xếp hạng
-  const rankedData = [...scoreData].sort((a, b) => b.score - a.score).map((student, index) => ({
-    ...student,
-    rank: index + 1,
-  }));
+
+    const rankedData = [...scoreData]
+    .sort((a, b) => b.score - a.score)
+    .map((student, index, arr) => {
+      let rank = index + 1;
+      if (index > 0 && arr[index - 1].score === student.score) {
+        rank = index;
+      }
+      return { ...student, rank };
+    });
 
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
@@ -195,9 +194,8 @@ const Analysis = () => {
         <Card>
           <h3 className="font-semibold mb-2">Xuất dữ liệu</h3>
           <div className="flex flex-col gap-2">
-            <Checkbox checked>Phân tích cơ bản</Checkbox>
-            <Checkbox checked>Bảng điểm</Checkbox>
-            <Checkbox checked>Biểu đồ</Checkbox>
+            <div>- Phân tích cơ bản</div>
+            <div>- Bảng điểm</div>
             {/* <Checkbox checked>Tỉ lệ đúng/sai theo câu hỏi</Checkbox> */}
           </div>
           <Button type="primary" className="mt-4 w-full" onClick={() => handleExportExcel(examId)}>
@@ -212,11 +210,16 @@ const Analysis = () => {
           {/* Tab Bảng điểm */}
           <Tabs.TabPane tab="Bảng điểm" key="2">
             <div className="p-4">
-              <Table columns={columns} dataSource={rankedData} pagination={false} />
-            </div>
-          </Tabs.TabPane>
+                <Table 
+                  columns={columns} 
+                  dataSource={rankedData} 
+                  pagination={false} 
+                  rowKey="studentId" 
+                />
+              </div>
+            </Tabs.TabPane>
 
-          {/* Tab Biểu đồ */}
+            {/* Tab Biểu đồ */}
           <Tabs.TabPane tab="Thống kê" key="1">
             {/*biểu đồ cột*/}
             <div className="grid grid-cols-2 gap-4 text-sm">
@@ -241,9 +244,6 @@ const Analysis = () => {
             {/*biểu đồ đường*/}
             <div className="grid grid-cols-2 gap-4 text-sm">
               <p><strong>2. BIỂU ĐỒ ĐƯỜNG THỐNG KÊ SỐ HỌC SINH THEO ĐIỂM SỐ CỤ THỂ</strong></p>
-            </div>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <p>(có làm tròn)</p>
             </div>
             <div className="p-4">
               <ResponsiveContainer width="100%" height={300}>

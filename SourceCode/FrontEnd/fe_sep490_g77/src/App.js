@@ -32,6 +32,9 @@ import CreateNewEssayPage from "./page/Essay/CreateNewEssayPage.js";
 import TempComponent from "./page/TempComponent/temp.js";
 import ExamSelect from "./page/Exam/ExamSelect.js";
 import ExamCreation3T from "./page/Exam/ExamMCQ3tMatrix.js";
+import PrintPreview from "./page/Exam/PrintPreview.js";
+import ExamSetting from "./page/Exam/ExamSetting.js";
+import ManagerPage from "./page/Manager/ManagerPage";
 import Guideline from "./page/Grading/GuidelineInstallApp";
 
 function App() {
@@ -47,7 +50,8 @@ function App() {
           <Route path="/profile" element={<Profile /> } />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/MainLayout2" element={<MainLayout2 />} />
+          <Route path="/manager" element={<ManagerPage />} />
+
           {/* Các trang khác bọc trong MainLayout */}
           <Route path="/question-bank" element={<MainLayout><QuestionBank /></MainLayout>} />
           <Route path="/question-bank-detail/:bankId" element={<MainLayout><QuestionBankDetail /></MainLayout>} />
@@ -64,6 +68,7 @@ function App() {
 
           <Route path="/exam/preview/:examid" element={<MainLayout><ExamPreview /></MainLayout>} />
           <Route path="/exam/analysis/:examId" element={<MainLayout><Analysis /></MainLayout>} />
+          <Route path="/exam/print/:id" element={<PrintPreview />} />
 
           <Route path="/essay/genqr" element={<MainLayout><GenQRCode></GenQRCode></MainLayout>}/>
           <Route path="/essay/preview-gen-qr" element={<MainLayout><PreviewGenQR></PreviewGenQR></MainLayout>}/>

@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Collapse, Dropdown, Input, Modal, Button, message, Skeleton } from "antd";
-import { MoreOutlined, EditOutlined, DeleteOutlined, PlusOutlined } from "@ant-design/icons";
+import { MoreOutlined, EditOutlined, DeleteOutlined, PlusOutlined, UserAddOutlined, TeamOutlined } from "@ant-design/icons";
 import axios from "axios";
 import { toast } from "react-toastify";
+import InviteUserModal from "../../Manager/components/InviteUserModal";
+import ListMemberModal from "../../Manager/components/ListMemberModal";
 import { getBankById, getSectionsByBankId, addMainSection, addSubSection, editSection, deleteSection } from "../../../services/api"; 
 
 const { Panel } = Collapse;
@@ -17,6 +19,8 @@ const QuestionBankDetail = () => {
   const [modalType, setModalType] = useState("");
   const [currentSection, setCurrentSection] = useState(null);
   const [sectionName, setSectionName] = useState("");
+  const [inviteModalVisible, setInviteModalVisible] = useState(false);
+  const [listMemberModalVisible, setListMemberModalVisible] = useState(false);
 
   useEffect(() => {
     if (bankId) {
@@ -193,11 +197,18 @@ const renderSections = (sections) => {
         )}
       </div>
 
-      <div className="flex justify-start mb-4 w-3/4 mx-auto">
+      <div className="flex justify-start mb-4 w-3/4 mx-auto gap-2">
         <Button type="primary" icon={<PlusOutlined />} onClick={() => showModal("add-main")}>
           Thêm Section
         </Button>
+        <Button type="primary" icon={<UserAddOutlined />} onClick={() => setInviteModalVisible(true)}>
+          Mời Người Dùng
+        </Button>
+        <Button type="primary" icon={<TeamOutlined />} onClick={() => setListMemberModalVisible(true)}>
+          Danh Sách Thành Viên
+        </Button>
       </div>
+      
 
       {/* ✅ Hiển thị danh sách section */}
       <div className="bg-white p-6 shadow-lg rounded-lg w-full max-w-5xl mx-auto">
@@ -213,6 +224,20 @@ const renderSections = (sections) => {
       >
         <Input value={sectionName} onChange={(e) => setSectionName(e.target.value)} placeholder="Nhập tên section" />
       </Modal>
+
+      <InviteUserModal
+        visible={inviteModalVisible}
+        onClose={() => setInviteModalVisible(false)}
+        bankId={bankId}
+        resourceType="bank"
+      />
+
+      <ListMemberModal
+        visible={listMemberModalVisible}
+        onClose={() => setListMemberModalVisible(false)}
+        bankId={bankId}
+        resourceType="bank"
+      />
     </div>
   );
 };

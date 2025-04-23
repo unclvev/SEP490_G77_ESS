@@ -1,8 +1,11 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using SEP490_G77_ESS.DTO.UserDTO;
 using SEP490_G77_ESS.Models;
 using SEP490_G77_ESS.Utils;
+using System;
+using System.Linq;
 using System.Security.Cryptography;
 
 namespace SEP490_G77_ESS.Controllers.Common
@@ -25,52 +28,71 @@ namespace SEP490_G77_ESS.Controllers.Common
         [HttpPost]
         public IActionResult Login([FromBody] LoginDTO loginDto)
         {
-            var userLogin = _context.Accounts.FirstOrDefault(x => x.Email == loginDto.Username);
-            if (userLogin == null || !_passwordHandler.VerifyPassword(loginDto.Password, userLogin.Userpass))
-            {
+            var user = _context.Accounts
+                .Include(a => a.ResourceAccesses)
+                  .ThenInclude(ra => ra.Role)
+                .FirstOrDefault(x => x.Email == loginDto.Username);
+
+
+            if (user == null || !_passwordHandler.VerifyPassword(loginDto.Password, user.Userpass))
                 return Unauthorized(new { message = "Sai tên đăng nhập hoặc mật khẩu" });
+
+            if (user.IsActive == 0)
+            {
+                return Unauthorized(new { message = "Tài khoản đã bị chưa xác thực" });
             }
+            // Tạo accessToken và refreshToken
+            var accessToken = _jwt.CreateJWTToken(user);
+            var refreshTokenEntity = GenerateRefreshToken();
+            SaveRefreshToken(user, refreshTokenEntity);
 
-            // Tạo JWT với thông tin user và role (ở đây role truyền vào là 1, có thể thay đổi theo nhu cầu)
-            var jwtToken = _jwt.CreateJWTToken(userLogin, 1);
+            return Ok(new
+            {
+                token = accessToken,
+                refreshToken = refreshTokenEntity.Token,
+                expiresIn = 15 * 60
+            });
+        }
 
-            // Nếu muốn sử dụng refresh token, tạo và thiết lập cho người dùng
-            //var refreshToken = GenerateRefreshToken();
-            //SaveRefreshToken(userLogin, refreshToken);
+        [HttpPost("refresh")]
+        public IActionResult RefreshToken([FromBody] RefreshTokenRequest request)
+        {
+            var tokenEntity = _context.RefreshTokens
+                .FirstOrDefault(t => t.Token == request.RefreshToken);
 
-            // Lưu các thay đổi vào cơ sở dữ liệu
-            _context.SaveChanges();
+            if (tokenEntity == null || tokenEntity.Expires < DateTime.UtcNow)
+                return Unauthorized(new { message = "Refresh token không hợp lệ hoặc đã hết hạn" });
 
-            return Ok(new { token = jwtToken});
+            var user = _context.Accounts.Find(tokenEntity.AccountId);
+            if (user == null)
+                return Unauthorized(new { message = "Người dùng không tồn tại" });
+
+            var newAccessToken = _jwt.CreateJWTToken(user);
+            return Ok(new { accessToken = newAccessToken });
         }
 
         private RefreshToken GenerateRefreshToken()
         {
-            var refreshToken = new RefreshToken
+            return new RefreshToken
             {
                 Token = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64)),
-                Expires = DateTime.Now.AddDays(7),
-                Created = DateTime.Now
+                Expires = DateTime.UtcNow.AddDays(7),
+                Created = DateTime.UtcNow
             };
-            return refreshToken;
         }
 
-        private void SaveRefreshToken(Models.Account account, RefreshToken newRefreshToken)
+        private void SaveRefreshToken(Account account, RefreshToken refreshToken)
         {
-            // Thiết lập thông tin khóa ngoại
-            newRefreshToken.AccountId = account.AccId;
+            refreshToken.AccountId = account.AccId;
+            _context.RefreshTokens.Add(refreshToken);
+            _context.SaveChanges();
 
-            // Thêm refresh token vào DbSet
-            _context.RefreshTokens.Add(newRefreshToken);
-
-            // Thiết lập cookie cho refresh token
-            var cookieOptions = new CookieOptions
+            Response.Cookies.Append("refreshToken", refreshToken.Token, new CookieOptions
             {
                 HttpOnly = true,
-                Expires = newRefreshToken.Expires
-            };
-            Response.Cookies.Append("refreshToken", newRefreshToken.Token, cookieOptions);
+                Secure = true,
+                Expires = refreshToken.Expires
+            });
         }
-
     }
 }

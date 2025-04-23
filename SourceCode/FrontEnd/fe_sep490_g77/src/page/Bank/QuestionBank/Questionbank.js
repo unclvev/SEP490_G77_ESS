@@ -105,7 +105,7 @@ const QuestionBank = () => {
       setTotalDefaultBanks(filteredBanks.length);
     } catch (error) {
       console.error("Error fetching default banks:", error);
-      message.error('❌ Lỗi khi tải dữ liệu ngân hàng đề của ESS!');
+   
     } finally {
       setLoadingDefaultBanks(false);
     }
@@ -195,6 +195,10 @@ const QuestionBank = () => {
       await updateBankName(editingBank.bankId, {
         bankId: editingBank.bankId,
         bankname: newBankName
+      }, {
+        headers: {
+          'Authorization': `Bearer ${token.token}`
+        }
       });
   
       toast.success("✅ Cập nhật tên ngân hàng thành công!", 2);
@@ -457,7 +461,7 @@ showSizeChanger={false}
       
 <Modal
       title="Lỗi tải dữ liệu"
-      open={loadingDefaultBanks && defaultBanks.length === 0}
+      open={loadingDefaultBanks === 0 && defaultBanks.length === 0}
       onOk={() => setLoadingDefaultBanks(false)}
       onCancel={() => setLoadingDefaultBanks(false)}
       okText="OK"

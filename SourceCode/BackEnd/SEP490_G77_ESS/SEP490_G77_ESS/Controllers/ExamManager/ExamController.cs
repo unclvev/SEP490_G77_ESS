@@ -333,9 +333,9 @@ namespace SEP490_G77_ESS.Controllers.ExamManager
 
 
         [HttpGet("subject-name/{subjectId}")]
-        public async Task<IActionResult> GetSubjectNameById(long subjectId)
+        public async Task<IActionResult> GetSubjectNameById(string subjectId)
         {
-            var subject = await _context.Subjects.FindAsync(subjectId);
+            var subject = await _context.Subjects.Where(s => s.SubjectName == subjectId).FirstOrDefaultAsync();
             if (subject == null)
             {
                 return NotFound(new { message = "Không tìm thấy môn học với ID đã cho." });
@@ -354,6 +354,39 @@ namespace SEP490_G77_ESS.Controllers.ExamManager
 
             return Ok(results);
         }
+
+        //get exams by accid
+        [HttpGet("accid/{accId}")]
+        public async Task<IActionResult> GetAllExamFromAccId(long accId)
+        {
+            var results = await _context.Exams
+                .Where(b => b.AccId == accId)
+                .ToListAsync();
+
+            return Ok(results);
+        }
+
+        ////get mcq exams by accid
+        //[HttpGet("mcq/accid/{accId}")]
+        //public async Task<IActionResult> GetAllMCQExamFromAccId(long accId)
+        //{
+        //    var results = await _context.Exams
+        //        .Where(b => b.AccId == accId)
+        //        .ToListAsync();
+
+        //    return Ok(results);
+        //}
+
+        ////get essay exams by accid
+        //[HttpGet("essay/accid/{accId}")]
+        //public async Task<IActionResult> GetAllEssayExamFromAccId(long accId)
+        //{
+        //    var results = await _context.Exams
+        //        .Where(b => b.AccId == accId)
+        //        .ToListAsync();
+
+        //    return Ok(results);
+        //}
     }
 
 }

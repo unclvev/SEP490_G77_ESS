@@ -21,7 +21,6 @@ public class MainActivity extends BaseActivity {
         setHeaderTitle("Trang chủ");
 
         btnMultipleChoice = findViewById(R.id.btnMultipleChoice);
-        btnEssay = findViewById(R.id.btnEssay);
 
         btnMultipleChoice.setOnClickListener(v ->{
             Intent intent = new Intent(MainActivity.this, TestListActivity.class);

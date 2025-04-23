@@ -121,7 +121,7 @@ const EssQuestionList = () => {
                             <img
                               src={question.imageUrl.startsWith("http")
                                 ? question.imageUrl
-                                : `https://localhost:7052${question.imageUrl}`}
+                                : `http://localhost:7052${question.imageUrl}`}
                               alt="Question"
                               className="max-w-full max-h-64 object-contain"
                             />

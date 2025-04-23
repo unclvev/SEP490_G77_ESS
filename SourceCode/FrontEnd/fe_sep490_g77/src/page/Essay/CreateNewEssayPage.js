@@ -3,6 +3,8 @@ import { Input, Select, Button, Form, message } from "antd";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-toastify";
+import { useSelector } from 'react-redux';
+import { jwtDecode } from "jwt-decode"
 import { getGrades, getSubjects,createEssay} from '../../services/api';
 const { Option } = Select;
 
@@ -11,7 +13,20 @@ const CreateNewEssayPage = () => {
   const [grades, setGrades] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [searchParams] = useSearchParams();
-  const accId = 7;
+  let accId = -1;
+  const token = useSelector((state) => state.token);
+
+    accId = searchParams.get("accid") || localStorage.getItem("accid"); // Mặc định cũ
+
+    // Nếu token tồn tại, giải mã để lấy AccId
+    if (token) {
+        try {
+            const decoded = jwtDecode(token.token);
+            accId = decoded.AccId || accId; // Ưu tiên lấy từ token nếu có
+        } catch (error) {
+            console.error("Invalid token", error);
+        }
+    }
   //const accId = searchParams.get("accid");
   const navigate = useNavigate();
 

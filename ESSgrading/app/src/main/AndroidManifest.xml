@@ -8,6 +8,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
 
     <application
+        android:name=".MyApplication"
         android:usesCleartextTraffic="true"
         android:networkSecurityConfig="@xml/network_security_config"
         android:allowBackup="true"
@@ -39,7 +40,7 @@
             android:exported="true"/>
         <activity android:name=".Activity.Test.TestOptionActivity"
             android:exported="true"/>
-        <activity android:name=".Activity.Test.GradingActivity"
+        <activity android:name=".Activity.Test.ScanEssayIn4Activity"
             android:exported="true"/>
         <activity android:name=".Activity.Test.ScoreReportActivity"
             android:exported="true"/>

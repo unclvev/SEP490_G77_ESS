@@ -17,15 +17,18 @@ const ImportEssayPage = () => {
     const selectedFile = e.target.files[0];
     if (!selectedFile) return;
 
+
     const isExcel = selectedFile.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
     if (!isExcel) {
       message.error("Chỉ chấp nhận file Excel (.xlsx)");
       return;
     }
 
+
     setFile(selectedFile);
     message.success(`Đã chọn file: ${selectedFile.name}`);
   };
+
 
   const handleUpload = async () => {
     if (!file || !examid) {
@@ -52,9 +55,11 @@ const ImportEssayPage = () => {
     }
   };
 
+
   return (
     <div className="p-6 w-full px-8 bg-white rounded shadow">
       <h1 className="text-2xl font-bold mb-4">Import danh sách học sinh</h1>
+
 
       <p className="text-sm text-gray-600 mb-4">
         📥 Nếu chưa có file, bạn có thể tải
@@ -67,6 +72,7 @@ const ImportEssayPage = () => {
         </a>
       </p>
 
+
       <input
         type="file"
         accept=".xlsx"
@@ -74,6 +80,7 @@ const ImportEssayPage = () => {
         ref={inputRef}
         className="mb-4"
       />
+
 
       <div>
         <Button
@@ -130,4 +137,8 @@ const ImportEssayPage = () => {
   );
 };
 
+
 export default ImportEssayPage;
+
+
+

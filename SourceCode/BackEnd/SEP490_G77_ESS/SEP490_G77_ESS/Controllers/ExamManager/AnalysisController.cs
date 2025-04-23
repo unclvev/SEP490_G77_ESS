@@ -21,6 +21,11 @@ namespace SEP490_G77_ESS.Controllers.ExamManager
         [HttpGet("{examId}")]
         public async Task<ActionResult<IEnumerable<StudentResultAnalysisDto>>> GetStudentResultsByExamId(long examId)
         {
+            if (examId <= 0)
+            {
+                Console.WriteLine("GetStudentResultsByExamId failed - examId is invalid");
+                return BadRequest(new { message = "ExamId không hợp lệ" });
+            }
             var results = await _context.StudentResults
                 .Where(r => r.ExamId == examId)
                 .Include(r => r.Exam)
