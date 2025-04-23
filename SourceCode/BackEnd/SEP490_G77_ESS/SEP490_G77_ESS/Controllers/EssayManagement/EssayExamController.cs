@@ -138,10 +138,6 @@ namespace SEP490_G77_ESS.Controllers.EssayManagement
             }
         }
 
-
-
-
-
         [HttpGet("by-account/{accId}")]
         public async Task<IActionResult> GetExamsByAccount(int accId, [FromQuery] string? grade, [FromQuery] string? subject, [FromQuery] string? classname)
         {
@@ -258,7 +254,6 @@ namespace SEP490_G77_ESS.Controllers.EssayManagement
             await _context.SaveChangesAsync();
             return Ok(new { message = "Cập nhật thành công" });
         }
-
 
         [HttpDelete("delete/{id}")]
         public async Task<IActionResult> DeleteExam(long id)

@@ -35,13 +35,13 @@ import ExamCreation3T from "./page/Exam/ExamMCQ3tMatrix.js";
 import PrintPreview from "./page/Exam/PrintPreview.js";
 import ExamSetting from "./page/Exam/ExamSetting.js";
 import ManagerPage from "./page/Manager/ManagerPage";
+import Guideline from "./page/Grading/GuidelineInstallApp";
 
 function App() {
   return (
     <Provider store={store}> {/* Thêm Provider */}
       <Router>
         <Routes>
-          
           
           {/* Home dùng Sidebar riêng */}
           <Route path="/" element={<Home />} />
@@ -76,10 +76,9 @@ function App() {
           <Route path="/essay" element={<MainLayout><CreateEssayExam></CreateEssayExam></MainLayout>}/>
           <Route path="/exam/matrix3t" element={<MainLayout><ExamCreation3T/></MainLayout>}></Route>
           <Route path="/exam/select" element={<MainLayout><ExamSelect/></MainLayout>}></Route>
-          
-          <Route path="/temp" element={<ExamSetting/>}></Route>
-          
+          <Route path="/temp" element={<TempComponent/>}></Route> 
           <Route path="/essay/create" element={<MainLayout><CreateNewEssayPage /></MainLayout>} />
+          <Route path="/grading" element={<MainLayout><Guideline /></MainLayout>} />
         </Routes>
       </Router>
                                                 

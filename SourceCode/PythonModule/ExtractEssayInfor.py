@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify,Blueprint
 from flasgger import Swagger
 import os
 import cv2
@@ -11,6 +11,12 @@ from unidecode import unidecode
 import re
 import time
 from dotenv import load_dotenv
+from database import get_db_connection
+
+conn = get_db_connection()
+cursor = conn.cursor()
+
+essay = Blueprint('essay', __name__)
 
 load_dotenv() 
 subscription_key = os.getenv("AZURE_SUBSCRIPTION_KEY")
@@ -129,7 +135,7 @@ def extract_qr_codes(image_path):
     
     return results
 
-@app.route("/scan-essay", methods=["POST"])
+@essay.route('/essay/scan-essay', methods=["POST"])
 def analyze_image():
     """
     Phân tích ảnh để trích xuất SBD, điểm và QR code
@@ -194,5 +200,3 @@ def analyze_image():
 
     return jsonify(result_scan)
 
-if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=5000)

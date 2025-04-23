@@ -18,6 +18,8 @@ import axios from "axios";
 import { toast } from "react-toastify";
 import { useSelector } from 'react-redux';
 import { jwtDecode } from "jwt-decode"
+import { getGrades, getSubjects, getEssaysByAccount, deleteEssay, updateEssay } from '../../services/api';
+
 
 const { Search } = Input;
 const { Option } = Select;
@@ -57,8 +59,8 @@ const CreateEssayExam = () => {
   const fetchFilters = async () => {
     try {
       const [gradeRes, subjectRes] = await Promise.all([
-        axios.get("http://localhost:7052/api/essay/grades"),
-        axios.get("http://localhost:7052/api/essay/subjects"),
+        getGrades(),
+        getSubjects(),
       ]);
       setGradeOptions(gradeRes.data);
       setSubjectOptions(subjectRes.data);
@@ -75,8 +77,7 @@ const CreateEssayExam = () => {
       if (selectedSubject) params.subject = selectedSubject;
       if (searchText) params.keyword = searchText;
 
-      const url = `http://localhost:7052/api/essay/by-account/${accId}`;
-      const response = await axios.get(url, { params });
+      const response = await getEssaysByAccount(accId, params);
       setData(response.data);
       setCurrentPage(1);
     } catch (error) {
@@ -86,7 +87,7 @@ const CreateEssayExam = () => {
 
   const handleDelete = async (id) => {
     try {
-      await axios.delete(`http://localhost:7052/api/essay/delete/${id}`);
+      await deleteEssay(id);
       toast.success("Đã xoá đề");
       fetchData();
     } catch {
@@ -103,7 +104,7 @@ const CreateEssayExam = () => {
     };
 
     try {
-      await axios.put(`http://localhost:7052/api/essay/update/${editingExam.id}`, payload);
+      await updateEssay(editingExam.id, payload);
       toast.success("Cập nhật đề thành công");
       setEditModalOpen(false);
       fetchData();
@@ -169,6 +170,7 @@ const CreateEssayExam = () => {
                   <span className="font-semibold">{item.title}</span>
                   <div className="space-x-2">
                     <Button
+                      className="font-semibold"
                       type="link"
                       size="small"
                       onClick={(e) => {
@@ -179,6 +181,7 @@ const CreateEssayExam = () => {
                       Sửa
                     </Button>
                     <Popconfirm
+                      className="font-semibold"
                       title="Bạn có chắc chắn muốn xoá đề này?"
                       okText="Xoá"
                       cancelText="Hủy"
@@ -198,9 +201,16 @@ const CreateEssayExam = () => {
               className="rounded-xl shadow-md cursor-pointer hover:border-blue-500"
               onClick={() => navigate(`/exam/analysis/${item.id}`)}
             >
-              <p>{item.grade} - {item.subject}</p>
-              <p className="text-sm text-gray-500">Ngày tạo {item.createdDate}</p>
-              <p className="text-sm text-gray-500">Lớp {item.nameClass}</p>
+              <p className="font-semibold">{item.grade} - {item.subject}</p>
+              <div className="text-sm text-gray-500 flex justify-between">
+                <span className="font-semibold">Ngày tạo</span>
+                <span className="font-semibold">{new Date(item.createdDate).toLocaleDateString()}</span>
+              </div>
+
+              <div className="text-sm text-gray-500 flex justify-between">
+                <span className="font-semibold">Lớp</span>
+                <span className="font-semibold">{item.nameClass}</span>
+              </div>
               <div className="mt-4 flex justify-between">
                 <Button
                   type="primary"
@@ -210,7 +220,7 @@ const CreateEssayExam = () => {
                     navigate(`/essay/import/${item.id}`);
                   }}
                 >
-                  Import
+                  Đẩy danh sách học sinh
                 </Button>
                 <Button
                   size="small"
@@ -227,7 +237,7 @@ const CreateEssayExam = () => {
                     });
                   }}
                 >
-                  Gen QR Code
+                  Tạo mã QR
                 </Button>
               </div>
             </Card>

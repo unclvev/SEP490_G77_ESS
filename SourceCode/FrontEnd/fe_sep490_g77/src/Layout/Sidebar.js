@@ -14,7 +14,7 @@ import {
 const Sidebar = ({ collapsed, setCollapsed }) => {
   return (
     <div
-      className={`h-screen fixed left-0 top-0 bg-blue-700 text-white transition-all duration-300 ${
+      className={`h-screen fixed left-0 top-0 bg-white border border-blue-500 text-black transition-all duration-300 ${
         collapsed ? "w-20" : "w-64"
       } p-4`}
     >
@@ -35,7 +35,7 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
           <Tooltip title={collapsed ? "Trang chủ" : ""} placement="right">
             <a
               href="/"
-              className="flex items-center space-x-3 text-lg hover:text-gray-200"
+              className="flex items-center space-x-3 text-lg font-semibold hover:text-gray-700"
             >
               <HomeOutlined className="text-2xl text-white" />
               {!collapsed && <span>Trang chủ</span>}
@@ -44,22 +44,10 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
         </li>
 
         <li>
-          <Tooltip title={collapsed ? "Đề thi" : ""} placement="right">
-            <a
-              href="/exam"
-              className="flex items-center space-x-3 text-lg hover:text-gray-200"
-            >
-              <FileTextOutlined className="text-2xl text-yellow-300" />
-              {!collapsed && <span>Đề thi</span>}
-            </a>
-          </Tooltip>
-        </li>
-
-        <li>
           <Tooltip title={collapsed ? "Ngân hàng câu hỏi" : ""} placement="right">
             <a
               href="/question-bank"
-              className="flex items-center space-x-3 text-lg hover:text-gray-200"
+              className="flex items-center space-x-3 text-lg font-semibold hover:text-gray-700"
             >
               <BookOutlined className="text-2xl text-green-300" />
               {!collapsed && <span>Ngân hàng câu hỏi</span>}
@@ -68,10 +56,24 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
         </li>
 
         <li>
+          <Tooltip title={collapsed ? "Đề thi" : ""} placement="right">
+            <a
+              href="/exam"
+              className="flex items-center space-x-3 text-lg font-semibold hover:text-gray-700 "
+            >
+              <FileTextOutlined className="text-2xl text-yellow-300" />
+              {!collapsed && <span>Đề thi</span>}
+            </a>
+          </Tooltip>
+        </li>
+
+        
+
+        <li>
           <Tooltip title={collapsed ? "Chấm điểm" : ""} placement="right">
             <a
               href="/grading"
-              className="flex items-center space-x-3 text-lg hover:text-gray-200"
+              className="flex items-center space-x-3 text-lg font-semibold hover:text-gray-700"
             >
               <CheckOutlined className="text-2xl text-red-300" />
               {!collapsed && <span>Chấm điểm</span>}
@@ -79,7 +81,7 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
           </Tooltip>
         </li>
         <li>
-          <Tooltip title={collapsed ? "Gen QR Code" : ""} placement="right">
+          <Tooltip title={collapsed ? "Tự luận" : ""} placement="right">
             <Link
               to="/essay"
               className="flex items-center space-x-4 text-lg hover:text-gray-300"

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Collapse, Skeleton, Button } from "antd";
 import axios from "axios";
 import { toast } from "react-toastify";
+import { getDefaultBank, getDefaultSections } from '../../../services/api';
 
 const { Panel } = Collapse;
 
@@ -22,7 +23,7 @@ const EssQuestionBankDetail = () => {
   // ✅ Lấy thông tin ngân hàng câu hỏi
   const fetchBankInfo = async () => {
     try {
-      const response = await axios.get(`http://localhost:7052/api/Bank/default/${bankId}`);
+      const response = await getDefaultBank(bankId);
       setBankInfo(response.data);
     } catch (error) {
       toast.error("Không thể tải dữ liệu ngân hàng!");
@@ -32,7 +33,8 @@ const EssQuestionBankDetail = () => {
   // ✅ Lấy danh sách Sections của ngân hàng
   const fetchSections = async () => {
     try {
-      const response = await axios.get(`http://localhost:7052/api/Bank/default/${bankId}/sections`);
+      const response = await getDefaultSections(bankId);
+
       setSections(response.data);
     } catch (error) {
       toast.error("Lỗi khi tải dữ liệu section!");

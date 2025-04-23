@@ -62,9 +62,6 @@ export const updateProfile = (data) => Http.put("/Profile/update", data);
 export const changePassword = (data) => Http.put("/Profile/changePassword", data);
 
 //bank-api
-
-
-
 export const loadGrade = () => Http.get("/Bank/grades");
 
 export const loadSubject = () => Http.get("/Bank/subjects");
@@ -135,30 +132,6 @@ export const getExamResults = (examid) => Http.get(`/Analysis/${examid}`)
 
 export const exportExcel = (examid) => Http.get(`/Analysis/export/${examid}`, { responseType: 'blob' })
 
-//essay-api
-
-export const getGrades = () => Http.get("/essay/grades");
-
-
-export const getSubjects = () => Http.get("/essay/subjects");
-
-
-export const getEssaysByAccount = (accId, params) => Http.get(`/essay/by-account/${accId}`, { params });
-
-
-export const deleteEssay = (id) => Http.delete(`/essay/delete/${id}`);
-
-
-export const createEssay = (accId, data) => Http.post(`/essay/create/${accId}`, data);
-
-
-export const updateEssay = (id, data) => Http.put(`/essay/update/${id}`, data);
-
-
-export const saveStudentList = (formData) => Http.post("/essay/savestudentlist", formData, {
-  headers: { "Content-Type": "multipart/form-data" }})
-
-
 //question-api
 
 
@@ -178,3 +151,61 @@ export const importQuestionsExcel = (sectionId, formData) =>
 export const uploadQuestionImage = (base64Image) =>
   Http.post(`/Question/upload-image-base64`, { base64Image });
 
+// essay-api
+
+export const getGrades = () => Http.get("/essay/grades");
+
+export const getSubjects = () => Http.get("/essay/subjects");
+
+export const getEssaysByAccount = (accId, params) => Http.get(`/essay/by-account/${accId}`, { params });
+
+export const deleteEssay = (id) => Http.delete(`/essay/delete/${id}`);
+
+export const createEssay = (accId, data) => Http.post(`/essay/create/${accId}`, data);
+
+export const updateEssay = (id, data) => Http.put(`/essay/update/${id}`, data);
+
+export const saveStudentList = (formData) => Http.post("/essay/savestudentlist", formData, {
+  headers: { "Content-Type": "multipart/form-data" }
+});
+
+// bank-api
+
+export const getBankGrades = () => Http.get("/Bank/grades");
+
+export const getBankSubjects = () => Http.get("/Bank/subjects");
+
+export const getBankCurriculums = () => Http.get("/Bank/curriculums");
+
+export const generateBank = (accId, data) => Http.post(`/Bank/generate/${accId}`, data);
+
+export const getDefaultBank = (bankId) => Http.get(`/Bank/default/${bankId}`);
+
+export const getDefaultSections = (bankId) => Http.get(`/Bank/default/${bankId}/sections`);
+
+export const getDefaultQuestions = (sectionId) => Http.get(`/Bank/default/${sectionId}/questions`);
+
+// question-api
+
+export const getBanksByAccount = (accid, params) => Http.get(`/Bank/account/${accid}`, { params });
+
+export const getDefaultBanks = (params) => Http.get(`/Bank/default-banks`, { params });
+
+// 📚 Question Bank Section APIs
+
+export const getBankById = (bankId) => Http.get(`/Bank/${bankId}`);
+
+export const getSectionsByBankId = (bankId) => Http.get(`/Bank/${bankId}/sections`);
+
+export const editSection = (sectionId, data) => Http.put(`/Bank/section/${sectionId}`, data);
+
+export const getQuestions = (sectionId) => Http.get(`/Question/questions`, { params: { sectionId } });
+
+export const uploadImageBase64 = (base64Image) => Http.post(`/Question/upload-image-base64`, { base64Image });
+
+export const importQuestionExcel = (sectionId, formData) => 
+  Http.post(`/Question/${sectionId}/import-excel`, formData, { headers: { "Content-Type": "multipart/form-data" } });
+
+export const exportQuestionExcel = (sectionId) => {
+  window.location.href = `https://localhost:7052/api/Question/${sectionId}/export-excel`;
+};

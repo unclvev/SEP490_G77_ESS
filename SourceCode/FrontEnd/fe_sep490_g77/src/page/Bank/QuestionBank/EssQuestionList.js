@@ -6,6 +6,7 @@ import { toast } from "react-toastify";
 import parse from "html-react-parser";
 import { InlineMath } from "react-katex";
 import "katex/dist/katex.min.css";
+import { getDefaultQuestions, getQuestionTypes, getLevels } from '../../../services/api';
 
 const EssQuestionList = () => {
   const { sectionId } = useParams();
@@ -25,9 +26,8 @@ const EssQuestionList = () => {
 
   const fetchQuestions = async () => {
     try {
-      const response = await axios.get(
-        `http://localhost:7052/api/Bank/default/${sectionId}/questions`
-      );
+      const response = await getDefaultQuestions(sectionId);
+
       setQuestions(response.data || []);
     } catch (error) {
       toast.error("Không thể tải danh sách câu hỏi!");
@@ -39,7 +39,7 @@ const EssQuestionList = () => {
 
   const fetchQuestionTypes = async () => {
     try {
-      const res = await axios.get("http://localhost:7052/api/Question/types");
+      const res = await getQuestionTypes();
       setQuestionTypes(res.data || []);
     } catch {
       toast.error("Không thể tải loại câu hỏi!");
@@ -48,7 +48,7 @@ const EssQuestionList = () => {
 
   const fetchLevels = async () => {
     try {
-      const res = await axios.get("http://localhost:7052/api/Question/levels");
+      const res = await getLevels();
       setLevels(res.data || []);
     } catch {
       toast.error("Không thể tải độ khó!");

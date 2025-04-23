@@ -14,6 +14,8 @@ import 'katex/dist/katex.min.css';
 import { InlineMath, BlockMath } from 'react-katex';
 import { Modal } from 'antd'; 
 import { useRef } from "react";
+import { getQuestions, getQuestionTypes, getLevels, createQuestion, updateQuestion, deleteQuestion,uploadImageBase64,importQuestionExcel,exportQuestionExcel} from "../../../services/api";
+
 const { TextArea } = Input;
 const { Option } = Select;
 const QuestionList = () => {
@@ -129,7 +131,7 @@ const isMountedRef = useRef(true);
 
   const fetchQuestions = async () => {
     try {
-      const response = await axios.get(`http://localhost:7052/api/Question/questions?sectionId=${sectionId}`);
+      const response = await getQuestions(sectionId);
       setQuestions(response.data);
     } catch (error) {
       if (!isMountedRef.current) return;
@@ -139,7 +141,7 @@ const isMountedRef = useRef(true);
 
   const fetchQuestionTypes = async () => {
     try {
-      const response = await axios.get(`http://localhost:7052/api/Question/types`);
+      const response = await getQuestionTypes();
       setQuestionTypes(response.data);
     } catch (error) {
       if (!isMountedRef.current) return;
@@ -149,7 +151,7 @@ const isMountedRef = useRef(true);
 
   const fetchLevels = async () => {
     try {
-      const response = await axios.get(`http://localhost:7052/api/Question/levels`);
+      const response = await getLevels();
       setLevels(response.data);
     } catch (error) {
       if (!isMountedRef.current) return;
@@ -482,9 +484,9 @@ const saveEditedFormula = () => {
 
       let response;
       if (currentQuestion) {
-        response = await axios.put(`https://localhost:7052/api/Question/questions/${currentQuestion.quesid}`, requestData);
+        response = await updateQuestion(currentQuestion.quesid, requestData);
       } else {
-        response = await axios.post(`https://localhost:7052/api/Question/questions`, requestData);
+        response = await createQuestion(requestData);
       }
 
       toast.success("✅ Lưu câu hỏi thành công!");
@@ -507,7 +509,7 @@ const saveEditedFormula = () => {
 
   const handleDelete = async (quesid) => {
     try {
-      await axios.delete(`https://localhost:7052/api/Question/questions/${quesid}`);
+      await deleteQuestion(quesid);
       toast.success("Xóa câu hỏi thành công!");
       fetchQuestions();
     } catch (error) {
@@ -516,7 +518,7 @@ const saveEditedFormula = () => {
   };
 
   const handleExportExcel = () => {
-    window.location.href = `https://localhost:7052/api/Question/${sectionId}/export-excel`;
+    exportQuestionExcel(sectionId);
   };
 
   const handleImportExcel = async ({ file }) => {
@@ -524,9 +526,7 @@ const saveEditedFormula = () => {
     formData.append("file", file);
 
     try {
-      const response = await axios.post(`https://localhost:7052/api/Question/${sectionId}/import-excel`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      const response = await importQuestionExcel(sectionId, formData);
 
       if (response.status === 200) {
         toast.success("✅ Import Excel thành công!");
@@ -1060,17 +1060,13 @@ const renderMathInput = () => {
   customRequest={async ({ file }) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
-
+  
     reader.onload = async () => {
       try {
         const base64Image = reader.result;
-
-        const response = await axios.post('https://localhost:7052/api/Question/upload-image-base64', {
-          base64Image
-        });
-
+        const response = await uploadImageBase64(base64Image);
+  
         let imageUrl = response.data.imageUrl;
-
         if (imageUrl && imageUrl.startsWith("/")) {
           imageUrl = `https://localhost:7052${imageUrl}`;
         }
@@ -1078,14 +1074,14 @@ const renderMathInput = () => {
           ...prev,
           imageUrl
         }));
-
+  
         toast.success("Tải ảnh lên thành công!");
       } catch (error) {
         toast.error("Lỗi khi tải ảnh base64 lên!");
         console.error(error);
       }
     };
-  }}
+  }}  
 >
   {newQuestion.imageUrl ? (
     <div className="relative w-full h-full">

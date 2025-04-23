@@ -5,10 +5,9 @@ import { useState, useRef } from "react";
 import { useSearchParams,useParams } from "react-router-dom";
 import { saveStudentList } from '../../services/api';
 
-
 const ImportEssayPage = () => {
   const [searchParams] = useSearchParams();
-  const { examid } = useParams();
+  const { examid } = useParams(); 
   const [file, setFile] = useState(null);
   const inputRef = useRef();
   const [importResult, setImportResult] = useState("");
@@ -36,14 +35,14 @@ const ImportEssayPage = () => {
       message.warning("Vui lòng chọn file và đảm bảo có ExamId.");
       return;
     }
- 
+  
     const formData = new FormData();
     formData.append("file", file);
     formData.append("examId", examid);
- 
+  
     try {
       const response = await saveStudentList(formData);
- 
+  
       message.success("Tải lên thành công!");
       setImportResult("Đã import " + response.data.length + " học sinh.");
       setImportedStudents(response.data); // ✅ cập nhật danh sách
@@ -128,7 +127,6 @@ const ImportEssayPage = () => {
           </table>
         </div>
       )}
-
 
       {importResult && (
         <p className="text-green-600 mt-4 font-semibold">

@@ -6,6 +6,8 @@ import { toast } from "react-toastify";
 import { useSelector } from 'react-redux';
 import { jwtDecode } from "jwt-decode";
 import { useLocation } from 'react-router-dom';
+import { getBankGrades, getBankSubjects, getBankCurriculums, generateBank } from '../../../services/api';
+
 const { Option } = Select;
 
 const CreateQuestionBank = () => {
@@ -41,7 +43,7 @@ const CreateQuestionBank = () => {
 
     const fetchGrades = async () => {
       try {
-        const response = await axios.get("http://localhost:7052/api/Bank/grades");
+        const response = await getBankGrades();
         setGrades(response.data || []);
       } catch (error) {
         toast.error("Lỗi khi tải danh sách Khối học.");
@@ -50,7 +52,7 @@ const CreateQuestionBank = () => {
 
     const fetchSubjects = async () => {
       try {
-        const response = await axios.get("http://localhost:7052/api/Bank/subjects");
+        const response = await getBankSubjects();
         setSubjects(response.data || []);
       } catch (error) {
         toast.error("Lỗi khi tải danh sách Môn học.");
@@ -59,7 +61,7 @@ const CreateQuestionBank = () => {
 
     const fetchCurriculums = async () => {
       try {
-        const response = await axios.get("http://localhost:7052/api/Bank/curriculums");
+        const response = await getBankCurriculums();
         setCurriculums(response.data || []);
       } catch (error) {
         toast.error("Lỗi khi tải danh sách Chương trình học.");
@@ -91,7 +93,7 @@ const CreateQuestionBank = () => {
       };
 
       // ✅ Gửi accid vào API
-      const response = await axios.post(`http://localhost:7052/api/Bank/generate/${accid}`, requestData);
+      const response = await generateBank(accid, requestData);  
 
       if (response.status === 200) {
         toast.success(`✅ Ngân hàng câu hỏi "${response.data.bankName}" đã được tạo thành công!`);
