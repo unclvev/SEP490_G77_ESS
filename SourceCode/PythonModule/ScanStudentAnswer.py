@@ -6,6 +6,7 @@ import uuid
 from flask import Flask, request, jsonify, Blueprint
 from flasgger import Swagger, swag_from
 from database import get_db_connection
+import json
 
 conn = get_db_connection()
 cursor = conn.cursor()
@@ -279,7 +280,6 @@ def split_by_detected_lines(region_img, lines_y, prefix="left", output_dir="outp
 
         save_path = os.path.join(output_dir, f"{prefix}_subregion_{i+1}.jpg")
         cv2.imwrite(save_path, sub_img)
-        print(f"✅ Saved subregion {i+1}: y = {y1} to {y2} -> {save_path}")
 
     return subregions
 
@@ -541,6 +541,67 @@ def detect_code(image_path, output_folder='recog', is_student_id=True):
     print(f"Detected {label}: {code}")
     return code
 
+def calculate_student_score(exam_data_json, detected_answers, exam_code, scale_to_10=True):
+    correct_answers = {}
+    index_to_letter = {1: 'A', 2: 'B', 3: 'C', 4: 'D'}
+    examcodes = exam_data_json.get("ExamCodes", [])
+    questions = []
+    print(f"examcodoe get from phieu tra lowi: {exam_code}")
+    # Tìm đúng ExamCode
+    for code in examcodes:
+        print(f'examcode detect trong json: {code.get("ExamCode")}')
+        if code.get("ExamCode") == exam_code:
+            questions = code.get("Questions", [])
+            break
+
+    if not questions:
+        print(f"Exam code {exam_code} not found!")
+        return 0.0
+
+    # Build dict correct_answers {question_number: correct content}
+    for idx, q in enumerate(questions, start=1):
+        if q["Type"] == "Multiple Choice":
+            for i, ans in enumerate(q.get("Answers", []), start=1):
+                if ans.get("IsCorrect", False):
+                    letter = index_to_letter.get(i, "?")
+                    correct_answers[str(idx)] = letter
+
+    total_questions = len(correct_answers)
+    correct_count = 0
+
+    for q_number, correct_choice in correct_answers.items():
+        student_choice = detected_answers.get(int(q_number))
+        if student_choice and student_choice.strip().upper() == correct_choice.strip().upper():
+            correct_count += 1
+
+    if total_questions == 0:
+        return 0.0
+
+    raw_score = correct_count / total_questions
+    final_score = round(raw_score * 10, 2) if scale_to_10 else raw_score
+    return final_score
+
+def save_student_result(cursor, conn, student_code, exam_code, exam_id, score):
+    cursor.execute(
+        "SELECT student_result_id FROM student_result WHERE student_code = ? AND exam_id = ?", 
+        (student_code, exam_id)
+    )
+    existing = cursor.fetchone()
+
+    if existing:
+        # Update điểm và exam_code
+        cursor.execute("""
+            UPDATE student_result 
+            SET exam_code = ?, score = ?, create_date = GETDATE()
+            WHERE student_code = ? AND exam_id = ?
+        """, (exam_code, score, student_code, exam_id))
+        print(f"Updated existing student result: student_code={student_code}, exam_id={exam_id}")
+    else:
+        print(f'{student_code} does not exist in student list')
+    
+    conn.commit()
+
+
 app = Flask(__name__)
 swagger = Swagger(app)
 
@@ -561,6 +622,13 @@ os.makedirs(TEMP_FOLDER, exist_ok=True)
             'type': 'file',
             'required': True,
             'description': 'Upload image file (Student answer sheet)'
+        },
+        {
+            'name': 'exam_id',
+            'in': 'formData',
+            'type': 'integer',
+            'required': True,
+            'description': 'Exam ID of the test'
         }
     ],
     'responses': {
@@ -591,6 +659,15 @@ def detect():
     input_path = os.path.join(UPLOAD_FOLDER, f"{uuid.uuid4().hex}.jpg")
     file.save(input_path)
 
+    exam_id = request.form.get('exam_id')
+    if not exam_id:
+        return jsonify({"error": "No exam_id provided"}), 400
+
+    try:
+        exam_id = int(exam_id)
+    except ValueError:
+        return jsonify({"error": "Invalid exam_id"}), 400
+    
     # Step 1: Detect squares and warp the paper
     all_square_boxes = detect_any_square(input_path)
     if not all_square_boxes:
@@ -657,17 +734,27 @@ def detect():
     exam_code = detect_code(exam_code_path, output_folder=OUTPUT_FOLDER, is_student_id=False)
     student_id = detect_code(student_id_path, output_folder=OUTPUT_FOLDER, is_student_id=True)
 
-    # Final return
+    cursor.execute("SELECT examdata FROM exam WHERE exam_id = ?", (exam_id,))
+    exam_row = cursor.fetchone()
+
+    if not exam_row:
+        return jsonify({"error": f"Exam code {exam_code} not found in database"}), 404
+
+    exam_data_json = exam_row[0]
+    exam_data = json.loads(exam_data_json)
+
+    score = calculate_student_score(exam_data, final_answers, exam_code)
+    print(f'Score: {score}')
+    save_student_result(cursor, conn, student_id, exam_code, exam_id, score)
+
     info_dict = {
         "student_id": student_id,
         "exam_code": exam_code,
-        "answers": final_answers
+        "exam_id": exam_id,
+        "score": score
     }
-
     return jsonify(info_dict)
 
-if __name__ == "__main__":
-    app.run(debug=True)
 
 
 
