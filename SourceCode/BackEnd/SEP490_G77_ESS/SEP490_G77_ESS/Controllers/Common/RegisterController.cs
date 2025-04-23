@@ -101,7 +101,7 @@ namespace SEP490_G77_ESS.Controllers.Common
                 return NotFound(new { message = "Người dùng không tồn tại hoặc token không hợp lệ." });
             }
 
-            if (user.ResetTokenExpires.HasValue && (DateTime.Now - user.ResetTokenExpires.Value).TotalMinutes > 5)
+            if (!user.ResetTokenExpires.HasValue || DateTime.UtcNow > user.ResetTokenExpires.Value.AddMinutes(5))
             {
                 _context.Accounts.Remove(user);
                 await _context.SaveChangesAsync();
