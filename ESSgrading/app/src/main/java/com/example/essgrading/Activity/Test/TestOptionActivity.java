@@ -66,7 +66,7 @@ public class TestOptionActivity extends BaseActivity {
         } else if ("MCQ50".equalsIgnoreCase(testType)) {
             // 2. MCQ50
             btnCorrectAnswers.setVisibility(View.VISIBLE);
-            btnGrading.setText("Chấm bài kiểm tra");
+            btnGrading.setText("Chấm bài kiểm tra MCQ50");
             btnCorrectAnswers.setOnClickListener(v -> {
                 Intent intent1 = new Intent(TestOptionActivity.this, SelectExCodeActivity.class);
                 intent1.putExtra("testId", id);
@@ -83,23 +83,29 @@ public class TestOptionActivity extends BaseActivity {
                 startActivity(intent2);
             });
         } else if ("MCQ3".equalsIgnoreCase(testType)) {
-            // 3. MCQ3 - Tạm chưa có chức năng
+            // 3. MCQ3
             btnCorrectAnswers.setVisibility(View.VISIBLE);
-            btnGrading.setVisibility(View.GONE);
-        } else {
-            // Default: cho Essay mặc định nếu testType null hoặc không khớp
-            btnCorrectAnswers.setVisibility(View.GONE);
-            btnGrading.setText("Quét thông tin tự luận");
+            btnGrading.setText("Chấm bài kiểm tra MCQ3");
+            btnCorrectAnswers.setOnClickListener(v -> {
+                Intent intent1 = new Intent(TestOptionActivity.this, SelectExCodeActivity.class);
+                intent1.putExtra("testId", id);
+                intent1.putExtra("testTitle", testTitle);
+                intent1.putExtra("classCode", classCode);
+                intent1.putStringArrayListExtra("exCodes", exCodes);
+                startActivity(intent1);
+            });
             btnGrading.setOnClickListener(v -> {
-                Intent intent2 = new Intent(TestOptionActivity.this, ScanEssayIn4Activity.class);
+                Intent intent2 = new Intent(TestOptionActivity.this, GradingMCQActivity.class);
                 intent2.putExtra("testId", id);
                 intent2.putExtra("testTitle", testTitle);
                 intent2.putExtra("classCode", classCode);
                 startActivity(intent2);
             });
+        } else {
+            btnCorrectAnswers.setVisibility(View.GONE);
+            btnGrading.setVisibility(View.GONE);
         }
 
-        // Báo cáo điểm luôn hiện
         btnScoreReport.setOnClickListener(v -> {
             Intent intent3 = new Intent(TestOptionActivity.this, ScoreReportActivity.class);
             intent3.putExtra("testId", id);

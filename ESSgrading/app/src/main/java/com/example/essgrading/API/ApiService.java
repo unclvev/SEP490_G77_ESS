@@ -32,6 +32,10 @@ public interface ApiService {
     Call<LoginResponse> login(@Body LoginRequest loginRequest);
 
     @Multipart
-    @POST("scan-essay")
-    Call<ResponseBody> uploadImage(@Part MultipartBody.Part image);
+    @POST("essay/scan-essay")
+    Call<ResponseBody> uploadEssay(@Part MultipartBody.Part image);
+
+    @Multipart
+    @POST("mcq/detect")
+    Call<ResponseBody> uploadMCQ(@Part MultipartBody.Part image);
 }

@@ -94,7 +94,7 @@ public class TestListActivity extends BaseActivity implements SearchHandler {
                                 test.getId(),
                                 test.getTitle(),
                                 test.getClassCode(),
-                                test.getTestType() == null ? "Essay" : test.getTestType(),
+                                test.getTestType() == null ? "NULL" : test.getTestType(),
                                 formattedDate,
                                 Arrays.asList("001", "002", "003")
                         ));
