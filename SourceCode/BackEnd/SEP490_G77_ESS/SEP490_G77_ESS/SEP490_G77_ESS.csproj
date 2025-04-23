@@ -29,6 +29,7 @@
 
   <ItemGroup>
   <!-- Giữ lại thư mục chứa ảnh -->
+  <Folder Include="Tests\" />
   <Folder Include="wwwroot\images\" />
 
   <!-- Cập nhật cấu hình appsettings.json để luôn sao chép vào thư mục đầu ra -->

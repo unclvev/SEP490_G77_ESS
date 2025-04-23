@@ -1,58 +1,89 @@
-﻿namespace SEP490_G77_ESS.Services
-{
-    using System.Security.Claims;
-    using System.Threading.Tasks;
-    using Microsoft.AspNetCore.Authorization;
-    using Microsoft.EntityFrameworkCore;
-    using SEP490_G77_ESS.Models;
+﻿using System;
+using System.Linq;
+using System.Security.Claims;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using SEP490_G77_ESS.Models;
 
-    public class ResourcePermissionHandler : AuthorizationHandler<ResourcePermissionRequirement>
+namespace SEP490_G77_ESS.Services
+{
+    public class ResourcePermissionHandler : AuthorizationHandler<ResourcePermissionRequirement, long>
     {
         private readonly EssDbV11Context _db;
-        public ResourcePermissionHandler(EssDbV11Context db) => _db = db;
+        private readonly ILogger<ResourcePermissionHandler> _logger;
+
+        public ResourcePermissionHandler(EssDbV11Context db, ILogger<ResourcePermissionHandler> logger)
+        {
+            _db = db;
+            _logger = logger;
+        }
 
         protected override async Task HandleRequirementAsync(
             AuthorizationHandlerContext context,
-            ResourcePermissionRequirement requirement)
+            ResourcePermissionRequirement requirement,
+            long resourceId)
         {
-            // Lấy userId từ claim "sub" (hoặc NameIdentifier)
-            var sub = context.User.FindFirst("AccId")?.Value;
-            if (!long.TryParse(sub, out var userId))
+            try
+            {
+                // Lấy userId từ claim
+                var sub = context.User.FindFirst("AccId")?.Value;
+                if (!long.TryParse(sub, out var userId))
+                {
+                    _logger.LogWarning("Invalid or missing AccId claim");
+                    context.Fail();
+                    return;
+                }
+
+                // Kiểm tra owner trên chính ResourceId
+                if (await CheckResourceOwnership(userId, requirement.ResourceType, resourceId))
+                {
+                    context.Succeed(requirement);
+                    return;
+                }
+
+                // Kiểm tra quyền cụ thể (Read/Modify/Delete) trên chính ResourceId
+                if (await CheckResourcePermission(userId, requirement.ResourceType, requirement.Action, resourceId))
+                {                   
+                    context.Succeed(requirement);
+                }
+                else
+                {
+                    context.Fail();
+                }
+            }
+            catch (Exception ex)
             {
                 context.Fail();
-                return;
             }
+        }
 
-            // Check if user is owner of the resource
-            var isOwner = await _db.ResourceAccesses
-                .AnyAsync(ra =>
-                    ra.Accid == userId &&
-                    ra.ResourceType == requirement.ResourceType &&
-                    ra.IsOwner == true);
+        private Task<bool> CheckResourceOwnership(long userId, string resourceType, long resourceId)
+        {
+            return _db.ResourceAccesses.AnyAsync(ra =>
+                ra.Accid == userId &&
+                ra.ResourceType == resourceType &&
+                ra.ResourceId == resourceId &&
+                ra.IsOwner == true);
+        }
 
-            if (isOwner)
-            {
-                context.Succeed(requirement);
-                return;
-            }
-
-            // Query ResourceAccess join RoleAccess
-            var hasPermission = await _db.ResourceAccesses
+        private Task<bool> CheckResourcePermission(long userId, string resourceType, string action, long resourceId)
+        {
+            var query = _db.ResourceAccesses
                 .Include(ra => ra.Role)
-                .AnyAsync(ra =>
+                .Where(ra =>
                     ra.Accid == userId &&
-                    ra.ResourceType == requirement.ResourceType &&
-                    (
-                      (requirement.Action == "Read" && ra.Role.CanRead == true) ||
-                      (requirement.Action == "Modify" && ra.Role.CanModify == true) ||
-                      (requirement.Action == "Delete" && ra.Role.CanDelete == true)
-                    )
-                );
+                    ra.ResourceType == resourceType &&
+                    ra.ResourceId == resourceId);
 
-            if (hasPermission)
-                context.Succeed(requirement);
-            else
-                context.Fail();
+            return action switch
+            {
+                "Read" => query.AnyAsync(ra => ra.Role.CanRead == true),
+                "Modify" => query.AnyAsync(ra => ra.Role.CanModify == true),
+                "Delete" => query.AnyAsync(ra => ra.Role.CanDelete == true),
+                _ => Task.FromResult(false)
+            };
         }
     }
 }
