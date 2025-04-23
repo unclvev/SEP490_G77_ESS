@@ -1,4 +1,5 @@
 ﻿using ClosedXML.Excel;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SEP490_G77_ESS.DTO.BankdDTO;
@@ -12,13 +13,15 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
 {
     [Route("api/Question")]
     [ApiController]
+    [Authorize]
     public class QuestionController : ControllerBase
     {
         private readonly EssDbV11Context _context;
-
-        public QuestionController(EssDbV11Context context)
+        private readonly IAuthorizationService _authorizationService;
+        public QuestionController(EssDbV11Context context, IAuthorizationService authorizationService)
         {
             _context = context;
+            _authorizationService = authorizationService;
         }
 
         // ✅ API lấy danh sách câu hỏi theo SectionId
@@ -74,6 +77,14 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
         [HttpPost("questions")]
         public async Task<IActionResult> CreateQuestion([FromBody] QuestionDto questionDto)
         {
+            var section = await _context.Sections.FindAsync(questionDto.Secid);
+            if (section == null)
+                return NotFound(new { message = "Section không tồn tại!" });
+
+            var authorizationResult = await _authorizationService.AuthorizeAsync(User, section.BankId, "BankModify");
+            if (!authorizationResult.Succeeded)
+                return Forbid();
+
             if (string.IsNullOrEmpty(questionDto.Quescontent))
                 return BadRequest(new { message = "Nội dung câu hỏi không được để trống!" });
 
@@ -714,6 +725,18 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
         [HttpPut("questions/{id}")]
         public async Task<IActionResult> UpdateQuestion(long id, [FromBody] QuestionDto questionDto)
         {
+            var question = await _context.Questions.FindAsync(id);
+            if (question == null)
+                return NotFound(new { message = "Không tìm thấy câu hỏi!" });
+
+            var section = await _context.Sections.FindAsync(question.Secid);
+            if (section == null)
+                return NotFound(new { message = "Section không tồn tại!" });
+
+            var authorizationResult = await _authorizationService.AuthorizeAsync(User, section.BankId, "BankModify");
+            if (!authorizationResult.Succeeded)
+                return Forbid();
+
             if (string.IsNullOrWhiteSpace(questionDto.Quescontent))
             {
                 return BadRequest("Question content must not be empty!");
@@ -733,7 +756,7 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
             {
                 return BadRequest("Invalid difficulty level!");
             }
-            var question = await _context.Questions.FindAsync(id);
+
             if (question == null)
                 return NotFound(new { message = "Không tìm thấy câu hỏi!" });
 
@@ -848,14 +871,22 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
 
         // ✅ Xóa câu hỏi
         [HttpDelete("questions/{id}")]
+        
         public async Task<IActionResult> DeleteQuestion(long id)
         {
+
             var question = await _context.Questions.FindAsync(id);
             if (question == null)
             {
                 return NotFound(new { message = "Không tìm thấy câu hỏi!" });
             }
+            var section = await _context.Sections.FindAsync(question.Secid);
+            if (section == null)
+                return NotFound(new { message = "Section không tồn tại!" });
 
+            var authorizationResult = await _authorizationService.AuthorizeAsync(User, section.BankId, "BankModify");
+            if (!authorizationResult.Succeeded)
+                return Forbid();
             // ✅ Xóa ảnh nếu có
             if (!string.IsNullOrEmpty(question.ImageUrl))
             {
