@@ -3,7 +3,6 @@ package com.example.essgrading.Activity.Test;
 import static android.widget.Toast.LENGTH_SHORT;
 
 import android.Manifest;
-import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -17,7 +16,6 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
@@ -43,7 +41,7 @@ import retrofit2.Response;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
-public class GradingActivity extends BaseActivity implements SurfaceHolder.Callback {
+public class GradingMCQActivity extends BaseActivity implements SurfaceHolder.Callback {
 
     private static final int CAMERA_PERMISSION_REQUEST_CODE = 100;
     private SurfaceView cameraView;
@@ -56,7 +54,7 @@ public class GradingActivity extends BaseActivity implements SurfaceHolder.Callb
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_grading);
+        setContentView(R.layout.activity_gradingmcq);
         setupDrawer();
         setHeaderTitle("Chấm điểm");
 

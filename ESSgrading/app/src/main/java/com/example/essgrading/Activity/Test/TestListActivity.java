@@ -43,7 +43,7 @@ public class TestListActivity extends BaseActivity implements SearchHandler {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_testlist);
         setupDrawer();
-        setHeaderTitle("Trắc nghiệm");
+        setHeaderTitle("Bài kiểm tra");
 
         recyclerViewTests = findViewById(R.id.recyclerViewTests);
 
@@ -54,7 +54,7 @@ public class TestListActivity extends BaseActivity implements SearchHandler {
             intent.putExtra("testId", selectedTest.getId());
             intent.putExtra("testTitle", selectedTest.getTitle());
             intent.putExtra("classCode", selectedTest.getClassCode());
-            intent.putExtra("testType", selectedTest.getTestType()); // Trắc nghiệm
+            intent.putExtra("testType", selectedTest.getTestType());
             intent.putExtra("testDate", selectedTest.getDate());
             intent.putStringArrayListExtra("exCodes", new ArrayList<>(selectedTest.getExCodes()));
             startActivity(intent);
@@ -94,9 +94,10 @@ public class TestListActivity extends BaseActivity implements SearchHandler {
                                 test.getId(),
                                 test.getTitle(),
                                 test.getClassCode(),
-                                "Trắc nghiệm",
+                                test.getTestType() == null ? "Essay" : test.getTestType(),
                                 formattedDate,
-                                Arrays.asList("001", "002", "003")));
+                                Arrays.asList("001", "002", "003")
+                        ));
                     }
                     searchList.clear();
                     searchList.addAll(testList);
