@@ -138,7 +138,7 @@ public class ScanEssayIn4Activity extends BaseActivity implements SurfaceHolder.
                         .build();
 
                 ApiService service = retrofit.create(ApiService.class);
-                Call<ResponseBody> call = service.uploadImage(body);
+                Call<ResponseBody> call = service.uploadEssay(body);
 
                 call.enqueue(new Callback<>() {
                     @Override

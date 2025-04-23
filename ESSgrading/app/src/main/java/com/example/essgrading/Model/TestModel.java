@@ -11,6 +11,7 @@ public class TestModel {
     private String title;
     @SerializedName("classname")
     private String classCode; // Đổi tên từ "code" thành "classCode"
+    @SerializedName("examType")
     private String testType;
     @SerializedName("createdate")
     private String date;

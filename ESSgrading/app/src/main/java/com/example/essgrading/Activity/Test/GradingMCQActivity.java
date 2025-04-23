@@ -12,10 +12,12 @@ import android.os.Bundle;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
@@ -54,23 +56,28 @@ public class GradingMCQActivity extends BaseActivity implements SurfaceHolder.Ca
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_gradingmcq);
+        setContentView(R.layout.activity_scanessayin4);
         setupDrawer();
         setHeaderTitle("Chấm điểm");
 
-        cameraView = findViewById(R.id.cameraPreview);
-        btnStatus = findViewById(R.id.btnStatus);
-        snapshotView = findViewById(R.id.snapshotView);
+        cameraView    = findViewById(R.id.cameraPreview);
+        btnStatus     = findViewById(R.id.btnStatus);
+        snapshotView  = findViewById(R.id.snapshotView);
 
         surfaceHolder = cameraView.getHolder();
         surfaceHolder.addCallback(this);
         surfaceHolder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
 
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+        // Yêu cầu quyền camera nếu chưa có
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
+                == PackageManager.PERMISSION_GRANTED) {
             openCamera();
         } else {
-            ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.CAMERA}, CAMERA_PERMISSION_REQUEST_CODE);
+            ActivityCompat.requestPermissions(
+                    this,
+                    new String[]{Manifest.permission.CAMERA},
+                    CAMERA_PERMISSION_REQUEST_CODE
+            );
         }
 
         btnStatus.setOnClickListener(v -> {
@@ -83,34 +90,40 @@ public class GradingMCQActivity extends BaseActivity implements SurfaceHolder.Ca
     }
 
     private final Camera.PictureCallback pictureCallback = (data, cam) -> {
-        // Rotate and display snapshot for 'freeze' effect
+        // Hiển thị ảnh “freeze” để đóng băng UI
         runOnUiThread(() -> {
             Bitmap raw = BitmapFactory.decodeByteArray(data, 0, data.length);
             Matrix matrix = new Matrix();
             matrix.postRotate(90);
-            Bitmap freezeBitmap = Bitmap.createBitmap(raw, 0, 0,
-                    raw.getWidth(), raw.getHeight(), matrix, true);
-            snapshotView.setImageBitmap(freezeBitmap);
+            Bitmap freeze = Bitmap.createBitmap(
+                    raw, 0, 0, raw.getWidth(), raw.getHeight(), matrix, true
+            );
+            snapshotView.setImageBitmap(freeze);
             snapshotView.setVisibility(View.VISIBLE);
             btnStatus.setText("📷 Đang xử lý...");
         });
 
-        // Process upload in background
+        // Upload ảnh trong background thread
         new Thread(() -> {
             try {
-                ByteArrayOutputStream stream = new ByteArrayOutputStream();
+                // Xoay và nén ảnh
                 Bitmap raw = BitmapFactory.decodeByteArray(data, 0, data.length);
                 Matrix matrix = new Matrix();
                 matrix.postRotate(90);
-                Bitmap bitmap = Bitmap.createBitmap(raw, 0, 0,
-                        raw.getWidth(), raw.getHeight(), matrix, true);
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 60, stream);
+                Bitmap bmp = Bitmap.createBitmap(
+                        raw, 0, 0, raw.getWidth(), raw.getHeight(), matrix, true
+                );
+                ByteArrayOutputStream stream = new ByteArrayOutputStream();
+                bmp.compress(Bitmap.CompressFormat.JPEG, 60, stream);
                 byte[] imageBytes = stream.toByteArray();
 
                 RequestBody requestFile = RequestBody.create(
-                        MediaType.parse("image/jpeg"), imageBytes);
+                        MediaType.parse("image/jpeg"),
+                        imageBytes
+                );
                 MultipartBody.Part body = MultipartBody.Part.createFormData(
-                        "image", "scan.jpg", requestFile);
+                        "image", "scan.jpg", requestFile
+                );
 
                 OkHttpClient client = new OkHttpClient.Builder()
                         .connectTimeout(60, TimeUnit.SECONDS)
@@ -125,11 +138,14 @@ public class GradingMCQActivity extends BaseActivity implements SurfaceHolder.Ca
                         .build();
 
                 ApiService service = retrofit.create(ApiService.class);
-                Call<ResponseBody> call = service.uploadImage(body);
+                Call<ResponseBody> call = service.uploadMCQ(body);
 
                 call.enqueue(new Callback<>() {
                     @Override
-                    public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
+                    public void onResponse(
+                            Call<ResponseBody> call,
+                            Response<ResponseBody> response
+                    ) {
                         runOnUiThread(() -> handleResult(response, null));
                     }
 
@@ -147,34 +163,58 @@ public class GradingMCQActivity extends BaseActivity implements SurfaceHolder.Ca
 
     private void handleResult(Response<ResponseBody> response, Throwable error) {
         if (error != null) {
-            btnStatus.setText("❌ Gửi ảnh thất bại\n📷Ấn để chụp tiếp");
-        } else if (response != null && response.isSuccessful() && response.body() != null) {
+            Toast.makeText(this, "❌ Gửi ảnh thất bại", LENGTH_SHORT).show();
+            btnStatus.setText("📷Ấn để chụp tiếp");
+        }
+        else if (response != null && response.isSuccessful() && response.body() != null) {
             try {
                 String result = response.body().string();
                 JSONObject json = new JSONObject(result);
-                JSONArray qr = json.getJSONArray("qr_content");
-                String score = json.getString("score");
-                String code = json.getString("student_code");
-                Toast.makeText(this, "Thành công", LENGTH_SHORT).show();
-                btnStatus.setText("✅ Mã QR: " + qr.getString(0) +
-                        "\nĐiểm: " + score + "\nSBD: " + code +
-                        "\n📷Ấn để chụp tiếp");
+                JSONArray qrArr = json.getJSONArray("qr_content");
+                String qrCode = qrArr.getString(0);
+                String score  = json.getString("score");
+                String code   = json.getString("student_code");
+                btnStatus.setText("📷Ấn để chụp tiếp");
+                showResultDialog(qrCode, score, code);
             } catch (Exception e) {
-                btnStatus.setText("❌ Lỗi đọc kết quả\n📷Ấn để chụp tiếp");
+                Toast.makeText(this, "❌ Lỗi đọc kết quả", LENGTH_SHORT).show();
+                btnStatus.setText("📷Ấn để chụp tiếp");
                 e.printStackTrace();
             }
-        } else {
-            int code = response != null ? response.code() : -1;
-            btnStatus.setText("❌ Lỗi phản hồi: " + code + "\n📷Ấn để chụp tiếp");
+        }
+        else {
+            int code = (response != null ? response.code() : -1);
+            Toast.makeText(this, "❌ Lỗi phản hồi: " + code, LENGTH_SHORT).show();
+            btnStatus.setText("📷Ấn để chụp tiếp");
         }
 
-        // Reset preview and UI
-        if (camera != null) {
-            camera.startPreview();
-        }
+        // Reset UI & camera preview
+        if (camera != null) camera.startPreview();
         snapshotView.setVisibility(View.GONE);
         btnStatus.setEnabled(true);
         isProcessing = false;
+    }
+
+    /** Hiển thị 1 AlertDialog ở giữa màn hình với nút Close **/
+    private void showResultDialog(String qr, String score, String code) {
+        View dialogView = getLayoutInflater()
+                .inflate(R.layout.dialog_scan_result, null);
+
+        TextView tvContent = dialogView.findViewById(R.id.tvResultContent);
+        Button btnClose   = dialogView.findViewById(R.id.btnCloseDialog);
+
+        String text = "Mã QR: " + qr + "\n"
+                + "Điểm: " + score + "\n"
+                + "SBD: " + code;
+        tvContent.setText(text);
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setView(dialogView)
+                .setCancelable(false)
+                .create();
+
+        btnClose.setOnClickListener(v -> dialog.dismiss());
+        dialog.show();
     }
 
     private void openCamera() {
@@ -217,7 +257,9 @@ public class GradingMCQActivity extends BaseActivity implements SurfaceHolder.Ca
     }
 
     @Override
-    public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
+    public void surfaceChanged(
+            SurfaceHolder holder, int format, int width, int height
+    ) {
         if (camera != null) {
             camera.stopPreview();
             try {

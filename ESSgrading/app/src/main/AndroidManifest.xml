@@ -42,6 +42,8 @@
             android:exported="true"/>
         <activity android:name=".Activity.Test.ScanEssayIn4Activity"
             android:exported="true"/>
+        <activity android:name=".Activity.Test.GradingMCQActivity"
+            android:exported="true"/>
         <activity android:name=".Activity.Test.ScoreReportActivity"
             android:exported="true"/>
         <activity android:name=".Activity.Test.ListAnswerActivity"
