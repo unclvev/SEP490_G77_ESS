@@ -7,3 +7,5 @@ azure-cognitiveservices-vision-computervision
 msrest
 unidecode
 python-dotenv
+pyodbc
+matplotlib
