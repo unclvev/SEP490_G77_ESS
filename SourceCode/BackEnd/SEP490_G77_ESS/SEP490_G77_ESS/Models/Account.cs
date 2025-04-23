@@ -37,6 +37,8 @@ public partial class Account
 
     public int? IsActive { get; set; }
 
+    public DateTime? Dob { get; set; }
+
     public virtual ICollection<BankAccess> BankAccesses { get; set; } = new List<BankAccess>();
 
     public virtual ICollection<Bank> Banks { get; set; } = new List<Bank>();
@@ -44,6 +46,8 @@ public partial class Account
     public virtual ICollection<Exam> Exams { get; set; } = new List<Exam>();
 
     public virtual ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
+
+    public virtual ICollection<ResourceAccess> ResourceAccesses { get; set; } = new List<ResourceAccess>();
 
     public virtual Role? Role { get; set; }
 }
