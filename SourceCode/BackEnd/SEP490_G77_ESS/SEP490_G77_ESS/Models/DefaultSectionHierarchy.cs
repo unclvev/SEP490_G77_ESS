@@ -24,4 +24,6 @@ public partial class DefaultSectionHierarchy
     public long? Depth { get; set; }
 
     public virtual Curriculum? Curriculum { get; set; }
+    public virtual Grade? Grade { get; set; }
+    public virtual Subject? Subject { get; set; }
 }

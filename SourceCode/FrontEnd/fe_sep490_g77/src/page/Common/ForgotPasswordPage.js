@@ -8,17 +8,25 @@ import { forgotPassword } from '../../services/api';
 
 const ForgotPasswordPage = () => {
   const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
 
   // Xử lý khi người dùng bấm Xác nhận
   const handleConfirm = async () => {
+    if (loading) return;
+    setLoading(true);
     try {
-      // Gửi yêu cầu POST với dữ liệu { email }
-      const response = await forgotPassword({ email });
-      toast.success('Vui lòng kiểm tra email để khôi phục mật khẩu!');
+      await forgotPassword({ email });
+      toast.success('Vui lòng kiểm tra email để khôi phục mật khẩu!', {
+        autoClose: 2000,
+        onClose: () => setLoading(false),
+      });
     } catch (error) {
-      const errMsg =
-        error.response?.data?.message || 'Gửi yêu cầu khôi phục mật khẩu thất bại!';
-      toast.error(errMsg);
+      const errMsg = error.response?.data?.message ||
+        'Gửi yêu cầu khôi phục mật khẩu thất bại!';
+      toast.error(errMsg, {
+        autoClose: 2000,
+        onClose: () => setLoading(false),
+      });
     }
   };
 
@@ -38,6 +46,7 @@ const ForgotPasswordPage = () => {
           className="rounded-full py-2 px-4 mb-4 border-none focus:ring-2 focus:ring-blue-500"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          disabled={loading}
           style={{ boxShadow: 'none' }}
         />
 
@@ -45,8 +54,10 @@ const ForgotPasswordPage = () => {
           type="primary"
           className="w-full rounded-full mb-2"
           onClick={handleConfirm}
+          loading={loading}
+          disabled={loading}
         >
-          Xác nhận
+          {loading ? 'Đang gửi...' : 'Xác nhận'}
         </Button>
 
         {/* Liên kết quay lại trang Đăng nhập */}

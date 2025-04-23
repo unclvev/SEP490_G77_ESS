@@ -43,14 +43,13 @@ namespace SEP490_G77_ESS.Controllers.Common
                 return NotFound("Tài khoản không tồn tại.");
             }
 
-            // Map dữ liệu Account sang ProfileDTO
             var profile = new Account
             {
                 Username = account.Username,
                 Email = account.Email,
                 Phone = account.Phone,
                 Gender = account.Gender,
-                Datejoin = account.Datejoin,
+                Dob= account.Dob,
                 IsActive = account.IsActive,
                 Subject = account.Subject,
                 Skill = account.Skill,

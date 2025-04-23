@@ -166,7 +166,7 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
 
             int row = 2;
             // ✅ Luôn thêm dòng ví dụ mẫu trước (row 2)
-            worksheet.Cell(row, 1).Value = "1 + 1 = ?";
+            worksheet.Cell(row, 1).Value = "[MATH:\\sqrt{4}]";
             worksheet.Cell(row, 2).Value = 1; // Trắc nghiệm
             worksheet.Cell(row, 3).Value = 1; // Mức độ
             worksheet.Cell(row, 4).Value = "Phép cộng cơ bản.";
@@ -175,7 +175,8 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
             worksheet.Cell(row, 7).Value = "3";
             worksheet.Cell(row, 8).Value = "4";
             worksheet.Cell(row, 9).Value = "2";
-            worksheet.Cell(row, 10).FormulaA1 = "IMAGE(\"https://localhost:7052/images/example.png\")";
+            worksheet.Cell(row, 10).FormulaA1 = "=IMAGE(\"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTE7X1Jz2BfKDUhA738FQCZwEiOC_S_DBefuA&s\")";
+
 
             worksheet.Row(row).Height = 100;
             worksheet.Column(10).Width = 30;
@@ -236,7 +237,7 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
             // ✅ Sheet hướng dẫn
             var guideSheet = workbook.Worksheets.Add("Import Guide");
             guideSheet.Cell(1, 1).Value = "HƯỚNG DẪN IMPORT EXCEL";
-            guideSheet.Cell(2, 1).Value = "1. Question Content: Nội dung câu hỏi ().";
+            guideSheet.Cell(2, 1).Value = "1. Question Content: Nội dung câu hỏi. Nếu có công thức toán học, cần giữ nguyên định dạng [MATH:...] (tham khảo công thức tại đây: https://www.mathvn.com/2021/09/latex-co-ban-cach-go-cac-cong-thuc-ki.html)";
             guideSheet.Cell(3, 1).Value = "2. Type ID: Loại câu hỏi (1: Trắc nghiệm, 2: True/False, 3: Điền kết quả).";
             guideSheet.Cell(4, 1).Value = "3. Mode ID: Mức độ khó.(1: Nhận biết, 2: Thổng hiểu, 3: Vận dụng )";
             guideSheet.Cell(5, 1).Value = "4. Solution: Giải thích cho câu hỏi).";
@@ -406,6 +407,7 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
                 while (!worksheet.Cell(row, 1).IsEmpty())
                 {
                     var quesContent = worksheet.Cell(row, 1).GetString().Trim();
+                    quesContent = ConvertMathPlaceholdersToHtml(quesContent);
                     if (string.IsNullOrEmpty(quesContent))
                     {
                         row++;
@@ -569,6 +571,13 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
                             if (string.IsNullOrWhiteSpace(correctAnswers) || correctAnswers.Length != 4)
                             {
                                 errors.Add($"Dòng {row}: Đáp án cho câu hỏi điền kết quả phải có đúng 4 ký tự");
+                                row++;
+                                continue;
+                            }
+                            // 🆕 Thêm validate regex chỉ nhận số, dấu , và dấu -
+                            if (!Regex.IsMatch(correctAnswers, @"^[\d\-,]{4}$"))
+                            {
+                                errors.Add($"Dòng {row}: Đáp án chỉ được chứa số, dấu - hoặc dấu , và phải đúng 4 ký tự");
                                 row++;
                                 continue;
                             }
@@ -823,7 +832,18 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
             public string Base64Image { get; set; }
         }
 
-        
+        private string ConvertMathPlaceholdersToHtml(string content)
+        {
+            if (string.IsNullOrWhiteSpace(content))
+                return content;
+
+            // Dùng Regex tìm tất cả [MATH:...] và thay bằng <span class="katex-math" data-formula="...">...</span>
+            return Regex.Replace(content, @"\[MATH:(.+?)\]", match =>
+            {
+                var formula = match.Groups[1].Value;
+                return $"<span class=\"katex-math\" data-formula=\"{formula}\">$$ {formula} $$</span>";
+            });
+        }
 
 
         // ✅ Xóa câu hỏi

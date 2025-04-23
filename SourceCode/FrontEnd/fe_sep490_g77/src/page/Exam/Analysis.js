@@ -19,7 +19,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { exportExcel, getExamResults, getSubjectNameById } from "../../services/api";
+import { exportExcel, getExam, getExamResults } from "../../services/api";
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#DC143C"];
 const columns = [
@@ -57,13 +57,16 @@ const Analysis = () => {
         try {
           const response = await getExamResults(examId);
           const data = response.data || [];
-          const rsubject = await getSubjectNameById(data[0].subject);
-
+          console.log(data[0]);
+          // const rsubject = await getSubjectNameById(data[0].subject);
+          const rexam = await getExam(examId);
+          const exam = rexam.data || {};
           setScoreData(data);
           setLoading(false);
-          setExamName(data[0].examName);
-          setSubjectName(rsubject.data.subjectName);
-          setCreatedate(data[0].examCreatedDate);
+          setExamName(exam.examname);
+          // setSubjectName(rsubject.data.subjectName);
+          setSubjectName(exam.subject);
+          setCreatedate(exam.createdate);
 
           // ==== Tính biểu đồ cột (chartData) ====
           const ranges = ["<3", ">=3 & <6", ">=6 & <7", ">=7 & <8", "8 - 10"];

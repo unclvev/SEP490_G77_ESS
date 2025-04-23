@@ -7,6 +7,7 @@ import "tailwindcss/tailwind.css";
 const GenQRCode = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { title, createdDate, grade, subject, nameClass } = location.state || {};
   const savedData = JSON.parse(sessionStorage.getItem("qrFormData")) || {};
   const [layout, setLayout] = useState(savedData.layout || "A4");
   const [testName, setTestName] = useState(savedData.testName || "");
@@ -15,11 +16,16 @@ const GenQRCode = () => {
   const [subjectName, setSubjectName] = useState(savedData.subjectName || ""); 
   const [printCount, setPrintCount] = useState(savedData.printCount || "1");
   const today = new Date().toISOString().split("T")[0];
-  const [examDate, setExamDate] = useState(savedData.examDate || today);
+  const [isImageLoaded, setIsImageLoaded] = useState(false);
   const [error, setError] = useState("");
-  const { title, createdDate, grade, subject, nameClass} = location.state || {};
-
-
+  const formatDate = (dateStr) => {
+    const d = new Date(dateStr);
+    return d.toISOString().split("T")[0]; 
+  };
+  const [examDate, setExamDate] = useState(() =>
+    savedData.examDate || (createdDate ? formatDate(createdDate) : today)
+  );
+  
   // ✅ Chỉ định ảnh mặt trước & mặt sau theo loại giấy
   const paperImages = {
     A4: {
@@ -33,10 +39,19 @@ const GenQRCode = () => {
   };
 
   const qrPositions = {
-    A4: { leftQR: { top: "160px", right: "85px" }, rightQR: { top: "60px", right: "85px" } },
-    A3: { leftQR: { top: "80px", left: "320px" }, rightQR: { top: "100px", right: "20px" } },
+    A4: {
+      leftQR: { top: "22%", left: "84%", position: "absolute" },
+      rightQR: { top: "8%", left: "84%", position: "absolute" },
+      style: { width: "80px", height: "80px" },
+    },
+    A3: {
+      leftQR: { top: "9%", left: "84%", position: "absolute" },
+      rightQR: { top: "9%", left: "75%", position: "absolute" },
+      style: { width: "57px", height: "57px" },
+    },
   };
-
+  
+  
   const [qrPosition, setQrPosition] = useState(qrPositions[layout]);
   const [frontImage, setFrontImage] = useState(paperImages[layout].front);
   const [backImage, setBackImage] = useState(paperImages[layout].back);
@@ -51,8 +66,17 @@ const GenQRCode = () => {
     setGradeName(savedData.gradeName || grade || "");
     setSubjectName(savedData.subjectName || subject || "");
     setPrintCount(savedData.printCount || "1");
-    setExamDate(savedData.examDate || createdDate || today);
-  }, []);
+    const rawDate = createdDate || savedData.examDate;
+    setExamDate(rawDate ? formatDate(rawDate) : today);
+    }, []);
+
+    useEffect(() => {
+      const img = new Image();
+      img.src = frontImage;
+      if (img.complete) {
+        setIsImageLoaded(true);
+      }
+    }, []);
   
   const handlePrintCountChange = (e) => {
     const value = e.target.value;
@@ -73,6 +97,7 @@ const GenQRCode = () => {
     setFrontImage(paperImages[selectedLayout].front);
     setBackImage(paperImages[selectedLayout].back);
     setQrPosition(qrPositions[selectedLayout]);
+    setIsImageLoaded(false);
   };
 
   const encodeBase64 = (text) => {
@@ -82,7 +107,7 @@ const GenQRCode = () => {
   const generateQRCodes = () => {
     let qrList = [];
     for (let i = 0; i < parseInt(printCount); i++) {
-      let qrData = `${testName}_${className}_${gradeName}_${subjectName}_${examDate}_Code_${i+1}`;
+      let qrData = (i + 1).toString().padStart(7, '0');
       qrList.push({ id: i, qrContent: qrData });
     }
     return qrList;
@@ -96,16 +121,28 @@ const GenQRCode = () => {
       message.error("Bạn cần điền đầy đủ các trường trước khi tiếp tục.");
       return;
     }
-
+  
     setError("");
     const formData = { testName, className, examDate, printCount, layout };
     sessionStorage.setItem("qrFormData", JSON.stringify(formData));
-
+  
     const qrList = generateQRCodes();
+  
     navigate("/essay/preview-gen-qr", {
-      state: { testName, className, examDate, printCount, qrList, frontImage, backImage, qrPosition },
+      state: {
+        testName,
+        className,
+        examDate,
+        printCount,
+        qrList,
+        frontImage,
+        backImage,
+        layout,
+        qrPosition 
+      },
     });
   };
+  
 
   const handleCancel = () => {
     sessionStorage.removeItem("qrFormData"); 
@@ -113,13 +150,13 @@ const GenQRCode = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-gray-200">
+    <div className="flex min-h-screen ">
       <div className="flex-1 p-6">
-        <div className="bg-blue-600 text-white text-center py-4 text-xl font-bold rounded-lg shadow-md w-[calc(100%-17rem)] mx-auto">
+      <div className="bg-white text-blue-600 text-center py-4 text-xl font-bold rounded-lg shadow-md border border-blue-600 w-[calc(100%-6rem)] mx-auto">
           GEN CODE CHO BÀI THI TỰ LUẬN
         </div>
 
-        <div className="mt-6 bg-white p-6 rounded-lg shadow-lg w-[600px] mx-auto">
+        <div className="mt-6 bg-white p-6 rounded-lg shadow-lg max-w-[calc(100%-6rem)] mx-auto">
           <p className="text-lg font-semibold text-red-500">(*) bắt buộc phải điền</p>
 
           <div className="flex items-center mb-4">
@@ -197,13 +234,17 @@ const GenQRCode = () => {
           <div className="mt-6">
             <p className="text-lg font-semibold">Mặt Trước</p>
             <div className="relative">
-              <img src={frontImage} alt="Mặt trước" className="w-[500px] h-auto rounded-lg shadow-md" />
-              <div className="absolute" style={qrPosition.leftQR}>
-                <QRCodeCanvas value={demoQR} size={50} />
-              </div>
-              <div className="absolute" style={qrPosition.rightQR}>
-                <QRCodeCanvas value={demoQR} size={50} />
-              </div>
+              <img src={frontImage} alt="Mặt trước" onLoad={() => setIsImageLoaded(true)} className="w-full h-auto rounded-lg shadow-md" />
+              {isImageLoaded && (
+                <>
+                  <div className="absolute" style={qrPosition.leftQR}>
+                    <QRCodeCanvas value={demoQR} style={qrPosition.style} />
+                  </div>
+                  <div className="absolute" style={qrPosition.rightQR}>
+                    <QRCodeCanvas value={demoQR} style={qrPosition.style} />
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
@@ -211,7 +252,7 @@ const GenQRCode = () => {
           <div className="mt-6">
             <p className="text-lg font-semibold">Mặt Sau</p>
             <div className="relative">
-              <img src={backImage} alt="Mặt sau" className="w-[500px] h-auto rounded-lg shadow-md" />
+              <img src={backImage} alt="Mặt sau" className="w-full h-auto rounded-lg shadow-md" />
             </div>
           </div>
 

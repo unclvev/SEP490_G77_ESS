@@ -32,7 +32,7 @@ namespace SEP490_G77_ESS.Controllers.Common
                 string.IsNullOrWhiteSpace(registerDto.Password) ||
                 string.IsNullOrWhiteSpace(registerDto.Email) ||
                 string.IsNullOrWhiteSpace(registerDto.Phone) ||
-                registerDto.Datejoin == null)
+                registerDto.Dob == null)
             {
                 return BadRequest(new { message = "Tất cả các trường đều bắt buộc" });
             }
@@ -52,19 +52,19 @@ namespace SEP490_G77_ESS.Controllers.Common
                 return BadRequest(new { message = "Số điện thoại phải gồm đúng 10 chữ số" });
             }
 
-            if (registerDto.Datejoin > DateTime.Now)
+            if (registerDto.Dob > DateTime.Now)
             {
                 return BadRequest(new { message = "Ngày sinh không thể là ngày trong tương lai" });
             }
             
-            int age = DateTime.Now.Year - registerDto.Datejoin.Value.Year;
-            if (registerDto.Datejoin > DateTime.Now.AddYears(-age))
+            int age = DateTime.Now.Year - registerDto.Dob.Value.Year;
+            if (registerDto.Dob > DateTime.Now.AddYears(-age))
             {
                 age--;
             }
-            if (age < 16)
+            if (age < 18)
             {
-                return BadRequest(new { message = "Bạn phải đủ 16 tuổi để đăng ký" });
+                return BadRequest(new { message = "Bạn phải đủ 18 tuổi để đăng ký" });
             }
 
 
@@ -73,9 +73,10 @@ namespace SEP490_G77_ESS.Controllers.Common
                 Username = registerDto.Username,
                 Email = registerDto.Email,
                 Userpass = _passwordHandler.HashPassword(registerDto.Password),
-                Datejoin = registerDto.Datejoin,
+                Dob = registerDto.Dob,
                 IsActive = 0,
-                ResetTokenExpires = DateTime.Now,
+                Datejoin = DateTime.UtcNow,
+                ResetTokenExpires = DateTime.UtcNow,
                 VerificationToken = Guid.NewGuid().ToString() 
             };
 
@@ -100,7 +101,7 @@ namespace SEP490_G77_ESS.Controllers.Common
                 return NotFound(new { message = "Người dùng không tồn tại hoặc token không hợp lệ." });
             }
 
-            if (user.ResetTokenExpires.HasValue && (DateTime.Now - user.ResetTokenExpires.Value).TotalMinutes > 5)
+            if (!user.ResetTokenExpires.HasValue || DateTime.UtcNow > user.ResetTokenExpires.Value.AddMinutes(5))
             {
                 _context.Accounts.Remove(user);
                 await _context.SaveChangesAsync();

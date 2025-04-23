@@ -17,6 +17,8 @@ public partial class Account
 
     public DateTime? Datejoin { get; set; }
 
+    public DateTime? Dob { get; set; }
+
     public string? Gender { get; set; }
 
     public string? Subject { get; set; }
@@ -27,8 +29,6 @@ public partial class Account
 
     public string? Phone { get; set; }
 
-    public long? Roleid { get; set; }
-
     public string? PasswordResetToken { get; set; }
 
     public DateTime? ResetTokenExpires { get; set; }
@@ -37,10 +37,6 @@ public partial class Account
 
     public int? IsActive { get; set; }
 
-    public DateTime? Dob { get; set; }
-
-    public virtual ICollection<BankAccess> BankAccesses { get; set; } = new List<BankAccess>();
-
     public virtual ICollection<Bank> Banks { get; set; } = new List<Bank>();
 
     public virtual ICollection<Exam> Exams { get; set; } = new List<Exam>();
@@ -48,6 +44,4 @@ public partial class Account
     public virtual ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
 
     public virtual ICollection<ResourceAccess> ResourceAccesses { get; set; } = new List<ResourceAccess>();
-
-    public virtual Role? Role { get; set; }
 }
