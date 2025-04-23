@@ -7,6 +7,7 @@ from flask import Flask, request, jsonify, Blueprint
 from flasgger import Swagger, swag_from
 from database import get_db_connection
 import json
+import glob
 
 conn = get_db_connection()
 cursor = conn.cursor()
@@ -567,6 +568,7 @@ def calculate_student_score(exam_data_json, detected_answers, exam_code, scale_t
                     correct_answers[str(idx)] = letter
 
     total_questions = len(correct_answers)
+    print(correct_answers)
     correct_count = 0
 
     for q_number, correct_choice in correct_answers.items():
@@ -596,11 +598,27 @@ def save_student_result(cursor, conn, student_code, exam_code, exam_id, score):
             WHERE student_code = ? AND exam_id = ?
         """, (exam_code, score, student_code, exam_id))
         print(f"Updated existing student result: student_code={student_code}, exam_id={exam_id}")
+        conn.commit()
+        return True
     else:
         print(f'{student_code} does not exist in student list')
+        return False
     
-    conn.commit()
+import glob
 
+def clean_folder(folder_path):
+    files = glob.glob(os.path.join(folder_path, '*'))
+    for f in files:
+        try:
+            os.remove(f)
+        except Exception as e:
+            print(f"Failed to remove {f}: {e}")
+
+def build_result_folder(exam_id, exam_type, suffix):
+    folder_name = f"{exam_id}_{exam_type}_{suffix}"
+    full_path = os.path.join("results", folder_name)
+    os.makedirs(full_path, exist_ok=True)
+    return full_path
 
 app = Flask(__name__)
 swagger = Swagger(app)
@@ -660,18 +678,22 @@ def detect():
     file.save(input_path)
 
     exam_id = request.form.get('exam_id')
+    exam_type = "MCQ"  # hoặc lấy từ request nếu có
+    result_folder_answer_image = build_result_folder(exam_id, exam_type,'img_answers')
+    result_folder_answer_json = build_result_folder(exam_id, exam_type,'json_answers')
+    
     if not exam_id:
         return jsonify({"error": "No exam_id provided"}), 400
 
     try:
         exam_id = int(exam_id)
     except ValueError:
-        return jsonify({"error": "Invalid exam_id"}), 400
+        return jsonify({"error": "Không tồn tại đề thi này"}), 400
     
     # Step 1: Detect squares and warp the paper
     all_square_boxes = detect_any_square(input_path)
     if not all_square_boxes:
-        return jsonify({"error": "No squares detected"}), 400
+        return jsonify({"error": "Không nhận diện rõ ảnh. Vui lòng chụp thẳng, còn nguyên 4 góc phiếu trắc nghiệm"}), 400
 
     img_original = cv2.imread(input_path)
     gray_original = cv2.cvtColor(img_original, cv2.COLOR_BGR2GRAY)
@@ -679,7 +701,7 @@ def detect():
     corner_map = find_4_corner_boxes_strict(final_filled_boxes, img_original.shape, max_distance=220)
 
     if corner_map is None:
-        return jsonify({"error": "Not enough corners detected"}), 400
+        return jsonify({"error": "Phiếu kiểm tra đang bị nghiêng hoặc lệch, vui lòng chụp thẳng, gần và đủ 4 góc giấy"}), 400
 
     src_pts = np.float32([
         (corner_map['C1'][0] + corner_map['C1'][2]//2, corner_map['C1'][1] + corner_map['C1'][3]//2),
@@ -738,21 +760,33 @@ def detect():
     exam_row = cursor.fetchone()
 
     if not exam_row:
-        return jsonify({"error": f"Exam code {exam_code} not found in database"}), 404
+        return jsonify({"error": f"Mã đề thi {exam_code} không tồn tại trong đề thi bạn tạo. Vui lòng kiểm tra lại"}), 404
 
     exam_data_json = exam_row[0]
     exam_data = json.loads(exam_data_json)
 
     score = calculate_student_score(exam_data, final_answers, exam_code)
     print(f'Score: {score}')
-    save_student_result(cursor, conn, student_id, exam_code, exam_id, score)
-
+    saved = save_student_result(cursor, conn, student_id, exam_code, exam_id, score)
+    if not saved:
+        return jsonify({"error": f"Mã học sinh {student_id} không tồn tại trong danh sách bạn đẩy lên hệ thống. Vui lòng kiểm tra lại"}), 400
     info_dict = {
         "student_id": student_id,
         "exam_code": exam_code,
         "exam_id": exam_id,
         "score": score
     }
+    info_dict_saved = {
+        "student_id": student_id,
+        "exam_code": exam_code,
+        "exam_id": exam_id,
+        "score": score,
+        "answer": final_answers
+    }
+    with open(os.path.join(result_folder_answer_json, f"student_{student_id}_result.json"), "w") as f:
+        json.dump(info_dict_saved, f, indent=2)
+    clean_folder(UPLOAD_FOLDER)
+    clean_folder(TEMP_FOLDER)
     return jsonify(info_dict)
 
 
