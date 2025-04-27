@@ -9,34 +9,44 @@ const RegistrationPage = () => {
   const [info, setInfo] = useState({
     username: '',
     email: '',
-    datejoin: '',
+    dob: '',       // đổi từ datejoin -> dob
     phone: '',
     password: '',
     rePassword: '',
-    role: 'Teacher'
   });
 
   const navigate = useNavigate();
 
   const handleChange = (e) => {
-    setInfo({ ...info, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setInfo((prev) => ({ ...prev, [name]: value }));
   };
 
-  const Register = async (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
+
+    // Kiểm tra mật khẩu xác nhận
     if (info.password !== info.rePassword) {
       toast.error('Mật khẩu xác nhận không khớp!');
       console.log('Lỗi: Mật khẩu xác nhận không khớp!');
       return;
     }
 
+    // Chuẩn bị payload theo đúng DTO bên backend
+    const payload = {
+      username: info.username,
+      email: info.email,
+      phone: info.phone,
+      dob: info.dob,               // gửi dob vào backend
+      password: info.password,     // backend sẽ hash lại
+    };
+
     try {
-      const response = await register(info);
+      const response = await register(payload);
       console.log('Phản hồi từ API:', response);
-      
+
       if (response.status === 200) {
-        toast.success('Đăng ký thành công!');
-        console.log('Đăng ký thành công, điều hướng đến trang đăng nhập...');
+        toast.success('Đăng ký thành công! Vui lòng kiểm tra email để xác thực.');
         navigate('/login');
       }
     } catch (error) {
@@ -60,8 +70,6 @@ const RegistrationPage = () => {
           height: '80vh',
           backgroundImage:
             'url(https://kissenglishcenter.com/wp-content/uploads/2022/05/1694-840x450.jpeg)',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
           borderRadius: '0 10px 10px 0',
           overflow: 'hidden',
           margin: 'auto'
@@ -69,23 +77,60 @@ const RegistrationPage = () => {
       ></div>
       <div className="flex-1 flex items-center justify-center bg-gray-100">
         <Card title="Tạo tài khoản cho riêng bạn" className="w-full max-w-md">
-          <form className="space-y-4 mt-4" onSubmit={Register}>
-            <Input type="text" name="username" placeholder="Tên" onChange={handleChange} />
-            <Input type="email" name="email" placeholder="Email" onChange={handleChange} />
-            <Input type="date" name="datejoin" onChange={handleChange} />
-            <Input type="text" name="phone" placeholder="Số điện thoại" onChange={handleChange} />
-            <Input type="password" name="password" placeholder="Mật khẩu" onChange={handleChange} />
+          <form className="space-y-4 mt-4" onSubmit={handleRegister}>
+            <Input
+              type="text"
+              name="username"
+              placeholder="Tên đăng nhập"
+              value={info.username}
+              onChange={handleChange}
+              required
+            />
+            <Input
+              type="email"
+              name="email"
+              placeholder="Email"
+              value={info.email}
+              onChange={handleChange}
+              required
+            />
+            <Input
+              type="date"
+              name="dob"                     // đặt name là dob
+              placeholder="Ngày sinh"
+              value={info.dob}
+              onChange={handleChange}
+              required
+            />
+            <Input
+              type="text"
+              name="phone"
+              placeholder="Số điện thoại"
+              value={info.phone}
+              onChange={handleChange}
+              required
+            />
+            <Input
+              type="password"
+              name="password"
+              placeholder="Mật khẩu"
+              value={info.password}
+              onChange={handleChange}
+              required
+            />
             <Input
               type="password"
               name="rePassword"
-              placeholder="Mật khẩu xác nhận"
+              placeholder="Xác nhận mật khẩu"
+              value={info.rePassword}
               onChange={handleChange}
+              required
             />
             <Button type="primary" htmlType="submit" className="w-full mt-4">
               Tạo tài khoản
             </Button>
             <span className="text-black text-sm text-center block mb-6">
-              Bạn đã có tài khoản ?{' '}
+              Bạn đã có tài khoản?{' '}
               <Link className="text-blue-600" to="/login">
                 Đăng nhập
               </Link>

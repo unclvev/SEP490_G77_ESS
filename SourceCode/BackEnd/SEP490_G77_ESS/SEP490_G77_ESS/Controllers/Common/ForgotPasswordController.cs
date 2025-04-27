@@ -64,21 +64,23 @@ namespace SEP490_G77_ESS.Controllers.Common
         }
 
         [HttpPost("reset-password")]
-        public async Task<IActionResult> ResetPassword([FromQuery] string token, [FromQuery] string newPassword)
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
         {
-            var account = await _context.Accounts.FirstOrDefaultAsync(u => u.PasswordResetToken == token);
+            var account = await _context.Accounts.FirstOrDefaultAsync(u => u.PasswordResetToken == request.Token);
             if (account == null)
             {
                 return NotFound(new { message = "Token không hợp lệ" });
             }
 
-            account.Userpass = _passwordHandler.HashPassword(newPassword);
+            account.Userpass = _passwordHandler.HashPassword(request.NewPassword);
             account.PasswordResetToken = null;
 
             _context.Accounts.Update(account);
             await _context.SaveChangesAsync();
 
-            return Redirect($"http://localhost:3000/login");
+            return Ok("Đã cập nhật thành công");
         }
+
+       
     }
 }

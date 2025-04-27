@@ -1,9 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Collapse, Dropdown, Input, Modal, Button, message, Skeleton } from "antd";
-import { MoreOutlined, EditOutlined, DeleteOutlined, PlusOutlined } from "@ant-design/icons";
+import { MoreOutlined, EditOutlined, DeleteOutlined, PlusOutlined, UserAddOutlined, TeamOutlined } from "@ant-design/icons";
 import axios from "axios";
 import { toast } from "react-toastify";
+import InviteUserModal from "../../Manager/components/InviteUserModal";
+import ListMemberModal from "../../Manager/components/ListMemberModal";
+import { getBankById, getSectionsByBankId, addMainSection, addSubSection, editSection, deleteSection } from "../../../services/api"; 
+
 const { Panel } = Collapse;
 
 const QuestionBankDetail = () => {
@@ -15,6 +19,8 @@ const QuestionBankDetail = () => {
   const [modalType, setModalType] = useState("");
   const [currentSection, setCurrentSection] = useState(null);
   const [sectionName, setSectionName] = useState("");
+  const [inviteModalVisible, setInviteModalVisible] = useState(false);
+  const [listMemberModalVisible, setListMemberModalVisible] = useState(false);
 
   useEffect(() => {
     if (bankId) {
@@ -27,7 +33,7 @@ const QuestionBankDetail = () => {
   const fetchBankInfo = async () => {
     try {
         console.log("🚀 Gọi API:", `https://localhost:7052/api/Bank/${bankId}`);
-        const response = await axios.get(`https://localhost:7052/api/Bank/${bankId}`);
+        const response = await getBankById(bankId);
         console.log("✅ API Response:", response.data);
         setBankInfo(response.data);
     } catch (error) {
@@ -38,7 +44,7 @@ const QuestionBankDetail = () => {
   /** ✅ Lấy danh sách Sections từ API */
   const fetchSections = async () => {
     try {
-      const response = await axios.get(`https://localhost:7052/api/Bank/${bankId}/sections`);
+      const response = await getSectionsByBankId(bankId);
       setSections(response.data);
     } catch (error) {
       toast.error("Lỗi khi tải dữ liệu section!");
@@ -60,12 +66,11 @@ const QuestionBankDetail = () => {
       return;
     }
     try {
-      const url =
-        modalType === "add-main"
-          ? `https://localhost:7052/api/Bank/${bankId}/add-section`
-          : `https://localhost:7052/api/Bank/${currentSection.secid}/add-subsection`;
-
-      await axios.post(url, { secname: sectionName });
+      if (modalType === "add-main") {
+        await addMainSection(bankId, { secname: sectionName });
+      } else {
+        await addSubSection(currentSection.secid, { secname: sectionName });
+      }
       toast.success("✅ Thêm section thành công!", 2); // 🟢 Thông báo UI thành công
       setIsModalVisible(false);
       setSectionName("");
@@ -85,9 +90,7 @@ const QuestionBankDetail = () => {
       return;
     }
     try {
-      await axios.put(`https://localhost:7052/api/Bank/section/${currentSection.secid}`, {
-        secname: sectionName,
-      });
+      await editSection(currentSection.secid, { secname: sectionName });
 
       fetchSections();
       toast.success("Cập nhật section thành công!");
@@ -101,7 +104,7 @@ const QuestionBankDetail = () => {
   /** ✅ Xóa Section */
   const handleDeleteSection = async (sectionId) => {
     try {
-      await axios.delete(`https://localhost:7052/api/Bank/section/${sectionId}`);
+      await deleteSection(sectionId);
       fetchSections();
       toast.success("Xóa section thành công!");
     } catch (error) {
@@ -114,7 +117,6 @@ const QuestionBankDetail = () => {
     navigate(`/question-list/${sectionId}`);
   };
 
-  /** ✅ Hiển thị danh sách Sections */
  /** ✅ Hiển thị danh sách Sections */
 const renderSections = (sections) => {
   return sections.map((section) => (
@@ -195,11 +197,18 @@ const renderSections = (sections) => {
         )}
       </div>
 
-      <div className="flex justify-start mb-4 w-3/4 mx-auto">
+      <div className="flex justify-start mb-4 w-3/4 mx-auto gap-2">
         <Button type="primary" icon={<PlusOutlined />} onClick={() => showModal("add-main")}>
           Thêm Section
         </Button>
+        <Button type="primary" icon={<UserAddOutlined />} onClick={() => setInviteModalVisible(true)}>
+          Mời Người Dùng
+        </Button>
+        <Button type="primary" icon={<TeamOutlined />} onClick={() => setListMemberModalVisible(true)}>
+          Danh Sách Thành Viên
+        </Button>
       </div>
+      
 
       {/* ✅ Hiển thị danh sách section */}
       <div className="bg-white p-6 shadow-lg rounded-lg w-full max-w-5xl mx-auto">
@@ -215,6 +224,20 @@ const renderSections = (sections) => {
       >
         <Input value={sectionName} onChange={(e) => setSectionName(e.target.value)} placeholder="Nhập tên section" />
       </Modal>
+
+      <InviteUserModal
+        visible={inviteModalVisible}
+        onClose={() => setInviteModalVisible(false)}
+        bankId={bankId}
+        resourceType="bank"
+      />
+
+      <ListMemberModal
+        visible={listMemberModalVisible}
+        onClose={() => setListMemberModalVisible(false)}
+        bankId={bankId}
+        resourceType="bank"
+      />
     </div>
   );
 };

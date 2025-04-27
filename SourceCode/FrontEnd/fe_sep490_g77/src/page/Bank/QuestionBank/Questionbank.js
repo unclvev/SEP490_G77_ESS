@@ -7,6 +7,8 @@ import { toast } from "react-toastify";
 import { useSearchParams } from "react-router-dom";
 import { useSelector } from 'react-redux';
 import { jwtDecode } from "jwt-decode";
+import { getBankGrades, getBankSubjects, getBankCurriculums, getBanksByAccount, getDefaultBanks,updateBankName,deleteBank} from '../../../services/api';
+
 
 import 'tailwindcss/tailwind.css';
 
@@ -70,13 +72,13 @@ const QuestionBank = () => {
   const fetchBanks = async () => {
     setLoading(true);
     try {
-      let url = `https://localhost:7052/api/Bank/account/${accid}?`;
-      if (searchQuery) url += `query=${searchQuery}&`;
-      if (selectedGrade) url += `grade=${selectedGrade}&`;
-      if (selectedSubject) url += `subject=${selectedSubject}&`;
-      if (selectedCurriculum) url += `curriculum=${selectedCurriculum}&`;
+      const params = {};
+      if (searchQuery) params.query = searchQuery;
+      if (selectedGrade) params.grade = selectedGrade;
+      if (selectedSubject) params.subject = selectedSubject;
+      if (selectedCurriculum) params.curriculum = selectedCurriculum;
 
-      const response = await axios.get(url);
+      const response = await getBanksByAccount(accid, params);
       setBanks(response.data.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage));
       setTotalBanks(response.data.length);
     } catch (error) {
@@ -90,20 +92,20 @@ const QuestionBank = () => {
   const fetchDefaultBanks = async () => {
     setLoadingDefaultBanks(true);
     try {
-      let url = `https://localhost:7052/api/Bank/default-banks?`;
-      if (defaultSearchQuery) url += `query=${defaultSearchQuery}&`;
-      if (selectedGrade) url += `grade=${selectedGrade}&`;
-      if (selectedSubject) url += `subject=${selectedSubject}&`;
-      if (selectedCurriculum) url += `curriculum=${selectedCurriculum}&`;
-  
-      const response = await axios.get(url);
+      const params = {};
+      if (defaultSearchQuery) params.query = defaultSearchQuery;
+      if (selectedGrade) params.grade = selectedGrade;
+      if (selectedSubject) params.subject = selectedSubject;
+      if (selectedCurriculum) params.curriculum = selectedCurriculum;
+
+      const response = await getDefaultBanks(params);
       const filteredBanks = response.data;
   
       setDefaultBanks(filteredBanks.slice((currentDefaultPage - 1) * itemsPerPage, currentDefaultPage * itemsPerPage));
       setTotalDefaultBanks(filteredBanks.length);
     } catch (error) {
       console.error("Error fetching default banks:", error);
-      message.error('❌ Lỗi khi tải dữ liệu ngân hàng đề của ESS!');
+   
     } finally {
       setLoadingDefaultBanks(false);
     }
@@ -112,7 +114,7 @@ const QuestionBank = () => {
 
   const fetchGrades = async () => {
     try {
-      const res = await axios.get('https://localhost:7052/api/Bank/grades');
+      const res = await getBankGrades();
       setGrades(res.data);
     } catch (error) {
       console.error("Error fetching grades:", error);
@@ -121,7 +123,7 @@ const QuestionBank = () => {
 
   const fetchSubjects = async () => {
     try {
-      const res = await axios.get('https://localhost:7052/api/Bank/subjects');
+      const res = await getBankSubjects();
       setSubjects(res.data);
     } catch (error) {
       console.error("Error fetching subjects:", error);
@@ -130,7 +132,7 @@ const QuestionBank = () => {
 
   const fetchCurriculums = async () => {
     try {
-      const res = await axios.get('https://localhost:7052/api/Bank/curriculums');
+      const res = await getBankCurriculums();
       setCurriculums(res.data);
     } catch (error) {
       console.error("Error fetching curriculums:", error);
@@ -190,9 +192,13 @@ const QuestionBank = () => {
       return;
     }
     try {
-      await axios.put(`https://localhost:7052/api/Bank/${editingBank.bankId}/name`, {
+      await updateBankName(editingBank.bankId, {
         bankId: editingBank.bankId,
         bankname: newBankName
+      }, {
+        headers: {
+          'Authorization': `Bearer ${token.token}`
+        }
       });
   
       toast.success("✅ Cập nhật tên ngân hàng thành công!", 2);
@@ -215,7 +221,7 @@ const QuestionBank = () => {
 
   const confirmDeleteBank = async () => {
     try {
-      await axios.delete(`https://localhost:7052/api/Bank/${deletingBank.bankId}`);
+      await deleteBank(deletingBank.bankId);
       
       toast.success("✅ Xóa ngân hàng câu hỏi thành công!", 2);
       setIsDeleteModalOpen(false);
@@ -455,7 +461,7 @@ showSizeChanger={false}
       
 <Modal
       title="Lỗi tải dữ liệu"
-      open={loadingDefaultBanks && defaultBanks.length === 0}
+      open={loadingDefaultBanks === 0 && defaultBanks.length === 0}
       onOk={() => setLoadingDefaultBanks(false)}
       onCancel={() => setLoadingDefaultBanks(false)}
       okText="OK"

@@ -7,33 +7,56 @@ using System.Threading.Tasks;
 using SEP490_G77_ESS.Models;
 using SEP490_G77_ESS.DTO.BankdDTO;
 using ClosedXML.Excel;
+using Microsoft.AspNetCore.Authorization;
 
 namespace SEP490_G77_ESS.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    
     public class BankController : ControllerBase
     {
         private readonly EssDbV11Context _context;
+        private readonly IAuthorizationService _authorizationService;
 
-        public BankController(EssDbV11Context context)
+        public BankController(EssDbV11Context context, IAuthorizationService authorizationService)
         {
             _context = context;
+            _authorizationService = authorizationService;
         }
 
         // ✅ Lấy danh sách ngân hàng câu hỏi
         [HttpGet("account/{accid}")]
         public async Task<ActionResult<IEnumerable<object>>> GetBanksByAccount(
-     long accid, [FromQuery] string query = "", [FromQuery] string grade = "", [FromQuery] string subject = "", [FromQuery] string curriculum = "")
+    long accid,
+    [FromQuery] string query = "",
+    [FromQuery] string grade = "",
+    [FromQuery] string subject = "",
+    [FromQuery] string curriculum = "")
         {
+            // 1. Xác định danh sách bankId được share cho user này (IsOwner hoặc CanRead)
+            var sharedBankIds = _context.ResourceAccesses
+                .Where(ra =>
+                    ra.Accid == accid &&
+                    ra.ResourceType == "Bank" &&
+                    // bạn có thể check sử dụng Include + ra.Role.CanRead nếu cần
+                    (ra.IsOwner == true || ra.Role.CanRead == true)
+                )
+                .Select(ra => ra.ResourceId);
+
+            // 2. Build query: lấy tất cả Bank mà accid == userId (owner) OR nằm trong sharedBankIds
             var banksQuery = _context.Banks
-                .Where(b => b.Accid == accid)
+                .Where(b =>
+                    b.Accid == accid ||
+                    sharedBankIds.Contains(b.BankId)
+                )
                 .Include(b => b.Grade)
                 .Include(b => b.Subject)
                 .Include(b => b.Curriculum)
                 .Include(b => b.Sections)
                 .AsQueryable();
 
+            // 3. Áp filter search như cũ
             if (!string.IsNullOrEmpty(query))
                 banksQuery = banksQuery.Where(b => b.Bankname.Contains(query));
 
@@ -46,24 +69,25 @@ namespace SEP490_G77_ESS.Controllers
             if (!string.IsNullOrEmpty(curriculum))
                 banksQuery = banksQuery.Where(b => b.Curriculum.CurriculumName.Contains(curriculum));
 
+            // 4. Project kết quả và trả về
             var banks = await banksQuery
                 .OrderByDescending(b => b.CreateDate)
                 .Select(b => new
                 {
                     b.BankId,
                     b.Bankname,
-                    Totalquestion = _context.Questions
+                    TotalQuestion = _context.Questions
                         .Count(q => q.Secid != null && b.Sections.Any(s => s.Secid == q.Secid)),
                     b.CreateDate,
                     Grade = b.Grade != null ? b.Grade.GradeLevel : "Không xác định",
                     Subject = b.Subject != null ? b.Subject.SubjectName : "Không xác định",
                     Curriculum = b.Curriculum != null ? b.Curriculum.CurriculumName : "Không xác định"
                 })
-                .OrderByDescending(b => b.CreateDate)
                 .ToListAsync();
 
             return Ok(banks);
         }
+
         [HttpGet("default-banks")]
         public async Task<IActionResult> GetDefaultBanks(
             [FromQuery] string grade = "",
@@ -339,14 +363,31 @@ namespace SEP490_G77_ESS.Controllers
             bank.CreateDate = DateTime.Now;
             _context.Banks.Add(bank);
             await _context.SaveChangesAsync();
+            // ✅ Tạo quan hệ quyền truy cập cho ngân hàng này
+            var owner = new ResourceAccess
+            {
+                Accid = bank.Accid,
+                ResourceId = bank.BankId,
+                ResourceType = "Bank",
+                IsOwner = true,
+
+            };
+            
 
             return CreatedAtAction(nameof(GetBank), new { id = bank.BankId }, bank);
         }
 
         // ✅ Cập nhật chỉ Bankname
         [HttpPut("{id}/name")]
+        [Authorize]
         public async Task<IActionResult> UpdateBankName(long id, [FromBody] Bank bank)
         {
+            var authorizationResult = await _authorizationService.AuthorizeAsync(User, id, "BankModify");
+            if (!authorizationResult.Succeeded)
+            {
+                return Forbid();
+            }
+
             if (string.IsNullOrEmpty(bank.Bankname))
             {
                 return BadRequest(new { message = "Tên ngân hàng không được để trống" });
@@ -380,8 +421,14 @@ namespace SEP490_G77_ESS.Controllers
 
         // ✅ Xóa ngân hàng câu hỏi
         [HttpDelete("{id}")]
+        [Authorize]
         public async Task<IActionResult> DeleteBank(long id)
         {
+            var authorizationResult = await _authorizationService.AuthorizeAsync(User, id, "BankDelete");
+            if (!authorizationResult.Succeeded)
+            {
+                return Forbid();
+            }
             var bank = await _context.Banks
                 .Include(b => b.Sections)
                 .ThenInclude(s => s.Questions)
@@ -416,8 +463,7 @@ namespace SEP490_G77_ESS.Controllers
             _context.SectionHierarchies.RemoveRange(sectionHierarchies);
 
             // ✅ Xóa toàn bộ dữ liệu trong BankAccess liên quan đến Bank
-            var bankAccesses = _context.BankAccesses.Where(ba => ba.Bankid == id);
-            _context.BankAccesses.RemoveRange(bankAccesses);
+
 
             // ✅ Xóa ngân hàng câu hỏi
             _context.Banks.Remove(bank);
@@ -676,7 +722,8 @@ namespace SEP490_G77_ESS.Controllers
             var questionCounts = await _context.Questions
                 .Where(q => q.Secid != null && sections.Select(s => s.Secid).Contains(q.Secid.Value))
                 .GroupBy(q => q.Secid)
-                .Select(g => new {
+                .Select(g => new
+                {
                     Key = g.Key ?? 0,
                     Count = g.Count()
                 })
@@ -761,8 +808,15 @@ namespace SEP490_G77_ESS.Controllers
 
 
         [HttpPost("{bankId}/add-section")]
+        [Authorize]
         public async Task<ActionResult<object>> AddSection(long bankId, [FromBody] Section section)
         {
+            var authorizationResult = await _authorizationService.AuthorizeAsync(User, bankId, "BankModify");
+            if (!authorizationResult.Succeeded)
+            {
+                return Forbid();
+            }
+
             if (string.IsNullOrWhiteSpace(section.Secname))
                 return BadRequest(new { message = "Tên section không được để trống" });
 
@@ -857,19 +911,24 @@ namespace SEP490_G77_ESS.Controllers
         }
 
 
-      
+
 
 
 
 
         // ✅ Cập nhật tên Section
-  [HttpPut("section/{sectionId}")]
+        [HttpPut("section/{sectionId}")]
         public async Task<IActionResult> UpdateSection(long sectionId, [FromBody] Section updatedSection)
         {
             var section = await _context.Sections.FindAsync(sectionId);
             if (section == null)
                 return NotFound(new { message = "Không tìm thấy section" });
 
+            var authorizationResult = await _authorizationService.AuthorizeAsync(User, section.BankId, "BankModify");
+            if (!authorizationResult.Succeeded)
+            {
+                return Forbid();
+            }
             section.Secname = updatedSection.Secname ?? section.Secname;
 
             _context.Entry(section).State = EntityState.Modified;
@@ -885,6 +944,11 @@ namespace SEP490_G77_ESS.Controllers
             var section = await _context.Sections.FindAsync(sectionId);
             if (section == null)
                 return NotFound(new { message = "Không tìm thấy section" });
+            var authorizationResult = await _authorizationService.AuthorizeAsync(User, section.BankId, "BankModify");
+            if (!authorizationResult.Succeeded)
+            {
+                return Forbid();
+            }
 
             var sectionRelations = _context.SectionHierarchies
                 .Where(sh => sh.AncestorId == sectionId || sh.DescendantId == sectionId);

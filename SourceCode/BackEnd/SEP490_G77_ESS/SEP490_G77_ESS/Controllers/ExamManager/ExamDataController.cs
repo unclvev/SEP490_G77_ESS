@@ -150,34 +150,58 @@ namespace SEP490_G77_ESS.Controllers.ExamManager
 
             foreach (var section in examSections)
             {
-                var questions = await _context.Questions
-                    .Where(q => q.Secid == section.SectionId &&
-                                (q.Modeid == 1 && section.Easy > 0 ||
-                                 q.Modeid == 2 && section.Medium > 0 ||
-                                 q.Modeid == 3 && section.Hard > 0))
+                // Lấy các câu hỏi theo section với điều kiện theo mức độ khó (Modeid)
+                // và include các dữ liệu cần thiết như CorrectAnswers và Type.
+                var questionsRaw = await _context.Questions
+                    .Include(q => q.CorrectAnswers)
+                    .Include(q => q.Type)
+                    .Where(q => q.Secid == section.SectionId && q.TypeId == 1 &&
+                                ((q.Modeid == 1 && section.Easy > 0) ||
+                                 (q.Modeid == 2 && section.Medium > 0) ||
+                                 (q.Modeid == 3 && section.Hard > 0)))
                     .OrderBy(r => Guid.NewGuid())
                     .Take(section.Easy + section.Medium + section.Hard)
-                    .Select(q => new QuestionDTO
+                    .ToListAsync();
+
+                foreach (var q in questionsRaw)
+                {
+                    var questionDTO = new QuestionDTO
                     {
                         QuestionId = q.Quesid,
                         Content = q.Quescontent,
-                        Type = q.Type.TypeName,
-                        Answers = _context.CorrectAnswers
-                            .Where(a => a.Quesid == q.Quesid)
-                            .Select(a => new AnswerDTO
-                            {
-                                AnswerId = a.AnsId,
-                                Content = a.Content,
-                                IsCorrect = true,
-                            })
-                            .ToList()
-                    })
-                    .ToListAsync();
+                        Type = q.Type != null ? q.Type.TypeName : "Unknown",
+                        Answers = new List<AnswerDTO>()
+                    };
 
-                selectedQuestions.AddRange(questions);
+                    // Nếu có dữ liệu trong AnswerContent thì tách các đáp án
+                    if (!string.IsNullOrWhiteSpace(q.AnswerContent))
+                    {
+                        var answerList = q.AnswerContent
+                            .Split(',')
+                            .Select(ans => ans.Trim())
+                            .Where(ans => !string.IsNullOrEmpty(ans))
+                            .ToList();
+
+                        int answerIdCounter = 1;
+                        foreach (var answer in answerList)
+                        {
+                            bool isCorrect = q.CorrectAnswers
+                                .Any(ca => string.Equals(ca.Content?.Trim(), answer, StringComparison.OrdinalIgnoreCase));
+
+                            questionDTO.Answers.Add(new AnswerDTO
+                            {
+                                AnswerId = answerIdCounter++,
+                                Content = answer,
+                                IsCorrect = isCorrect
+                            });
+                        }
+                    }
+
+                    selectedQuestions.Add(questionDTO);
+                }
             }
 
-            //long? accId = await GetAccIdFromToken();
+            // long? accId = await GetAccIdFromToken();
             long? accId = 15;
 
             var examData = new ExamDataDTO

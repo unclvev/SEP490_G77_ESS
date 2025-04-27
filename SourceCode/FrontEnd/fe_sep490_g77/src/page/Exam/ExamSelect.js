@@ -29,35 +29,15 @@ const ExamSelect = () => {
       <Content style={{ padding: '24px' }}>
         <Row gutter={24}>
           {/* Khu vực upload (bên trái) */}
-          <Col xs={24} md={16} style={{ marginBottom: 24 }}>
-            <Card
-              style={{
-                borderRadius: 8,
-                minHeight: '400px',
-              }}
-            >
-              <Dragger
-                {...propsUpload}
-                style={{
-                  border: '2px dashed #d9d9d9',
-                  borderRadius: 8,
-                  background: '#fafafa',
-                }}
-              >
-                <p className="ant-upload-drag-icon">
-                  <UploadOutlined style={{ fontSize: 32 }} />
-                </p>
-                <Title level={4}>Chọn File hoặc kéo thả File vào đây ( tính năng đang không được cung cấp )</Title>
-              </Dragger>
-            </Card>
-          </Col>
+          
 
           {/* Khu vực các lựa chọn (bên phải) */}
           <Col xs={24} md={8}>
-            <Space direction="vertical" style={{ width: '100%' }}>
+            <Space direction="vertical" style={{ width: '100%', cursor: 'not-allowed' }}>
               {/* Card: Tự soạn đề thi / Bài tập */}
               <Link to={`/`}>
                 <Card
+                
                   hoverable
                   style={{ borderRadius: 8 }}
                   bodyStyle={{ padding: '16px' }}
@@ -88,7 +68,7 @@ const ExamSelect = () => {
                 <Card
                   hoverable
                   style={{ borderRadius: 8 }}
-                  bodyStyle={{ padding: '16px' }}
+                  bodyStyle={{ padding: '16px',  cursor: 'not-allowed' }}
                 >
                   <Space>
                     <BarcodeOutlined />

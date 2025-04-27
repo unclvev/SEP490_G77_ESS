@@ -2,11 +2,13 @@
 {
     public class InvitedUserDTO
     {
-        public string? Name { get; set; }
-        public string? Email { get; set; }
-        public long? BankId { get; set; }
-        public long? UserId { get; set; }
-        public bool? CanEdit { get; set; }
-        public bool? CanView { get; set; }
+        public string RoleName { get; set; }
+        public string ResourceType { get; set; }
+        public long ResourceId { get; set; }
+        public long Accid { get; set; }
+        public bool CanModify { get; set; }
+        public bool CanRead { get; set; }
+        public bool CanDelete { get; set; }
+
     }
 }
