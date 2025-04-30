@@ -45,7 +45,7 @@ namespace SEP490_G77_ESS.Services
 
                 // Kiểm tra quyền cụ thể (Read/Modify/Delete) trên chính ResourceId
                 if (await CheckResourcePermission(userId, requirement.ResourceType, requirement.Action, resourceId))
-                {                   
+                {
                     context.Succeed(requirement);
                 }
                 else
