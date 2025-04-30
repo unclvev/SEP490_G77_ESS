@@ -68,6 +68,8 @@ public partial class EssDbV11Context : DbContext
     } 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.UseCollation("SQL_Latin1_General_CP1_CI_AS");
+
         modelBuilder.Entity<Account>(entity =>
         {
             entity.HasKey(e => e.AccId).HasName("PK__Account__9A20D5545A6F77C9");
@@ -386,7 +388,6 @@ public partial class EssDbV11Context : DbContext
             entity.Property(e => e.ResourceType)
                 .HasMaxLength(50)
                 .HasColumnName("resource_type");
-
             entity.HasOne(d => d.Acc).WithMany(p => p.ResourceAccesses)
                 .HasForeignKey(d => d.Accid)
                 .HasConstraintName("FK__ResourceA__accid__7C4F7684");

@@ -1,0 +1,11 @@
+flask
+flasgger
+opencv-python
+pyzbar
+pillow
+azure-cognitiveservices-vision-computervision
+msrest
+unidecode
+python-dotenv
+pyodbc
+matplotlib

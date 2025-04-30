@@ -13,13 +13,16 @@ namespace SEP490_G77_ESS.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    
     public class BankController : ControllerBase
     {
         private readonly EssDbV11Context _context;
+        private readonly IAuthorizationService _authorizationService;
 
-        public BankController(EssDbV11Context context)
+        public BankController(EssDbV11Context context, IAuthorizationService authorizationService)
         {
             _context = context;
+            _authorizationService = authorizationService;
         }
 
         // ✅ Lấy danh sách ngân hàng câu hỏi
@@ -360,15 +363,31 @@ namespace SEP490_G77_ESS.Controllers
             bank.CreateDate = DateTime.Now;
             _context.Banks.Add(bank);
             await _context.SaveChangesAsync();
+            // ✅ Tạo quan hệ quyền truy cập cho ngân hàng này
+            var owner = new ResourceAccess
+            {
+                Accid = bank.Accid,
+                ResourceId = bank.BankId,
+                ResourceType = "Bank",
+                IsOwner = true,
+
+            };
+            
 
             return CreatedAtAction(nameof(GetBank), new { id = bank.BankId }, bank);
         }
 
         // ✅ Cập nhật chỉ Bankname
         [HttpPut("{id}/name")]
-        [Authorize(Policy = "BankModify")]
+        [Authorize]
         public async Task<IActionResult> UpdateBankName(long id, [FromBody] Bank bank)
         {
+            var authorizationResult = await _authorizationService.AuthorizeAsync(User, id, "BankModify");
+            if (!authorizationResult.Succeeded)
+            {
+                return Forbid();
+            }
+
             if (string.IsNullOrEmpty(bank.Bankname))
             {
                 return BadRequest(new { message = "Tên ngân hàng không được để trống" });
@@ -402,9 +421,14 @@ namespace SEP490_G77_ESS.Controllers
 
         // ✅ Xóa ngân hàng câu hỏi
         [HttpDelete("{id}")]
-        [Authorize(Policy = "BankDelete")]
+        [Authorize]
         public async Task<IActionResult> DeleteBank(long id)
         {
+            var authorizationResult = await _authorizationService.AuthorizeAsync(User, id, "BankDelete");
+            if (!authorizationResult.Succeeded)
+            {
+                return Forbid();
+            }
             var bank = await _context.Banks
                 .Include(b => b.Sections)
                 .ThenInclude(s => s.Questions)
@@ -439,7 +463,7 @@ namespace SEP490_G77_ESS.Controllers
             _context.SectionHierarchies.RemoveRange(sectionHierarchies);
 
             // ✅ Xóa toàn bộ dữ liệu trong BankAccess liên quan đến Bank
-            
+
 
             // ✅ Xóa ngân hàng câu hỏi
             _context.Banks.Remove(bank);
@@ -784,8 +808,15 @@ namespace SEP490_G77_ESS.Controllers
 
 
         [HttpPost("{bankId}/add-section")]
+        [Authorize]
         public async Task<ActionResult<object>> AddSection(long bankId, [FromBody] Section section)
         {
+            var authorizationResult = await _authorizationService.AuthorizeAsync(User, bankId, "BankModify");
+            if (!authorizationResult.Succeeded)
+            {
+                return Forbid();
+            }
+
             if (string.IsNullOrWhiteSpace(section.Secname))
                 return BadRequest(new { message = "Tên section không được để trống" });
 
@@ -893,6 +924,11 @@ namespace SEP490_G77_ESS.Controllers
             if (section == null)
                 return NotFound(new { message = "Không tìm thấy section" });
 
+            var authorizationResult = await _authorizationService.AuthorizeAsync(User, section.BankId, "BankModify");
+            if (!authorizationResult.Succeeded)
+            {
+                return Forbid();
+            }
             section.Secname = updatedSection.Secname ?? section.Secname;
 
             _context.Entry(section).State = EntityState.Modified;
@@ -908,6 +944,11 @@ namespace SEP490_G77_ESS.Controllers
             var section = await _context.Sections.FindAsync(sectionId);
             if (section == null)
                 return NotFound(new { message = "Không tìm thấy section" });
+            var authorizationResult = await _authorizationService.AuthorizeAsync(User, section.BankId, "BankModify");
+            if (!authorizationResult.Succeeded)
+            {
+                return Forbid();
+            }
 
             var sectionRelations = _context.SectionHierarchies
                 .Where(sh => sh.AncestorId == sectionId || sh.DescendantId == sectionId);

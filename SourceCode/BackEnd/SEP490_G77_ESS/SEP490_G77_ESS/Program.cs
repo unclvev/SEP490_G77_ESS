@@ -110,7 +110,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 builder.Configuration.GetSection("AppSetting:Token").Value!)),
             ClockSkew = TimeSpan.Zero,
             ValidateIssuer = false,
-            ValidateAudience = false
+            ValidateAudience = false,
+            NameClaimType = "AccId"
         };
     });
 builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));

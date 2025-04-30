@@ -11,13 +11,15 @@ namespace SEP490_G77_ESS.Controllers.ExamManager
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class ExamController : ControllerBase
     {
         private readonly EssDbV11Context _context;
-
-        public ExamController(EssDbV11Context context)
+        private readonly IAuthorizationService _authorizationService;
+        public ExamController(EssDbV11Context context, IAuthorizationService authorizationService)
         {
             _context = context;
+            _authorizationService = authorizationService;
         }
 
         private async Task<long?> GetAccIdFromToken()
@@ -33,7 +35,7 @@ namespace SEP490_G77_ESS.Controllers.ExamManager
             //var accId = await GetAccIdFromToken();
             //if (accId == null)
             //    return Unauthorized(new { message = "Không thể xác định tài khoản." });
-            var accId = 15;
+            //accId = 10002;
 
             // Lấy bài thi từ database
             var exam = await _context.Exams
@@ -44,23 +46,25 @@ namespace SEP490_G77_ESS.Controllers.ExamManager
                     e.Examname,
                     e.Createdate,
                     e.Examdata,
-                    e.AccId // ID người tạo bài thi
+                    e.AccId, // ID người tạo bài thi
+                    e.Subject,
                 })
                 .FirstOrDefaultAsync();
 
             if (exam == null)
                 return NotFound(new { message = "Bài thi không tồn tại." });
 
-            // Kiểm tra quyền truy cập (nếu cần, có thể bổ sung kiểm tra AccId)
-            if (exam.AccId != accId)
-                return Forbid(); // Hoặc có thể trả về Forbidden(403)
+            //// Kiểm tra quyền truy cập (nếu cần, có thể bổ sung kiểm tra AccId)
+            //if (exam.AccId != accId)
+            //    return Forbid(); // Hoặc có thể trả về Forbidden(403)
 
             return Ok(new
             {
                 examid = exam.ExamId,
                 examname = exam.Examname,
                 createdate = exam.Createdate,
-                examdata = exam.Examdata
+                examdata = exam.Examdata,
+                subject = exam.Subject,
             });
         }
 
@@ -206,7 +210,9 @@ namespace SEP490_G77_ESS.Controllers.ExamManager
             var accId = await GetAccIdFromToken();
             if (accId == null)
                 return Unauthorized(new { message = "Không thể xác định tài khoản." });
-
+            var authorizationResult = await _authorizationService.AuthorizeAsync(User, examid, "ExamModify");
+            if (!authorizationResult.Succeeded)
+                return Forbid();
             var exam = await _context.Exams.FirstOrDefaultAsync(e => e.ExamId == examid && e.AccId == accId);
             if (exam == null)
                 return NotFound(new { message = "Không tìm thấy bài kiểm tra hoặc bạn không có quyền chỉnh sửa." });
@@ -219,13 +225,14 @@ namespace SEP490_G77_ESS.Controllers.ExamManager
 
         //Testing
         [HttpDelete("{examid}")]
-        [Authorize]
         public async Task<IActionResult> DeleteExamById(int examid)
         {
             var accId = await GetAccIdFromToken();
             if (accId == null)
                 return Unauthorized(new { message = "Không thể xác định tài khoản." });
-
+            var authorizationResult = await _authorizationService.AuthorizeAsync(User, examid, "ExamDelete");
+            if (!authorizationResult.Succeeded)
+                return Forbid();
             var exam = await _context.Exams.FirstOrDefaultAsync(e => e.ExamId == examid && e.AccId == accId);
             if (exam == null)
                 return NotFound(new { message = "Không tìm thấy bài kiểm tra hoặc bạn không có quyền xóa." });
