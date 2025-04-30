@@ -18,6 +18,7 @@ import LoginPage from "./page/Common/LoginPage";
 import Profile from "./page/Common/ProfilePage";
 import RegistrationPage from "./page/Common/RegisterPage";
 import ResetPassword from "./page/Common/ResetPasswordPage";
+import ErrorPage from "./page/Common/ErrorPage";
 import CreateEssayExam from "./page/Essay/CreateEssayExam";
 import GenQRCode from "./page/Essay/CreateQRCode.js";
 import ImportEssayPage from "./page/Essay/ImportEssayPage";
@@ -50,6 +51,8 @@ function App() {
           <Route path="/profile" element={<Profile /> } />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/error" element={<ErrorPage />} />
+          <Route path="/error/:message" element={<ErrorPage />} />
           <Route path="/manager" element={<ManagerPage />} />
 
           {/* Các trang khác bọc trong MainLayout */}

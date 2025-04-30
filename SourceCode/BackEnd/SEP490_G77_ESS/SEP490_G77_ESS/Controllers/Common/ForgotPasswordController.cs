@@ -36,7 +36,7 @@ namespace SEP490_G77_ESS.Controllers.Common
             account.ResetTokenExpires = DateTime.Now;
             var resetUrl = $"{Request.Scheme}://{Request.Host}/api/ForgotPassword/verify-email-for-password?token={account.PasswordResetToken}";
 
-            await _emailService.SendVerificationEmailAsync(email, resetUrl);
+            await _emailService.SendVerificationEmailForReset(email, resetUrl);
 
             await _context.SaveChangesAsync();
             return Ok(new { message = "Vui lòng kiểm tra email để xác thực và đặt lại mật khẩu." });
@@ -51,13 +51,13 @@ namespace SEP490_G77_ESS.Controllers.Common
                 return NotFound(new { message = "Người dùng không tồn tại hoặc token không hợp lệ." });
             }
 
-            // Kiểm tra thời gian xác thực (ví dụ: token chỉ hợp lệ trong 5 phút)
+            
             if (account.ResetTokenExpires.HasValue && (DateTime.Now - account.ResetTokenExpires.Value).TotalMinutes > 5)
             {
                 account.PasswordResetToken = null;
                 _context.Accounts.Update(account);
                 await _context.SaveChangesAsync();
-                return BadRequest(new { message = "Thời gian xác thực đã quá 5 phút, vui lòng đăng ký lại." });
+                return BadRequest(new { message = "Thời gian xác thực đã quá 15 phút, vui lòng đăng ký lại." });
             }
 
             return Redirect($"http://localhost:3000/reset-password?token={token}");

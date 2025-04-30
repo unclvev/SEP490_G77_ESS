@@ -86,7 +86,7 @@ namespace SEP490_G77_ESS.Controllers.Common
             account.Datejoin = updateProfileDto.Datejoin;
             account.Address = updateProfileDto.Address;
             account.Subject = updateProfileDto.Subject;
-
+            account.Skill = updateProfileDto.Skill;
             await _context.SaveChangesAsync();
             return Ok(new { message = "Cập nhật thông tin cá nhân thành công." });
         }
