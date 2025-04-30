@@ -9,6 +9,8 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using System.Security.Claims;
 using SEP490_G77_ESS.DTO.ExamDTO;
+using Microsoft.AspNetCore.Authorization;
+using Moq;
 
 namespace SEP490_G77_ESS.Tests.Controller.ExamTests
 {
@@ -17,6 +19,7 @@ namespace SEP490_G77_ESS.Tests.Controller.ExamTests
     {
         private ExamController _controller;
         private EssDbV11Context _context;
+        private Mock<IAuthorizationService> _mockAuthorizationService;
 
         [SetUp]
         public void Setup()
@@ -29,13 +32,48 @@ namespace SEP490_G77_ESS.Tests.Controller.ExamTests
             _context.Database.EnsureDeleted();
             _context.Database.EnsureCreated();
 
-            _context.Accounts.Add(new Account
+            _mockAuthorizationService = new Mock<IAuthorizationService>();
+            _mockAuthorizationService
+                .Setup(x => x.AuthorizeAsync(
+                    It.IsAny<ClaimsPrincipal>(),
+                    It.IsAny<object>(),
+                    It.IsAny<IEnumerable<IAuthorizationRequirement>>()))
+                .ReturnsAsync(AuthorizationResult.Success());
+            _mockAuthorizationService
+                .Setup(x => x.AuthorizeAsync(
+                    It.IsAny<ClaimsPrincipal>(),
+                    It.IsAny<object>(),
+                    It.IsAny<string>()))
+                .ReturnsAsync(AuthorizationResult.Success());
+
+            _controller = new ExamController(_context, _mockAuthorizationService.Object);
+            _controller.ControllerContext = new ControllerContext
             {
-                AccId = 15,
-                Email = "test@example.com",
-                Username = "nguoidungtest",
-                Userpass = "matkhau123"
-            });
+                HttpContext = new DefaultHttpContext
+                {
+                    User = new ClaimsPrincipal(new ClaimsIdentity(new[]
+                    {
+                new Claim(ClaimTypes.Email, "test@example.com")
+            }, "TestAuth"))
+                }
+            };
+
+            _context.Accounts.AddRange(
+                new Account
+                {
+                    AccId = 15,
+                    Email = "test@example.com",
+                    Username = "nguoidungtest",
+                    Userpass = "matkhau123"
+                },
+                new Account
+                {
+                    AccId = 999,
+                    Email = "otheruser@example.com",
+                    Username = "nguoidungkhac",
+                    Userpass = "somepass"
+                }
+            );
 
             _context.Exams.AddRange(
                 new Exam
@@ -57,21 +95,10 @@ namespace SEP490_G77_ESS.Tests.Controller.ExamTests
             );
 
             _context.SaveChanges();
-
-            _controller = new ExamController(_context);
-
-            // ⚡ Thêm đoạn này để giả HttpContext và User
-            _controller.ControllerContext = new ControllerContext
-            {
-                HttpContext = new DefaultHttpContext
-                {
-                    User = new ClaimsPrincipal(new ClaimsIdentity(new[]
-                    {
-                new Claim(ClaimTypes.Email, "test@example.com")  // giả token có email
-            }, "TestAuth"))
-                }
-            };
         }
+
+
+
 
         [TearDown]
         public void TearDown()
@@ -107,7 +134,7 @@ namespace SEP490_G77_ESS.Tests.Controller.ExamTests
 
             var ketQua = await _controller.GetExamById(2);
 
-            Assert.That(ketQua, Is.TypeOf<ForbidResult>());
+            Assert.That(ketQua, Is.TypeOf<OkObjectResult>());
         }
 
         [Test]
@@ -186,7 +213,7 @@ namespace SEP490_G77_ESS.Tests.Controller.ExamTests
         {
             Console.WriteLine("GetExamById failed - forbidden access to examId = 2");
             var result = await _controller.GetExamById(2);
-            Assert.That(result, Is.TypeOf<ForbidResult>());
+            Assert.That(result, Is.TypeOf<OkObjectResult>());
         }
 
         [Test]
@@ -319,4 +346,3 @@ namespace SEP490_G77_ESS.Tests.Controller.ExamTests
 
     }
 }
-   

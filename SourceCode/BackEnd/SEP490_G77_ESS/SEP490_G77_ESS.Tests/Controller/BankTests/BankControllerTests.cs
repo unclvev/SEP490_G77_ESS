@@ -6,6 +6,10 @@ using System.Linq;
 using System.Threading.Tasks;
 using SEP490_G77_ESS.Controllers;
 using SEP490_G77_ESS.Models;
+using Microsoft.AspNetCore.Authorization;
+using Moq;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Http;
 
 namespace SEP490_G77_ESS.Tests.Controller.BankTests
 {
@@ -13,6 +17,7 @@ namespace SEP490_G77_ESS.Tests.Controller.BankTests
     {
         private BankController _controller;
         private EssDbV11Context _context;
+        private Mock<IAuthorizationService> _mockAuthorizationService;
 
         [SetUp]
         public void Setup()
@@ -25,6 +30,19 @@ namespace SEP490_G77_ESS.Tests.Controller.BankTests
 
             _context.Database.EnsureDeleted();
             _context.Database.EnsureCreated();
+            _mockAuthorizationService = new Mock<IAuthorizationService>();
+            _mockAuthorizationService
+        .Setup(x => x.AuthorizeAsync(
+            It.IsAny<ClaimsPrincipal>(),
+            It.IsAny<object>(),
+            It.IsAny<IEnumerable<IAuthorizationRequirement>>()))
+        .ReturnsAsync(AuthorizationResult.Success());
+            _mockAuthorizationService
+    .Setup(x => x.AuthorizeAsync(
+        It.IsAny<ClaimsPrincipal>(),
+        It.IsAny<object>(),
+        It.IsAny<string>())) // ➡️ mock thêm cái overload này
+    .ReturnsAsync(AuthorizationResult.Success());
 
             var grade = new Grade { GradeId = 1, GradeLevel = "10" };
             var subject = new Subject { SubjectId = 1, SubjectName = "Toán" };
@@ -66,8 +84,21 @@ namespace SEP490_G77_ESS.Tests.Controller.BankTests
             _context.Questions.Add(question);
 
             _context.SaveChanges();
+            _controller = new BankController(_context, _mockAuthorizationService.Object);
+            _controller.ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext
+                {
+                    User = new ClaimsPrincipal(new ClaimsIdentity(new[]
+           {
+            new Claim(ClaimTypes.Name, "testuser@example.com"),
+            new Claim(ClaimTypes.NameIdentifier, "1"), // Bổ sung thêm NameIdentifier
+            new Claim(ClaimTypes.Role, "User") // hoặc Role cần thiết
+        }, "TestAuthentication"))
+                }
+            };
 
-            _controller = new BankController(_context);
+
         }
 
         [TearDown]

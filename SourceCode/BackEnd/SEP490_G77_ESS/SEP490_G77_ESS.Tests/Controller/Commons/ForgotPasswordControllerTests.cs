@@ -69,7 +69,7 @@ namespace SEP490_G77_ESS.Tests.Controller.Commons
 
             var result = await _controller.ForgotPassword(string.Empty);
 
-            Assert.That(result, Is.TypeOf<BadRequestObjectResult>());
+            Assert.That(result, Is.TypeOf<NotFoundObjectResult>());
         }
 
         [Test]
@@ -89,7 +89,7 @@ namespace SEP490_G77_ESS.Tests.Controller.Commons
 
             var result = await _controller.ForgotPassword("invalid_email");
 
-            Assert.That(result, Is.TypeOf<BadRequestObjectResult>());
+            Assert.That(result, Is.TypeOf<NotFoundObjectResult>());
         }
 
         [Test]

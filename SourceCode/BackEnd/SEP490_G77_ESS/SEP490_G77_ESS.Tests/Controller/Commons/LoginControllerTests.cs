@@ -8,6 +8,7 @@ using SEP490_G77_ESS.DTO.UserDTO;
 using SEP490_G77_ESS.Utils;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
+using Microsoft.AspNetCore.Http;
 
 namespace SEP490_G77_ESS.Tests.Controller.Commons
 {
@@ -32,28 +33,53 @@ namespace SEP490_G77_ESS.Tests.Controller.Commons
 
             _passwordHandler = new PasswordHandler();
 
-            // 👇 Fake configuration for JWT
             var inMemorySettings = new Dictionary<string, string> {
-    {"AppSetting:Token", "this_is_test_secret_key_that_has_more_than_64_bytes_length_1234567890_ABCDEFG"}
-};
+        {"AppSetting:Token", "this_is_test_secret_key_that_has_more_than_64_bytes_length_1234567890_ABCDEFG"},
+        {"AppSetting:Issuer", "TestIssuer"},
+        {"AppSetting:Audience", "TestAudience"},
+        {"AppSetting:TokenExpiryMinutes", "60"}
+    };
 
             IConfiguration configuration = new ConfigurationBuilder()
                 .AddInMemoryCollection(inMemorySettings)
                 .Build();
 
-            _jwt = new JWT(configuration);
+            _jwt = new JWT(configuration, _context);
             _controller = new LoginController(_context, _jwt, _passwordHandler);
-
+            _controller.ControllerContext.HttpContext = new DefaultHttpContext();
             var hashed = _passwordHandler.HashPassword("password123");
+
             _context.Accounts.Add(new Account
             {
                 AccId = 1,
                 Username = "TestUser",
                 Email = "user@example.com",
-                Userpass = hashed
+                Userpass = hashed,
+                IsActive = 1 // nhớ cần phải Active
             });
+
+            // 👉 Add RoleAccess
+            _context.RoleAccesses.Add(new RoleAccess
+            {
+                Roleid = 1,
+                RoleName = "User",
+                CanModify = true,
+                CanRead = true,
+                CanDelete = false
+            });
+
+            // 👉 Add ResourceAccess
+            _context.ResourceAccesses.Add(new ResourceAccess
+            {
+                ResourceAccessId = 1,
+                Accid = 1,
+                RoleId = 1
+            });
+
             _context.SaveChanges();
         }
+
+
 
         [TearDown]
         public void TearDown()

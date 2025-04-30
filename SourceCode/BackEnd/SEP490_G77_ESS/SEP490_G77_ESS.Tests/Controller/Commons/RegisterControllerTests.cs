@@ -80,7 +80,7 @@ namespace SEP490_G77_ESS.Tests.Controller.Commons
                 Password = "",
                 Email = "test@example.com",
                 Phone = "0123456789",
-                Datejoin = DateTime.Now.AddYears(-20)
+                Dob = DateTime.Now.AddYears(-20)
             };
 
             var result = await _controller.Register(registerDto);
@@ -99,7 +99,7 @@ namespace SEP490_G77_ESS.Tests.Controller.Commons
                 Password = "password123",
                 Email = "user@example.com",
                 Phone = "0123456789",
-                Datejoin = DateTime.Now.AddYears(-20)
+                Dob = DateTime.Now.AddYears(-20)
             };
 
             var result = await _controller.Register(registerDto);
@@ -118,7 +118,7 @@ namespace SEP490_G77_ESS.Tests.Controller.Commons
                 Password = "password123",
                 Email = "newuser@example.com",
                 Phone = "1234", // ❌ invalid
-                Datejoin = DateTime.Now.AddYears(-20)
+                Dob = DateTime.Now.AddYears(-20)
             };
 
             var result = await _controller.Register(registerDto);
@@ -137,7 +137,7 @@ namespace SEP490_G77_ESS.Tests.Controller.Commons
                 Password = "password123",
                 Email = "futureuser@example.com",
                 Phone = "0123456789",
-                Datejoin = DateTime.Now.AddDays(1) // ❌ future
+                Dob = DateTime.Now.AddDays(1) // ❌ future
             };
 
             var result = await _controller.Register(registerDto);
@@ -156,7 +156,7 @@ namespace SEP490_G77_ESS.Tests.Controller.Commons
                 Password = "password123",
                 Email = "younguser@example.com",
                 Phone = "0123456789",
-                Datejoin = DateTime.Now.AddYears(-15) // ❌ under 16
+                Dob = DateTime.Now.AddYears(-15) // ❌ under 16
             };
 
             var result = await _controller.Register(registerDto);
@@ -175,7 +175,7 @@ namespace SEP490_G77_ESS.Tests.Controller.Commons
                 Password = "password123",
                 Email = "invalidEmailFormat", // ❌ not a valid email
                 Phone = "0123456789",
-                Datejoin = DateTime.Now.AddYears(-20)
+                Dob = DateTime.Now.AddYears(-20)
             };
 
             // Note: API gốc hiện tại **không check email format**, nên test này phụ thuộc nếu sau này bạn thêm validate thì sẽ pass.
@@ -196,7 +196,7 @@ namespace SEP490_G77_ESS.Tests.Controller.Commons
                 Password = "password123",
                 Email = "newuservalid@example.com",
                 Phone = "0123456789",
-                Datejoin = DateTime.Now.AddYears(-20)
+                Dob = DateTime.Now.AddYears(-20)
             };
 
             var result = await _controller.Register(registerDto);
