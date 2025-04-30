@@ -13,7 +13,7 @@ namespace SEP490_G77_ESS.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    
+
     public class BankController : ControllerBase
     {
         private readonly EssDbV11Context _context;
@@ -372,7 +372,7 @@ namespace SEP490_G77_ESS.Controllers
                 IsOwner = true,
 
             };
-            
+
 
             return CreatedAtAction(nameof(GetBank), new { id = bank.BankId }, bank);
         }
@@ -385,7 +385,7 @@ namespace SEP490_G77_ESS.Controllers
             var authorizationResult = await _authorizationService.AuthorizeAsync(User, id, "BankModify");
             if (!authorizationResult.Succeeded)
             {
-                return Forbid();
+                return Forbid("");
             }
 
             if (string.IsNullOrEmpty(bank.Bankname))
@@ -501,6 +501,7 @@ namespace SEP490_G77_ESS.Controllers
 
 
         [HttpPost("generate/{accid}")]
+        [Authorize]
         public async Task<ActionResult<object>> GenerateQuestionBank(long accid, [FromBody] Bank bank)
         {
             var grade = await _context.Grades.FindAsync(bank.GradeId);
@@ -868,6 +869,7 @@ namespace SEP490_G77_ESS.Controllers
 
         // ✅ API: Thêm Section con cho bất kỳ Section
         [HttpPost("{parentId}/add-subsection")]
+        [Authorize]
         public async Task<ActionResult<object>> AddSubSection(long parentId, [FromBody] Section section)
         {
             if (string.IsNullOrWhiteSpace(section.Secname))
@@ -918,6 +920,7 @@ namespace SEP490_G77_ESS.Controllers
 
         // ✅ Cập nhật tên Section
         [HttpPut("section/{sectionId}")]
+        [Authorize]
         public async Task<IActionResult> UpdateSection(long sectionId, [FromBody] Section updatedSection)
         {
             var section = await _context.Sections.FindAsync(sectionId);
@@ -939,6 +942,7 @@ namespace SEP490_G77_ESS.Controllers
 
         // ✅ Xóa Section (Sửa route để không bị trùng)
         [HttpDelete("section/{sectionId}")]
+        [Authorize]
         public async Task<IActionResult> DeleteSection(long sectionId)
         {
             var section = await _context.Sections.FindAsync(sectionId);
