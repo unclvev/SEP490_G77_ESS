@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import {jwtDecode} from "jwt-decode";
 
@@ -12,6 +12,8 @@ const Header = ({ collapsed }) => {
   const [email, setEmail] = useState("");
   const token = useSelector((state) => state.token);
   const dispatch = useDispatch();
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const avatarRef = useRef(null);
 
 
   useEffect(() => {
@@ -34,6 +36,23 @@ const Header = ({ collapsed }) => {
       setAvatar("");
     }
   }, [token]);
+
+  // Đóng dropdown khi click ra ngoài
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (avatarRef.current && !avatarRef.current.contains(event.target)) {
+        setDropdownOpen(false);
+      }
+    }
+    if (dropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    } else {
+      document.removeEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [dropdownOpen]);
 
 
   const handleLogout = () => {
@@ -69,20 +88,35 @@ const Header = ({ collapsed }) => {
       {/* Khu vực User hoặc Login/Register */}
       <div className="flex items-center">
         {token ? (
-          <>
-            <img
-              src={avatar || "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSCI2T98OlomWWZac0cEFYkTJ9iPoECWFph3Q&s"}
-              alt="User"
-              className="w-10 h-10 rounded-full mr-2"
-            />
-            <span className="mr-4">{email}</span>
-            <button
-              onClick={handleLogout}
-              className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
-            >
-              Logout
-            </button>
-          </>
+          <div className="relative flex items-center gap-2" ref={avatarRef}>
+          <span className="text-sm text-gray-700">{email}</span>
+          <img
+            src={avatar}
+            alt="User"
+            className="w-10 h-10 rounded-full cursor-pointer"
+            onClick={() => setDropdownOpen((open) => !open)}
+          />
+          {dropdownOpen && (
+            <div className="absolute right-0 mt-12 w-40 bg-white border rounded shadow-lg z-20">
+              <button
+                className="block w-full text-left px-4 py-2 hover:bg-gray-100"
+                onClick={() => {
+                  setDropdownOpen(false);
+                  window.location.href = "/profile";
+                }}
+              >
+                Profile
+              </button>
+              <button
+                className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-red-500"
+                onClick={handleLogout}
+              >
+                Logout
+              </button>
+            </div>
+          )}
+        </div>
+        
         ) : (
           <>
             <button

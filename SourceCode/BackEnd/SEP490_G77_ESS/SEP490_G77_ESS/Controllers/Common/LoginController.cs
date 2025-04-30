@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using SEP490_G77_ESS.DTO.UserDTO;
 using SEP490_G77_ESS.Models;
 using SEP490_G77_ESS.Utils;
@@ -33,7 +34,10 @@ namespace SEP490_G77_ESS.Controllers.Common
                   .ThenInclude(ra => ra.Role)
                 .FirstOrDefault(x => x.Email == loginDto.Username);
 
-
+            if (loginDto.Username.IsNullOrEmpty() || loginDto.Password.IsNullOrEmpty())
+            {
+                return BadRequest("Xin hãy điền đủ thông tin");
+            }
             if (user == null || !_passwordHandler.VerifyPassword(loginDto.Password, user.Userpass))
                 return Unauthorized(new { message = "Sai tên đăng nhập hoặc mật khẩu" });
 

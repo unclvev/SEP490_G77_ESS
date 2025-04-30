@@ -29,7 +29,7 @@ const LoginPage = () => {
       });
     } catch (error) {
       setErrorMessage('Tên đăng nhập hoặc mật khẩu không đúng');
-      message.error('Invalid username or password', 2, () => {
+      message.error('Email hoặc mật khẩu không đúng', 2, () => {
         setLoading(false);
       });
     }

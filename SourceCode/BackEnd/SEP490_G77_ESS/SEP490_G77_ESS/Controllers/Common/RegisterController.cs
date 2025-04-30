@@ -98,14 +98,14 @@ namespace SEP490_G77_ESS.Controllers.Common
             var user = _context.Accounts.FirstOrDefault(u => u.VerificationToken == token);
             if (user == null)
             {
-                return NotFound(new { message = "Người dùng không tồn tại hoặc token không hợp lệ." });
+                return Redirect($"http://localhost:3000/error/{Uri.EscapeDataString("Mã của bạn không hợp lệ.")}");
             }
 
-            if (!user.ResetTokenExpires.HasValue || DateTime.UtcNow > user.ResetTokenExpires.Value.AddMinutes(5))
+            if (!user.ResetTokenExpires.HasValue || DateTime.UtcNow > user.ResetTokenExpires.Value.AddMinutes(1))
             {
                 _context.Accounts.Remove(user);
                 await _context.SaveChangesAsync();
-                return BadRequest(new { message = "Thời gian xác thực đã quá 5 phút, vui lòng đăng ký lại." });
+                return Redirect($"http://localhost:3000/error/{Uri.EscapeDataString("Mã của bạn đã hết hạn vui lòng đắng ký lại.")}");
             }
 
             user.IsActive = 1;

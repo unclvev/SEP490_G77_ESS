@@ -12,20 +12,30 @@ const ProfilePage = () => {
   const [form] = Form.useForm();
   const [passwordForm] = Form.useForm();
   const [avatarUrl, setAvatarUrl] = useState('https://via.placeholder.com/150');
+  const [userInfo, setUserInfo] = useState({
+    accid: null,
+    accname: '',
+    email: ''
+  });
   const fileInputRef = useRef(null);
 
   // ✅ Lấy token từ Redux và decode
   const token = useSelector((state) => state.token);
-  let accid = null;
 
-  if (token) {
-    try {
-      const decoded = jwtDecode(token);
-      accid = decoded.AccId || null;
-    } catch (error) {
-      console.error('Invalid token', error);
+  useEffect(() => {
+    if (token) {
+      try {
+        const decoded = jwtDecode(token);
+        setUserInfo({
+          accid: decoded.AccId || null,
+          accname: decoded.AccName || '',
+          email: decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'] || ''
+        });
+      } catch (error) {
+        console.error('Invalid token', error);
+      }
     }
-  }
+  }, [token]);
 
   useEffect(() => {
     getProfile()
@@ -43,6 +53,12 @@ const ProfilePage = () => {
         if (profile.avatarUrl) {
           setAvatarUrl(profile.avatarUrl);
         }
+        // Update user info with profile data
+        setUserInfo(prev => ({
+          ...prev,
+          accname: profile.accname || prev.accname,
+          email: profile.email || prev.email
+        }));
       })
       .catch(() => {
         toast.error('Không thể tải thông tin người dùng!');
@@ -109,20 +125,20 @@ const ProfilePage = () => {
           />
           <div>
             <h2 className="text-xl font-semibold mb-0">
-              {form.getFieldValue('accname') || 'Tên người dùng'}
+              {userInfo.accname || 'Tên người dùng'}
             </h2>
             <p className="text-sm text-gray-600">
-              {form.getFieldValue('email') || 'Email người dùng'}
+              {userInfo.email || 'Email người dùng'}
             </p>
-            {/* ✅ Hiển thị AccId nếu có */}
-            {accid && (
-              <p className="text-xs text-gray-500">Mã tài khoản: {accid}</p>
+            {userInfo.accid && (
+              <p className="text-xs text-gray-500">Mã tài khoản: {userInfo.accid}</p>
             )}
           </div>
+
         </div>
-        <Button type="primary" className="rounded-full px-6">
+        {/* <Button type="primary" className="rounded-full px-6">
           Thay đổi
-        </Button>
+        </Button> */}
       </div>
 
       <div className="mt-8">
@@ -132,35 +148,19 @@ const ProfilePage = () => {
           onFinish={handleUpdateInfo}
           className="grid grid-cols-1 md:grid-cols-2 gap-4"
         >
-          <Form.Item
-            label="Tên đầy đủ"
-            name="accname"
-            rules={[{ required: true, message: 'Vui lòng nhập tên đầy đủ' }]}
-          >
+          <Form.Item label="Tên đầy đủ" name="accname">
             <Input placeholder="Tên đầy đủ của bạn" />
           </Form.Item>
 
-          <Form.Item
-            label="Email"
-            name="email"
-            rules={[{ required: true, message: 'Vui lòng nhập email' }]}
-          >
-            <Input placeholder="Email của bạn" />
+          <Form.Item label="Email" name="email">
+            <Input placeholder="Email của bạn" disabled />
           </Form.Item>
 
-          <Form.Item
-            label="Số điện thoại"
-            name="phone"
-            rules={[{ required: true, message: 'Vui lòng nhập số điện thoại' }]}
-          >
+          <Form.Item label="Số điện thoại" name="phone">
             <Input placeholder="Số điện thoại của bạn" />
           </Form.Item>
 
-          <Form.Item
-            label="Giới tính"
-            name="gender"
-            rules={[{ required: true, message: 'Vui lòng chọn giới tính' }]}
-          >
+          <Form.Item label="Giới tính" name="gender">
             <Select placeholder="Chọn giới tính">
               <Option value="male">Nam</Option>
               <Option value="female">Nữ</Option>
@@ -168,27 +168,15 @@ const ProfilePage = () => {
             </Select>
           </Form.Item>
 
-          <Form.Item
-            label="Địa chỉ"
-            name="address"
-            rules={[{ required: true, message: 'Vui lòng nhập địa chỉ' }]}
-          >
+          <Form.Item label="Địa chỉ" name="address">
             <Input placeholder="Địa chỉ của bạn" />
           </Form.Item>
 
-          <Form.Item
-            label="Chuyên ngành"
-            name="subject"
-            rules={[{ required: true, message: 'Vui lòng nhập chuyên ngành' }]}
-          >
+          <Form.Item label="Chuyên ngành" name="subject">
             <Input placeholder="Chuyên ngành của bạn" />
           </Form.Item>
 
-          <Form.Item
-            label="Trình độ"
-            name="skill"
-            rules={[{ required: true, message: 'Vui lòng nhập trình độ' }]}
-          >
+          <Form.Item label="Trình độ" name="skill">
             <Input placeholder="Trình độ chuyên môn của bạn" />
           </Form.Item>
 
@@ -198,6 +186,7 @@ const ProfilePage = () => {
             </Button>
           </div>
         </Form>
+
       </div>
 
       <div className="mt-10">

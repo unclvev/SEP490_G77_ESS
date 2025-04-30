@@ -29,9 +29,98 @@ namespace SEP490_G77_ESS.Services
 
                 email.Body = new TextPart("html")
                 {
-                    Text = $"<p>Nhấn vào liên kết bên dưới để xác thực tài khoản của bạn:</p><br>" +
-                           $"<a href='{verificationLink}' target='_blank'>Xác nhận tài khoản</a>" +
-                           $"<p>Liên kết này sẽ hết hạn sau 1 giờ.</p>"
+                    Text = $@"
+                    <!DOCTYPE html>
+                    <html lang='vi'>
+                    <head>
+                        <meta charset='UTF-8'>
+                        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                        <title>Xác thực tài khoản</title>
+                        <style>
+                            body {{
+                                font-family: Arial, Helvetica, sans-serif;
+                                line-height: 1.6;
+                                color: #333333;
+                                max-width: 600px;
+                                margin: 0 auto;
+                                padding: 20px;
+                            }}
+                            .email-container {{
+                                border: 1px solid #e0e0e0;
+                                border-radius: 5px;
+                                padding: 25px;
+                                background-color: #ffffff;
+                            }}
+                            .header {{
+                                text-align: center;
+                                margin-bottom: 25px;
+                                padding-bottom: 15px;
+                                border-bottom: 1px solid #eeeeee;
+                            }}
+                            .logo {{
+                                font-size: 24px;
+                                font-weight: bold;
+                                color: #2563eb;
+                            }}
+                            .content {{
+                                margin-bottom: 25px;
+                            }}
+                            .button {{
+                                display: inline-block;
+                                background-color: #2563eb;
+                                color: white;
+                                text-decoration: none;
+                                padding: 12px 24px;
+                                border-radius: 4px;
+                                font-weight: bold;
+                                margin: 15px 0;
+                                text-align: center;
+                            }}
+                            .button:hover {{
+                                background-color: #3b7bf2;
+                            }}
+                            .button-container {{
+                                text-align: center;
+                                margin: 25px 0;
+                            }}
+                            .footer {{
+                                font-size: 12px;
+                                color: #666666;
+                                margin-top: 30px;
+                                text-align: center;
+                                padding-top: 15px;
+                                border-top: 1px solid #eeeeee;
+                            }}
+                            .expiry-note {{
+                                color: #666666;
+                                font-style: italic;
+                            }}
+                        </style>
+                    </head>
+                    <body>
+                        <div class='email-container'>
+                            <div class='header'>
+                                <div class='logo'>Tên Công Ty/Dịch Vụ</div>
+                            </div>
+                            <div class='content'>
+                                <h2>Xác thực tài khoản của bạn</h2>
+                                <p>Chào bạn,</p>
+                                <p>Cảm ơn bạn đã đăng ký tài khoản. Để hoàn tất quá trình đăng ký và kích hoạt tài khoản của bạn, vui lòng nhấn vào nút bên dưới:</p>
+                
+                                <div class='button-container'>
+                                    <a href='{verificationLink}' class='button' target='_blank'>Xác nhận tài khoản</a>
+                                </div>
+                
+                                <p class='expiry-note'>Lưu ý: Liên kết này sẽ hết hạn sau 1 giờ từ thời điểm nhận email.</p>
+                            </div>
+                            <div class='footer'>
+                                <p>Đây là email tự động, vui lòng không trả lời email này.</p>
+                                <p>Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email này hoặc liên hệ với bộ phận hỗ trợ của chúng tôi.</p>
+                                <p>&copy; 2025 Tên Công Ty/Dịch Vụ. Đã đăng ký bản quyền.</p>
+                            </div>
+                        </div>
+                    </body>
+                    </html>"
                 };
 
                 using var smtp = new SmtpClient();
