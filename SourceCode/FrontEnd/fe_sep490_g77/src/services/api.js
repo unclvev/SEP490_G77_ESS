@@ -207,5 +207,5 @@ export const importQuestionExcel = (sectionId, formData) =>
   Http.post(`/Question/${sectionId}/import-excel`, formData, { headers: { "Content-Type": "multipart/form-data" } });
 
 export const exportQuestionExcel = (sectionId) => {
-  window.location.href = `https://localhost:7052/api/Question/${sectionId}/export-excel`;
+  window.location.href = `http://localhost:7052/api/Question/${sectionId}/export-excel`;
 };

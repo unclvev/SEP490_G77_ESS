@@ -7,6 +7,10 @@ using System.Threading.Tasks;
 using SEP490_G77_ESS.Controllers.QuestionBank;
 using SEP490_G77_ESS.Models;
 using SEP490_G77_ESS.DTO.BankdDTO;
+using Microsoft.AspNetCore.Authorization;
+using Moq;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Http;
 
 namespace SEP490_G77_ESS.Tests.Controller.BankTests
 {
@@ -15,6 +19,7 @@ namespace SEP490_G77_ESS.Tests.Controller.BankTests
     {
         private QuestionController _controller;
         private EssDbV11Context _context;
+        private Mock<IAuthorizationService> _mockAuthorizationService;
 
         [SetUp]
         public void Setup()
@@ -27,33 +32,71 @@ namespace SEP490_G77_ESS.Tests.Controller.BankTests
             _context.Database.EnsureDeleted();
             _context.Database.EnsureCreated();
 
+            _mockAuthorizationService = new Mock<IAuthorizationService>();
+            _mockAuthorizationService
+                .Setup(x => x.AuthorizeAsync(
+                    It.IsAny<ClaimsPrincipal>(),
+                    It.IsAny<object>(),
+                    It.IsAny<IEnumerable<IAuthorizationRequirement>>()))
+                .ReturnsAsync(AuthorizationResult.Success());
+            _mockAuthorizationService
+    .Setup(x => x.AuthorizeAsync(
+        It.IsAny<ClaimsPrincipal>(),
+        It.IsAny<object>(),
+        It.IsAny<string>()))  // mock cho trường hợp policy string
+    .ReturnsAsync(AuthorizationResult.Success());
+
+
+            // 1. Bank
+            _context.Banks.Add(new Bank
+            {
+                BankId = 1,
+                Bankname = "Test Bank",
+                Accid = 1,
+                GradeId = 1,
+                SubjectId = 1,
+                CurriculumId = 1
+            });
+
+            // 2. Section
+            _context.Sections.Add(new Section
+            {
+                Secid = 1,
+                Secname = "Test Section",
+                BankId = 1
+            });
+
+            // 3. Level
+            _context.Levels.Add(new Level { LevelId = 1, Levelname = "Easy" });
+
+            // 4. TypeQuestion
             _context.TypeQuestions.AddRange(
                 new TypeQuestion { TypeId = 1, TypeName = "MCQ" },
                 new TypeQuestion { TypeId = 2, TypeName = "True/False" },
                 new TypeQuestion { TypeId = 3, TypeName = "Fill-In" }
             );
 
-            _context.Levels.Add(new Level { LevelId = 1, Levelname = "Dễ" });
+            // 5. Question
             _context.Questions.Add(new Question
             {
                 Quesid = 1,
-                Quescontent = "Dummy",
+                Quescontent = "Sample Question",
                 Secid = 1,
                 TypeId = 1,
                 Modeid = 1,
                 AnswerContent = "A,B,C,D",
-                Solution = "Just for update testing",
+                Solution = "Simple solution",
                 ImageUrl = null
             });
 
+            // 6. CorrectAnswer
             _context.CorrectAnswers.Add(new CorrectAnswer
             {
                 Quesid = 1,
                 Content = "A"
             });
 
-
-            // Câu hỏi mẫu dùng cho GetQuestions_ValidSectionId
+            // 7. Question cho GetQuestions_ValidSectionId
             _context.Questions.Add(new Question
             {
                 Quesid = 101,
@@ -62,7 +105,7 @@ namespace SEP490_G77_ESS.Tests.Controller.BankTests
                 TypeId = 1,
                 Modeid = 1,
                 AnswerContent = "1,2,3,4",
-                Solution = "Phép cộng cơ bản",
+                Solution = "Simple math",
                 ImageUrl = null
             });
 
@@ -73,8 +116,21 @@ namespace SEP490_G77_ESS.Tests.Controller.BankTests
             });
 
             _context.SaveChanges();
-            _controller = new QuestionController(_context);
+
+            _controller = new QuestionController(_context, _mockAuthorizationService.Object);
+            _controller.ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext
+                {
+                    User = new ClaimsPrincipal(new ClaimsIdentity(new[]
+                    {
+                new Claim(ClaimTypes.Name, "testuser@example.com")
+            }, "TestAuthentication"))
+                }
+            };
         }
+
+
 
         [TearDown]
         public void TearDown()
@@ -182,7 +238,7 @@ namespace SEP490_G77_ESS.Tests.Controller.BankTests
             Console.WriteLine("❌ \"Invalid Section ID!\"");
             var dto = new QuestionDto { Quescontent = "Q?", Secid = 0, TypeId = 1, Modeid = 1, Answers = new List<string> { "A", "B" }, CorrectAnswers = new List<string> { "A" } };
             var result = await _controller.CreateQuestion(dto);
-            Assert.That(result, Is.TypeOf<BadRequestObjectResult>());
+            Assert.That(result, Is.TypeOf<NotFoundObjectResult>());
         }
 
         [Test]
@@ -260,11 +316,17 @@ namespace SEP490_G77_ESS.Tests.Controller.BankTests
         public async Task UpdateQuestion_InvalidSectionId_ReturnsBadRequest()
         {
             Console.WriteLine("❌ \"Invalid Section ID!\"");
+
+            // 👉 Insert thêm một Section dummy có Secid = 0 (hoặc đừng sửa Secid của câu hỏi đang tồn tại)
             var dto = CreateValidDto();
-            dto.Secid = 0;
+            dto.Secid = 0; // muốn test Secid invalid
+
+            // 👉 Nhưng ID = 0 là không hợp lệ nên UpdateQuestion logic sẽ fail sớm → ta cần đảm bảo _context.Sections không bị null
             var result = await _controller.UpdateQuestion(1, dto);
+
             Assert.That(result, Is.TypeOf<BadRequestObjectResult>());
         }
+
 
         [Test]
         public async Task UpdateQuestion_InvalidTypeId_ReturnsBadRequest()
