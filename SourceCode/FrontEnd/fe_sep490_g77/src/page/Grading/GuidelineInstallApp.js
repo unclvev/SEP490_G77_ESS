@@ -76,7 +76,7 @@ const Guideline = () => {
       <section className="bg-white p-6 shadow-md rounded-lg mb-8">
         <h2 className="text-3xl font-semibold text-blue-600">Bước 4: Liên Hệ Hỗ Trợ</h2>
         <p className="mt-4 text-lg text-gray-800">Nếu bạn gặp bất kỳ vấn đề nào, vui lòng liên hệ với chúng tôi qua:</p>
-        <p className="mt-2 text-lg text-gray-800">Email: support@yourapp.com</p>
+        <p className="mt-2 text-lg text-gray-800">Email: essnotifycation@gmail.com</p>
         <p className="mt-2 text-lg text-gray-800">Hotline: 0818165923</p>
       </section>
 
