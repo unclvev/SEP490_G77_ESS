@@ -7,6 +7,7 @@ from flask import Flask, request, jsonify, Blueprint
 from flasgger import Swagger, swag_from
 from database import get_db_connection
 import json
+import glob
 
 conn = get_db_connection()
 cursor = conn.cursor()
@@ -27,7 +28,7 @@ def detect_any_square(image_path, output_path="detected_squares_any.jpg"):
     detected_squares = []
     min_area = 200
     max_area = 2000
-    aspect_ratio_tolerance = 0.5
+    aspect_ratio_tolerance = 0.6
     approx_poly_epsilon_factor = 0.04
 
     for contour in contours:
@@ -150,13 +151,15 @@ def split_into_question_regions(region_img, questions_per_region=5):
         regions.append((roi, i*questions_per_region + 1))  # (ảnh cắt nhỏ, câu bắt đầu)
     return regions
 
-def extract_answers_from_region(region_img, start_q):
+def extract_answers_from_region(region_img, start_q, debug_folder="output/debug_detect_answers"):
+    os.makedirs(debug_folder, exist_ok=True)
     bubble_boxes = detect_bubbles(region_img)
     bubble_boxes = sorted(bubble_boxes, key=lambda b: (b[1], b[0]))
     gray = cv2.cvtColor(region_img, cv2.COLOR_BGR2GRAY)
     rows = []
     current_row = []
     last_y = -100
+
     for box in bubble_boxes:
         x, y, w, h = box
         if abs(y - last_y) > 15 and current_row:
@@ -168,21 +171,43 @@ def extract_answers_from_region(region_img, start_q):
         rows.append(sorted(current_row, key=lambda b: b[0]))
 
     answers = {}
+    debug_img = region_img.copy()
+
     for i, row in enumerate(rows):
         if len(row) != 4:
             continue
         max_fill = 0
         best_choice = ""
+        best_box = None
         for j, box in enumerate(row):
             x, y, w, h = box
             roi = gray[y:y+h, x:x+w]
             _, thresh = cv2.threshold(roi, 120, 255, cv2.THRESH_BINARY_INV)
             fill = cv2.countNonZero(thresh)
+
+            # Vẽ rectangle
+            color = (0, 255, 0)  # mặc định xanh
             if fill > max_fill:
                 max_fill = fill
                 best_choice = "ABCD"[j]
+                best_box = (x, y, w, h)
+
+            cv2.rectangle(debug_img, (x, y), (x+w, y+h), color, 1)
+            cv2.putText(debug_img, f"{fill}", (x, y-5), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (255, 0, 0), 1)
+
+        if best_box:
+            bx, by, bw, bh = best_box
+            cv2.rectangle(debug_img, (bx, by), (bx+bw, by+bh), (0, 0, 255), 2)
+            cv2.putText(debug_img, best_choice, (bx, by-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,255), 2)
+
         answers[str(start_q+i)] = best_choice
+
+    save_path = os.path.join(debug_folder, f"detected_answers_from_q{start_q}.jpg")
+    cv2.imwrite(save_path, debug_img)
+    print(f"✅ Saved debug detect answers at {save_path}")
+
     return answers
+
 
 def extract_all_information(regions):
     result = {}
@@ -195,7 +220,7 @@ def extract_all_information(regions):
         region_img = regions[side]
         regions_split = split_into_question_regions(region_img)
         for small_region, start_q in regions_split:
-            ans = extract_answers_from_region(small_region, start_q)
+            ans = extract_answers_from_region(small_region, start_q, debug_folder="output/debug_detect_answers")
             answers.update(ans)
 
     result["answers"] = answers
@@ -283,121 +308,101 @@ def split_by_detected_lines(region_img, lines_y, prefix="left", output_dir="outp
 
     return subregions
 
+def enhance_contrast_clahe(image):
+    lab = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
+    l, a, b = cv2.split(lab)
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+    cl = clahe.apply(l)
+    merged = cv2.merge((cl, a, b))
+    return cv2.cvtColor(merged, cv2.COLOR_LAB2BGR)
+
 def detect_answers(image_path, output_folder='recog'):
-    # Create output folder if it doesn't exist
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
-    
-    # Read the image
+
+    # Read and enhance image
     image = cv2.imread(image_path)
     if image is None:
         raise Exception(f"Could not read image at {image_path}")
     
-    # Convert to grayscale
+    image = enhance_contrast_clahe(image)
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     
-    # Save original grayscale for visualization
-    cv2.imwrite(os.path.join(output_folder, "grayscale.jpg"), gray)
-    
-    # Apply preprocessing to enhance the contrast
-    gray = cv2.GaussianBlur(gray, (5, 5), 0)
-    
-    # Use adaptive thresholding instead of global
-    binary = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-                                   cv2.THRESH_BINARY_INV, 11, 2)
-    
-    # Save binary image for debugging
-    cv2.imwrite(os.path.join(output_folder, "binary.jpg"), binary)
-    
-    # Detect circles using Hough Circle Transform
+    # Slight blur
+    blurred = cv2.medianBlur(gray, 5)
+
+    # Detect circles
     circles = cv2.HoughCircles(
-        gray,
+        blurred,
         cv2.HOUGH_GRADIENT,
-        dp=1,
-        minDist=20,
+        dp=1.2,
+        minDist=25,
         param1=50,
-        param2=30,
+        param2=28,
         minRadius=8,
         maxRadius=20
     )
-    
-    # Create a visualization image
+
     vis_image = image.copy()
+    if circles is None:
+        print("No circles detected.")
+        return {}
+
+    circles = np.round(circles[0, :]).astype("int")
     
-    # Initialize grid for answers
-    # We know there are 5 rows (questions) and 4 columns (A, B, C, D)
-    num_rows = 5
-    num_cols = 4
+    # Sort circles top-to-bottom, left-to-right
+    circles = sorted(circles, key=lambda c: (c[1], c[0]))  # sort by y then x
+
+    # Group into rows
+    rows = []
+    current_row = []
+    last_y = -100
+    for (x, y, r) in circles:
+        if abs(y - last_y) > 20 and current_row:
+            rows.append(sorted(current_row, key=lambda c: c[0]))  # sort each row by x
+            current_row = []
+        current_row.append((x, y, r))
+        last_y = y
+    if current_row:
+        rows.append(sorted(current_row, key=lambda c: c[0]))
     
-    # Calculate approximate grid positions
-    height, width = gray.shape
-    row_height = height / num_rows
-    col_width = width / num_cols
-    
-    # Create grid cells
-    grid = []
-    for r in range(num_rows):
-        row = []
-        for c in range(num_cols):
-            # Calculate cell center
-            center_x = int(col_width * (c + 0.5))
-            center_y = int(row_height * (r + 0.5))
-            row.append((center_x, center_y))
-        grid.append(row)
-    
-    # Draw grid for visualization
-    grid_image = image.copy()
-    for r in range(num_rows):
-        for c in range(num_cols):
-            x, y = grid[r][c]
-            cv2.circle(grid_image, (x, y), 14, (0, 255, 0), 1)
-    
-    # Save grid visualization
-    cv2.imwrite(os.path.join(output_folder, "grid.jpg"), grid_image)
-    
-    # Initialize results
-    results = []
-    
-    # For each row (question), find the darkest circle
-    for r in range(num_rows):
+    print(f"Detected {len(rows)} rows.")
+
+    # Now detect which bubble is the darkest per row
+    results = {}
+    question_num = 1
+    for row in rows:
+        if len(row) != 4:
+            continue
         darkest_val = 255
-        darkest_idx = -1
-        
-        for c in range(num_cols):
-            center_x, center_y = grid[r][c]
-            
-            # Create a mask for sampling the area around this grid point
+        selected_idx = -1
+        for idx, (x, y, r) in enumerate(row):
             mask = np.zeros(gray.shape, dtype=np.uint8)
-            cv2.circle(mask, (center_x, center_y), 10, 255, -1)
-            
-            # Get mean pixel value in this circle area
+            cv2.circle(mask, (x, y), r-2, 255, thickness=-1)
+
             mean_val = np.mean(gray[mask > 0])
-            
-            # Debug: Draw the sampling area and add text with mean value
-            cv2.circle(vis_image, (center_x, center_y), 10, (0, 0, 255), 2)
-            cv2.putText(vis_image, f"{mean_val:.1f}", (center_x-15, center_y+25), 
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 255), 1)
-            
-            # Check if this is the darkest so far for this row
+            cv2.putText(vis_image, f"{mean_val:.1f}", (x-10, y+30),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 0, 0), 1)
+
             if mean_val < darkest_val:
                 darkest_val = mean_val
-                darkest_idx = c
+                selected_idx = idx
         
-        # Mark the darkest (selected) answer
-        if darkest_idx != -1:
-            answer_x, answer_y = grid[r][darkest_idx]
-            cv2.circle(vis_image, (answer_x, answer_y), 12, (0, 255, 0), 3)
-            answer = chr(65 + darkest_idx)  # 'A', 'B', 'C', or 'D'
-            results.append((r+1, answer))
-    
-    # Save visualization
-    cv2.imwrite(os.path.join(output_folder, "detected_answers.jpg"), vis_image)
-    
-    # Save results to file
-    with open(os.path.join(output_folder, "results.txt"), "w") as f:
-        for question, answer in results:
-            f.write(f"Question {question}: {answer}\n")
-    
+        if selected_idx != -1:
+            answer = chr(65 + selected_idx)  # 'A'/'B'/'C'/'D'
+            results[str(question_num)] = answer
+
+            # Vẽ ô được chọn
+            sel_x, sel_y, sel_r = row[selected_idx]
+            cv2.circle(vis_image, (sel_x, sel_y), sel_r, (0, 255, 0), 3)
+
+        question_num += 1
+
+    # Save debug image
+    output_img_path = os.path.join(output_folder, f"detected_answers_debug.jpg")
+    cv2.imwrite(output_img_path, vis_image)
+    print(f"✅ Saved debug to {output_img_path}")
+
     return results
 
 def detect_code(image_path, output_folder='recog', is_student_id=True):
@@ -567,6 +572,7 @@ def calculate_student_score(exam_data_json, detected_answers, exam_code, scale_t
                     correct_answers[str(idx)] = letter
 
     total_questions = len(correct_answers)
+    print(correct_answers)
     correct_count = 0
 
     for q_number, correct_choice in correct_answers.items():
@@ -596,11 +602,27 @@ def save_student_result(cursor, conn, student_code, exam_code, exam_id, score):
             WHERE student_code = ? AND exam_id = ?
         """, (exam_code, score, student_code, exam_id))
         print(f"Updated existing student result: student_code={student_code}, exam_id={exam_id}")
+        conn.commit()
+        return True
     else:
         print(f'{student_code} does not exist in student list')
+        return False
     
-    conn.commit()
+import glob
 
+def clean_folder(folder_path):
+    files = glob.glob(os.path.join(folder_path, '*'))
+    for f in files:
+        try:
+            os.remove(f)
+        except Exception as e:
+            print(f"Failed to remove {f}: {e}")
+
+def build_result_folder(exam_id, exam_type, suffix):
+    folder_name = f"{exam_id}_{exam_type}_{suffix}"
+    full_path = os.path.join("results", folder_name)
+    os.makedirs(full_path, exist_ok=True)
+    return full_path
 
 app = Flask(__name__)
 swagger = Swagger(app)
@@ -660,18 +682,22 @@ def detect():
     file.save(input_path)
 
     exam_id = request.form.get('exam_id')
+    exam_type = "MCQ"  # hoặc lấy từ request nếu có
+    result_folder_answer_image = build_result_folder(exam_id, exam_type,'img_answers')
+    result_folder_answer_json = build_result_folder(exam_id, exam_type,'json_answers')
+    
     if not exam_id:
         return jsonify({"error": "No exam_id provided"}), 400
 
     try:
         exam_id = int(exam_id)
     except ValueError:
-        return jsonify({"error": "Invalid exam_id"}), 400
+        return jsonify({"error": "Không tồn tại đề thi này"}), 400
     
     # Step 1: Detect squares and warp the paper
     all_square_boxes = detect_any_square(input_path)
     if not all_square_boxes:
-        return jsonify({"error": "No squares detected"}), 400
+        return jsonify({"error": "Không nhận diện rõ ảnh. Vui lòng chụp thẳng, còn nguyên 4 góc phiếu trắc nghiệm"}), 400
 
     img_original = cv2.imread(input_path)
     gray_original = cv2.cvtColor(img_original, cv2.COLOR_BGR2GRAY)
@@ -679,7 +705,7 @@ def detect():
     corner_map = find_4_corner_boxes_strict(final_filled_boxes, img_original.shape, max_distance=220)
 
     if corner_map is None:
-        return jsonify({"error": "Not enough corners detected"}), 400
+        return jsonify({"error": "Phiếu kiểm tra đang bị nghiêng hoặc lệch, vui lòng chụp thẳng, gần và đủ 4 góc giấy"}), 400
 
     src_pts = np.float32([
         (corner_map['C1'][0] + corner_map['C1'][2]//2, corner_map['C1'][1] + corner_map['C1'][3]//2),
@@ -709,8 +735,8 @@ def detect():
         temp_filename = os.path.join(TEMP_FOLDER, f"left_{idx}_{uuid.uuid4().hex}.jpg")
         cv2.imwrite(temp_filename, sub_img)
         detected = detect_answers(temp_filename)
-        for relative_q, answer in detected:
-            absolute_q = start_q + (relative_q - 1)
+        for relative_q, answer in detected.items():
+            absolute_q = start_q + (int(relative_q) - 1)
             answers_left[absolute_q] = answer
 
     answers_right = {}
@@ -719,8 +745,8 @@ def detect():
         temp_filename = os.path.join(TEMP_FOLDER, f"right_{idx}_{uuid.uuid4().hex}.jpg")
         cv2.imwrite(temp_filename, sub_img)
         detected = detect_answers(temp_filename)
-        for relative_q, answer in detected:
-            absolute_q = start_q + (relative_q - 1)
+        for relative_q, answer in detected.items():
+            absolute_q = start_q + (int(relative_q) - 1)
             answers_right[absolute_q] = answer
 
     final_answers = {**answers_left, **answers_right}
@@ -738,25 +764,32 @@ def detect():
     exam_row = cursor.fetchone()
 
     if not exam_row:
-        return jsonify({"error": f"Exam code {exam_code} not found in database"}), 404
+        return jsonify({"error": f"Mã đề thi {exam_code} không tồn tại trong đề thi bạn tạo. Vui lòng kiểm tra lại"}), 404
 
     exam_data_json = exam_row[0]
     exam_data = json.loads(exam_data_json)
 
     score = calculate_student_score(exam_data, final_answers, exam_code)
     print(f'Score: {score}')
-    save_student_result(cursor, conn, student_id, exam_code, exam_id, score)
-
+    saved = save_student_result(cursor, conn, student_id, exam_code, exam_id, score)
+    if not saved:
+        return jsonify({"error": f"Mã học sinh {student_id} không tồn tại trong danh sách bạn đẩy lên hệ thống. Vui lòng kiểm tra lại"}), 400
     info_dict = {
         "student_id": student_id,
         "exam_code": exam_code,
         "exam_id": exam_id,
-        "score": score
+        "score": score,
+        "answer": final_answers
     }
+    info_dict_saved = {
+        "student_id": student_id,
+        "exam_code": exam_code,
+        "exam_id": exam_id,
+        "score": score,
+        "answer": final_answers
+    }
+    with open(os.path.join(result_folder_answer_json, f"student_{student_id}_result.json"), "w") as f:
+        json.dump(info_dict_saved, f, indent=2)
+    # clean_folder(UPLOAD_FOLDER)
+    # clean_folder(TEMP_FOLDER)
     return jsonify(info_dict)
-
-
-
-
-
-

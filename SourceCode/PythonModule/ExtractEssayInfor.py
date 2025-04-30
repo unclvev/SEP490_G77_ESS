@@ -12,6 +12,9 @@ import re
 import time
 from dotenv import load_dotenv
 from database import get_db_connection
+import requests
+import json
+import glob
 
 conn = get_db_connection()
 cursor = conn.cursor()
@@ -30,29 +33,170 @@ swagger = Swagger(app)
 def home():
     return 'Welcome to the Flask App!'
 
-def extract_student_info(text):
-    student_id = None
-    score = None
-    lines = text.splitlines()
+def row_to_dict(cursor, row):
+    return {col[0]: row[idx] for idx, col in enumerate(cursor.description)}
 
+def parse_score(raw_score):
+    try:
+        return float(raw_score.replace(",", "."))
+    except:
+        return None
+
+
+def center(polygon):
+    xs = polygon[::2]
+    ys = polygon[1::2]
+    return sum(xs) / 4, sum(ys) / 4
+
+def is_below_and_near(label_poly, value_poly, tol=40):
+    x1, y1 = center(label_poly)
+    x2, y2 = center(value_poly)
+    return y2 > y1 and abs(x2 - x1) < tol
+
+def scan_score_a3(image_path):
+    with open(image_path, "rb") as f:
+        image_bytes = f.read()
+
+    headers = {
+        "Ocp-Apim-Subscription-Key": subscription_key,
+        "Content-Type": "application/octet-stream"
+    }
+    post_url = f"{endpoint.rstrip('/')}/formrecognizer/documentModels/prebuilt-layout:analyze?api-version=2023-07-31"
+    res = requests.post(post_url, headers=headers, data=image_bytes)
+    op_url = res.headers["Operation-Location"]
+    
+    # chờ kết quả
+    while True:
+        result = requests.get(op_url, headers={"Ocp-Apim-Subscription-Key": subscription_key}).json()
+        if result.get("status") in ["succeeded", "failed"]:
+            break
+        time.sleep(1)
+
+    if result["status"] != "succeeded":
+        return {"error": "OCR failed"}
+
+    lines = result["analyzeResult"]["pages"][0]["lines"]
+    score = extract_score_a3_from_lines(lines)
+    return {"score": score}
+
+def extract_score_a3_from_lines(lines):
+    label_polygon = None
     for line in lines:
-        if "SBD" in line.upper():
-            match_sbd = re.search(r"SBD[:\-]?\s*(\d+)", line, re.IGNORECASE)
-            if match_sbd:
-                student_id = match_sbd.group(1)
-                break
+        if "Bằng số" in line["content"]:
+            label_polygon = line["polygon"]
+            break
 
-    for i, line in enumerate(lines):
-        if any(keyword in unidecode(line).lower() for keyword in ["diem", "diểm", "score", "giam khao"]):
-            for j in range(i, min(i + 3, len(lines))):
-                score_match = re.search(r"\d{1,2},\d{1,2}", lines[j])
-                if score_match:
-                    score = score_match.group(0)
-                    break
-            if score:
-                break
+    if label_polygon:
+        for line in lines:
+            if re.match(r"^\d{1,2}[,.]\d{1,2}$", line["content"]):
+                if is_below_and_near(label_polygon, line["polygon"]):
+                    return line["content"]
+    return None 
 
-    return student_id, score
+def extract_info_a3_from_lines(lines):
+    print(f"{lines}")
+    sbd_polygon = None
+    for line in lines:  
+        text = line["content"].lower()
+        if "báo" in text and "danh" in text:
+            sbd_polygon = line["polygon"]
+            break
+
+    if sbd_polygon:
+        for line in lines:
+            if re.match(r"^[A-Z0-9]{3,10}$", line["content"]):
+                if is_below_and_near(sbd_polygon, line["polygon"]):
+                    return line["content"]
+    return None
+
+def scan_info_a3(image_path):
+    with open(image_path, "rb") as f:
+        image_bytes = f.read()
+
+    headers = {
+        "Ocp-Apim-Subscription-Key": subscription_key,
+        "Content-Type": "application/octet-stream"
+    }
+    post_url = f"{endpoint.rstrip('/')}/formrecognizer/documentModels/prebuilt-layout:analyze?api-version=2023-07-31"
+    res = requests.post(post_url, headers=headers, data=image_bytes)
+    op_url = res.headers["Operation-Location"]
+    
+    # chờ kết quả
+    while True:
+        result = requests.get(op_url, headers={"Ocp-Apim-Subscription-Key": subscription_key}).json()
+        if result.get("status") in ["succeeded", "failed"]:
+            break
+        time.sleep(1)
+
+    if result["status"] != "succeeded":
+        return {"error": "OCR failed"}
+
+    lines = result["analyzeResult"]["pages"][0]["lines"]
+    sbd = extract_info_a3_from_lines(lines)
+    return {"student_code": sbd}
+
+def extract_score_a4_from_lines(lines):
+    for line in lines:
+        if re.match(r"^\d{1,2}[,.]\d{1,2}$", line["content"]):
+            return line["content"]
+
+def extract_info_a4_from_lines(lines):
+    for line in lines:
+        text = line["content"]
+        match = re.search(r"SBD[:\s\-]*([A-Z0-9]{2,10})", text.upper())
+        if match:
+            return match.group(1)
+    return None
+
+def scan_info_a4(image_path):
+    with open(image_path, "rb") as f:
+        image_bytes = f.read()
+
+    headers = {
+        "Ocp-Apim-Subscription-Key": subscription_key,
+        "Content-Type": "application/octet-stream"
+    }
+    post_url = f"{endpoint.rstrip('/')}/formrecognizer/documentModels/prebuilt-layout:analyze?api-version=2023-07-31"
+    res = requests.post(post_url, headers=headers, data=image_bytes)
+    op_url = res.headers["Operation-Location"]
+
+    while True:
+        result = requests.get(op_url, headers={"Ocp-Apim-Subscription-Key": subscription_key}).json()
+        if result.get("status") in ["succeeded", "failed"]:
+            break
+        time.sleep(1)
+
+    if result["status"] != "succeeded":
+        return {"error": "OCR failed"}
+
+    lines = result["analyzeResult"]["pages"][0]["lines"]
+    sbd = extract_info_a4_from_lines(lines)
+    return {"student_code": sbd}
+
+def scan_score_a4(image_path):
+    with open(image_path, "rb") as f:
+        image_bytes = f.read()
+
+    headers = {
+        "Ocp-Apim-Subscription-Key": subscription_key,
+        "Content-Type": "application/octet-stream"
+    }
+    post_url = f"{endpoint.rstrip('/')}/formrecognizer/documentModels/prebuilt-layout:analyze?api-version=2023-07-31"
+    res = requests.post(post_url, headers=headers, data=image_bytes)
+    op_url = res.headers["Operation-Location"]
+
+    while True:
+        result = requests.get(op_url, headers={"Ocp-Apim-Subscription-Key": subscription_key}).json()
+        if result.get("status") in ["succeeded", "failed"]:
+            break
+        time.sleep(1)
+
+    if result["status"] != "succeeded":
+        return {"error": "OCR failed"}
+
+    lines = result["analyzeResult"]["pages"][0]["lines"]
+    score = extract_score_a4_from_lines(lines)
+    return {"score": score}
 
 def safe_decode_qr(data_bytes):
     try:
@@ -62,7 +206,6 @@ def safe_decode_qr(data_bytes):
             return data_bytes.decode('latin1').encode('utf-8').decode('utf-8')
         except:
             return data_bytes.decode('utf-8', errors='replace')
-
 
 def extract_qr_codes(image_path):
     image = cv2.imread(image_path)
@@ -135,10 +278,10 @@ def extract_qr_codes(image_path):
     
     return results
 
-@essay.route('/essay/scan-essay', methods=["POST"])
-def analyze_image():
+@essay.route('/essay/scan', methods=["POST"])
+def scan_essay():
     """
-    Phân tích ảnh để trích xuất SBD, điểm và QR code
+    Phân tích ảnh info/score A3 hoặc A4 để trích xuất thông tin và mã QR, đồng thời lưu kết quả vào bảng student_result.
     ---
     consumes:
       - multipart/form-data
@@ -147,56 +290,100 @@ def analyze_image():
         in: formData
         type: file
         required: true
-        description: Ảnh cần phân tích (JPG, PNG)
+        description: Ảnh cần phân tích
+      - name: type
+        in: formData
+        type: string
+        enum: ['info-a3', 'score-a3', 'info-a4', 'score-a4']
+        required: true
+        description: Loại phân tích ảnh
+      - name: exam_id
+        in: query
+        type: string
+        required: true
+        description: ID của đề thi tương ứng
     responses:
       200:
-        description: Kết quả phân tích
-        examples:
-          application/json: {
-            "student_code": "student_code",
-            "score": "student_score",
-            "qr_content": ["QR Student"]
-          }
+        description: Kết quả trả về
     """
-    if 'image' not in request.files:
-        return jsonify({"error": "No image part in request"}), 400
+    if 'image' not in request.files or 'type' not in request.form:
+        return jsonify({"error": "Missing image or type"}), 400
+
+    scan_type = request.form['type']
+    exam_id = request.args.get("exam_id")
+    if not exam_id:
+        return jsonify({"error": "Missing exam_id"}), 400
 
     file = request.files['image']
     if file.filename == '':
         return jsonify({"error": "No selected file"}), 400
 
-    filepath = os.path.join("temp.jpg")
+    filepath = "temp.jpg"
     file.save(filepath)
 
-    result_raw = ""
-    with open(filepath, "rb") as image_stream:
-        ocr_result = client.read_in_stream(image_stream, raw=True)
-
-    operation_location = ocr_result.headers["Operation-Location"]
-    operation_id = operation_location.split("/")[-1]
-
-    while True:
-        result = client.get_read_result(operation_id)
-        if result.status not in ['notStarted', 'running']:
-            break
-        time.sleep(1)
-
-    if result.status == OperationStatusCodes.succeeded:
-        for page in result.analyze_result.read_results:
-            for line in page.lines:
-                result_raw += line.text + "\n"
-
     qr_results = extract_qr_codes(filepath)
-    for qr in qr_results:
-        result_raw += "QR content: " + qr + "\n"
+    qr_list = qr_results if isinstance(qr_results, list) else [qr_results]
 
-    student_id, score = extract_student_info(result_raw)
+    if scan_type == "info-a3":
+        result_data = scan_info_a3(filepath)
+    elif scan_type == "info-a4":
+        result_data = scan_info_a4(filepath)
+    elif scan_type == "score-a3":
+        result_data = scan_score_a3(filepath)
+    elif scan_type == "score-a4":
+        result_data = scan_score_a4(filepath)
+    else:
+        return jsonify({"error": f"Invalid scan type: {scan_type}"}), 400
 
-    result_scan = {
-        "student_code": student_id,
-        "score": score,
-        "qr_content": qr_results
-    }
+    result_data["qr_content"] = qr_list
 
-    return jsonify(result_scan)
+    if scan_type.startswith("info"):
+        student_code = result_data.get("student_code")
+        if not student_code:
+            return jsonify({"error": "Không trích xuất được SBD"}), 400
 
+        cursor.execute("SELECT * FROM student_result WHERE student_code = ? AND exam_id = ?", (student_code, exam_id))
+        row = cursor.fetchone()
+        if not row:
+            return jsonify({"error": f"Học sinh '{student_code}' không thuộc đề thi {exam_id}"}), 404
+
+        student = row_to_dict(cursor, row)
+
+        try:
+            existing_qrs = json.loads(student["student_qr_codes"] or "[]")
+        except:
+            existing_qrs = []
+
+        updated_qrs = list(set(existing_qrs + qr_list))
+
+        cursor.execute(
+            "UPDATE student_result SET student_qr_codes = ? WHERE student_result_id = ?",
+            (json.dumps(updated_qrs), student["student_result_id"])
+        )
+        conn.commit()
+
+    elif scan_type.startswith("score"):
+        score = parse_score(result_data.get("score"))
+        if not score:
+            return jsonify({"error": "Không trích xuất được điểm"}), 400
+
+        found = False
+        for qr in qr_list:
+            cursor.execute("SELECT * FROM student_result WHERE exam_id = ? AND student_qr_codes LIKE ?", (exam_id, f'%{qr}%'))
+            row = cursor.fetchone()
+            if row:
+                student = row_to_dict(cursor, row)
+                found = True
+
+                if not student["score"]:  # chỉ update nếu chưa có điểm
+                    cursor.execute(
+                        "UPDATE student_result SET score = ? WHERE student_result_id = ?",
+                        (score, student["student_result_id"])
+                    )
+                    conn.commit()
+                break
+
+        if not found:
+            return jsonify({"error": "Không tìm thấy học sinh tương ứng với mã QR"}), 404
+
+    return jsonify(result_data)
