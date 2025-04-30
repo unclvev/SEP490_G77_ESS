@@ -276,119 +276,18 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
 
 
 
-
-
-
-        //[HttpPost("{sectionId}/import-excel")]
-        //public async Task<IActionResult> ImportQuestionsFromExcel(long sectionId, IFormFile file)
-        //{
-        //    if (file == null || file.Length == 0)
-        //        return BadRequest(new { message = "File không hợp lệ hoặc rỗng." });
-
-        //    try
-        //    {
-        //        using var stream = new MemoryStream();
-        //        await file.CopyToAsync(stream);
-        //        using var workbook = new XLWorkbook(stream);
-
-        //        var worksheet = workbook.Worksheets.FirstOrDefault();
-        //        if (worksheet == null)
-        //            return BadRequest(new { message = "File Excel không có sheet nào." });
-
-        //        var existingQuestions = await _context.Questions
-        //            .Where(q => q.Secid == sectionId)
-        //            .Include(q => q.CorrectAnswers)
-        //            .ToListAsync();
-
-        //        var questionMap = existingQuestions.ToDictionary(q => q.Quescontent.Trim().ToLower(), q => q);
-        //        var excelQuestions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        //        int row = 2;
-        //        while (!worksheet.Cell(row, 1).IsEmpty())
-        //        {
-        //            var quesContent = worksheet.Cell(row, 1).GetString().Trim();
-        //            if (string.IsNullOrEmpty(quesContent))
-        //            {
-        //                row++;
-        //                continue;
-        //            }
-
-        //            excelQuestions.Add(quesContent);
-
-        //            int.TryParse(worksheet.Cell(row, 2).GetString(), out int typeId);
-        //            int.TryParse(worksheet.Cell(row, 3).GetString(), out int modeId);
-        //            var solution = worksheet.Cell(row, 4).GetString().Trim();
-        //            var answers = worksheet.Cell(row, 5).GetString().Trim();
-        //            var correctAnswers = worksheet.Cell(row, 6).GetString().Trim();
-
-        //            if (questionMap.TryGetValue(quesContent.ToLower(), out var existingQuestion))
-        //            {
-        //                // ✅ Cập nhật nếu câu hỏi đã tồn tại
-        //                existingQuestion.TypeId = typeId;
-        //                existingQuestion.Modeid = modeId;
-        //                existingQuestion.Solution = solution;
-        //                existingQuestion.AnswerContent = answers;
-
-        //                // ✅ Cập nhật lại Correct Answers
-        //                _context.CorrectAnswers.RemoveRange(existingQuestion.CorrectAnswers);
-        //                var newCorrectAnswers = correctAnswers.Split(',')
-        //                    .Where(a => !string.IsNullOrWhiteSpace(a))
-        //                    .Select(a => new CorrectAnswer { Quesid = existingQuestion.Quesid, Content = a.Trim() });
-
-        //                await _context.CorrectAnswers.AddRangeAsync(newCorrectAnswers);
-        //            }
-        //            else
-        //            {
-        //                // ✅ Tạo câu hỏi mới nếu chưa có
-        //                var newQuestion = new Question
-        //                {
-        //                    Quescontent = quesContent,
-        //                    Secid = sectionId,
-        //                    TypeId = typeId,
-        //                    Modeid = modeId,
-        //                    Solution = solution,
-        //                    AnswerContent = answers
-        //                };
-        //                _context.Questions.Add(newQuestion);
-        //                await _context.SaveChangesAsync();
-
-        //                // ✅ Thêm Correct Answers nếu có
-        //                var newCorrectAnswers = correctAnswers.Split(',')
-        //                    .Where(a => !string.IsNullOrWhiteSpace(a))
-        //                    .Select(a => new CorrectAnswer { Quesid = newQuestion.Quesid, Content = a.Trim() });
-
-        //                await _context.CorrectAnswers.AddRangeAsync(newCorrectAnswers);
-        //            }
-
-        //            row++;
-        //        }
-
-        //        // ✅ **XÓA câu hỏi cũ không có trong file Excel nhưng thuộc Section này**
-        //        var questionsToDelete = existingQuestions
-        //            .Where(q => !excelQuestions.Contains(q.Quescontent))
-        //            .ToList();
-
-        //        if (questionsToDelete.Count > 0)
-        //        {
-        //            var correctAnswersToDelete = questionsToDelete.SelectMany(q => q.CorrectAnswers).ToList();
-        //            _context.CorrectAnswers.RemoveRange(correctAnswersToDelete);
-        //            _context.Questions.RemoveRange(questionsToDelete);
-        //        }
-
-        //        await _context.SaveChangesAsync();
-        //        return Ok(new { message = "Import dữ liệu thành công!" });
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return StatusCode(500, new { message = "Lỗi hệ thống khi xử lý file Excel.", error = ex.Message });
-        //    }
-        //}
         [HttpPost("{sectionId}/import-excel")]
+        [Authorize]
         public async Task<IActionResult> ImportQuestionsFromExcel(long sectionId, IFormFile file)
         {
             if (file == null || file.Length == 0)
                 return BadRequest(new { message = "File không hợp lệ hoặc rỗng." });
-
+            var section = await _context.Sections.FindAsync(sectionId);
+            var authorizationResult = await _authorizationService.AuthorizeAsync(User, section.BankId, "BankModify");
+            if (!authorizationResult.Succeeded)
+            {
+                return Forbid();
+            }
             try
             {
                 using var stream = new MemoryStream();
@@ -871,7 +770,7 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
 
         // ✅ Xóa câu hỏi
         [HttpDelete("questions/{id}")]
-        
+
         public async Task<IActionResult> DeleteQuestion(long id)
         {
 
