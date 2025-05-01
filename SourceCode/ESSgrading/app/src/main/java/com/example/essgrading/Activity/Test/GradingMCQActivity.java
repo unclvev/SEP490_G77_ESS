@@ -26,6 +26,7 @@ import com.example.essgrading.API.ApiConfig;
 import com.example.essgrading.API.ApiService;
 import com.example.essgrading.Activity.BaseActivity;
 import com.example.essgrading.R;
+import com.example.essgrading.Utils.RetrofitClient;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -150,8 +151,8 @@ public class GradingMCQActivity extends BaseActivity implements SurfaceHolder.Ca
                         .addConverterFactory(GsonConverterFactory.create())
                         .build();
 
-                ApiService service = retrofit.create(ApiService.class);
-                Call<ResponseBody> call = service.uploadMCQ(filePart, examIdPart);
+                ApiService apiService = RetrofitClient.getInstance(this, getString(R.string.upload_url)).create(ApiService.class);
+                Call<ResponseBody> call = apiService.uploadMCQ(filePart, examIdPart);
                 call.enqueue(new Callback<>() {
                     @Override
                     public void onResponse(
