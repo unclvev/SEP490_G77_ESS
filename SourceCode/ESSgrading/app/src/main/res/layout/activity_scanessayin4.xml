@@ -29,31 +29,46 @@
                 android:layout_height="match_parent"
                 android:background="@android:color/transparent"
                 android:padding="8dp" />
-
-            <!-- Snapshot overlay để đóng băng -->
-            <ImageView
-                android:id="@+id/snapshotView"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:visibility="gone"
-                android:adjustViewBounds="true"
-                android:scaleType="fitCenter" />
         </FrameLayout>
 
-        <!-- Nút Status -->
-        <TextView
-            android:id="@+id/btnStatus"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Chụp"
-            android:textSize="16sp"
-            android:background="@color/deepblue"
-            android:textColor="@android:color/white"
-            android:gravity="center"
-            android:padding="10dp"
-            android:layout_gravity="center_horizontal"
-            android:layout_margin="16dp"
-            app:cornerRadius="20dp"/>
+            android:orientation="horizontal"
+            android:layout_marginHorizontal="16dp"
+            android:layout_marginBottom="16dp"
+            android:gravity="center">
+
+            <TextView
+                android:id="@+id/btnStatus"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Chụp"
+                android:textSize="16sp"
+                android:background="@color/deepblue"
+                android:textColor="@android:color/white"
+                android:gravity="center"
+                android:padding="10dp"
+                app:cornerRadius="20dp" />
+
+            <Space
+                android:layout_width="16dp"
+                android:layout_height="wrap_content" />
+
+            <TextView
+                android:id="@+id/btnDevice"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Thiết bị"
+                android:textSize="16sp"
+                android:background="@color/deepblue"
+                android:textColor="@android:color/white"
+                android:gravity="center"
+                android:padding="10dp"
+                app:cornerRadius="20dp" />
+        </LinearLayout>
 
         <!-- Include Footer -->
         <include layout="@layout/footer" />
