@@ -101,7 +101,7 @@ namespace SEP490_G77_ESS.Controllers.Common
                 return Redirect($"http://localhost:3000/error/{Uri.EscapeDataString("Mã của bạn không hợp lệ.")}");
             }
 
-            if (!user.ResetTokenExpires.HasValue || DateTime.UtcNow > user.ResetTokenExpires.Value.AddMinutes(1))
+            if (!user.ResetTokenExpires.HasValue || DateTime.UtcNow > user.ResetTokenExpires.Value.AddMinutes(15))
             {
                 _context.Accounts.Remove(user);
                 await _context.SaveChangesAsync();
