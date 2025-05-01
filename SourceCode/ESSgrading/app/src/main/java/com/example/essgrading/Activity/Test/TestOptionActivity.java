@@ -57,7 +57,7 @@ public class TestOptionActivity extends BaseActivity {
             btnCorrectAnswers.setVisibility(View.GONE);
             btnGrading.setText("Quét thông tin tự luận");
             btnGrading.setOnClickListener(v -> {
-                Intent intent2 = new Intent(TestOptionActivity.this, ScanEssayIn4Activity.class);
+                Intent intent2 = new Intent(TestOptionActivity.this, ScanEssayActivity.class);
                 intent2.putExtra("testId", id);
                 intent2.putExtra("testTitle", testTitle);
                 intent2.putExtra("classCode", classCode);
