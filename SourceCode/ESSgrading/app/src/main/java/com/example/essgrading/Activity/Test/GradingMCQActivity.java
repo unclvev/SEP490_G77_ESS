@@ -3,6 +3,7 @@ package com.example.essgrading.Activity.Test;
 import static android.widget.Toast.LENGTH_SHORT;
 
 import android.Manifest;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -50,19 +51,22 @@ public class GradingMCQActivity extends BaseActivity implements SurfaceHolder.Ca
     private SurfaceHolder surfaceHolder;
     private Camera camera;
     private TextView btnStatus;
-    private ImageView snapshotView;
     private boolean isProcessing = false;
+    private int examId;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_scanessayin4);
+        setContentView(R.layout.activity_gradingmcq);
         setupDrawer();
         setHeaderTitle("Chấm điểm");
 
+        // Lấy examId từ Intent
+        Intent intent = getIntent();
+        examId = intent.getIntExtra("testId", -1);
+
         cameraView    = findViewById(R.id.cameraPreview);
         btnStatus     = findViewById(R.id.btnStatus);
-        snapshotView  = findViewById(R.id.snapshotView);
 
         surfaceHolder = cameraView.getHolder();
         surfaceHolder.addCallback(this);
@@ -98,8 +102,6 @@ public class GradingMCQActivity extends BaseActivity implements SurfaceHolder.Ca
             Bitmap freeze = Bitmap.createBitmap(
                     raw, 0, 0, raw.getWidth(), raw.getHeight(), matrix, true
             );
-            snapshotView.setImageBitmap(freeze);
-            snapshotView.setVisibility(View.VISIBLE);
             btnStatus.setText("📷 Đang xử lý...");
         });
 
@@ -114,17 +116,28 @@ public class GradingMCQActivity extends BaseActivity implements SurfaceHolder.Ca
                         raw, 0, 0, raw.getWidth(), raw.getHeight(), matrix, true
                 );
                 ByteArrayOutputStream stream = new ByteArrayOutputStream();
+//                bmp.compress(Bitmap.CompressFormat.PNG, 100, stream);
                 bmp.compress(Bitmap.CompressFormat.JPEG, 60, stream);
                 byte[] imageBytes = stream.toByteArray();
 
+                // Tạo phần file
                 RequestBody requestFile = RequestBody.create(
                         MediaType.parse("image/jpeg"),
                         imageBytes
                 );
-                MultipartBody.Part body = MultipartBody.Part.createFormData(
-                        "image", "scan.jpg", requestFile
+                MultipartBody.Part filePart = MultipartBody.Part.createFormData(
+                        "file",        // phải trùng với tên field trong Swagger (/mcq/detect)
+                        "scan.jpg",
+                        requestFile
                 );
 
+                // Tạo phần exam_id
+                RequestBody examIdPart = RequestBody.create(
+                        MediaType.parse("text/plain"),
+                        String.valueOf(examId)
+                );
+
+                // Khởi tạo Retrofit với timeout
                 OkHttpClient client = new OkHttpClient.Builder()
                         .connectTimeout(60, TimeUnit.SECONDS)
                         .readTimeout(60, TimeUnit.SECONDS)
@@ -138,8 +151,7 @@ public class GradingMCQActivity extends BaseActivity implements SurfaceHolder.Ca
                         .build();
 
                 ApiService service = retrofit.create(ApiService.class);
-                Call<ResponseBody> call = service.uploadMCQ(body);
-
+                Call<ResponseBody> call = service.uploadMCQ(filePart, examIdPart);
                 call.enqueue(new Callback<>() {
                     @Override
                     public void onResponse(
@@ -162,35 +174,68 @@ public class GradingMCQActivity extends BaseActivity implements SurfaceHolder.Ca
     };
 
     private void handleResult(Response<ResponseBody> response, Throwable error) {
+        // 1) Lỗi kết nối
         if (error != null) {
             Toast.makeText(this, "❌ Gửi ảnh thất bại", LENGTH_SHORT).show();
-            btnStatus.setText("📷Ấn để chụp tiếp");
-        }
-        else if (response != null && response.isSuccessful() && response.body() != null) {
-            try {
-                String result = response.body().string();
-                JSONObject json = new JSONObject(result);
-                JSONArray qrArr = json.getJSONArray("qr_content");
-                String qrCode = qrArr.getString(0);
-                String score  = json.getString("score");
-                String code   = json.getString("student_code");
-                btnStatus.setText("📷Ấn để chụp tiếp");
-                showResultDialog(qrCode, score, code);
-            } catch (Exception e) {
-                Toast.makeText(this, "❌ Lỗi đọc kết quả", LENGTH_SHORT).show();
-                btnStatus.setText("📷Ấn để chụp tiếp");
-                e.printStackTrace();
-            }
         }
         else {
-            int code = (response != null ? response.code() : -1);
-            Toast.makeText(this, "❌ Lỗi phản hồi: " + code, LENGTH_SHORT).show();
-            btnStatus.setText("📷Ấn để chụp tiếp");
+            String payload = null;
+            try {
+                if (response.isSuccessful()) {
+                    // Thành công 200, đọc từ body()
+                    payload = response.body().string();
+                } else if (response.errorBody() != null) {
+                    // Lỗi 400, 500..., đọc từ errorBody()
+                    payload = response.errorBody().string();
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+            if (payload != null) {
+                try {
+                    JSONObject json = new JSONObject(payload);
+                    // Nếu có key "error" thì show lỗi
+                    if (json.has("error")) {
+                        String errMsg = json.getString("error");
+                        new AlertDialog.Builder(this)
+                                .setTitle("Không thể chấm điểm")
+                                .setMessage(errMsg)
+                                .setPositiveButton("Đóng", null)
+                                .show();
+                    }
+                    // Ngược lại, parse phần trả về thành công
+                    else {
+                        String examCode   = json.optString("exam_code");
+                        int    returnedId = json.optInt("exam_id");
+                        double score      = json.optDouble("score");
+                        String studentId  = json.optString("student_id");
+
+                        String content = "Mã đề: "   + examCode  + "\n"
+                                + "Exam ID: " + returnedId + "\n"
+                                + "Điểm: "    + score     + "\n"
+                                + "SBD: "     + studentId;
+
+                        new AlertDialog.Builder(this)
+                                .setTitle("Kết quả chấm điểm")
+                                .setMessage(content)
+                                .setPositiveButton("Đóng", null)
+                                .show();
+                    }
+                } catch (Exception e) {
+                    Toast.makeText(this, "❌ Lỗi đọc kết quả", LENGTH_SHORT).show();
+                    e.printStackTrace();
+                }
+            } else {
+                // Nếu không lấy được payload, show mã lỗi HTTP
+                int code = response != null ? response.code() : -1;
+                Toast.makeText(this, "❌ Lỗi phản hồi: " + code, LENGTH_SHORT).show();
+            }
         }
 
-        // Reset UI & camera preview
+        // Reset camera preview & UI
         if (camera != null) camera.startPreview();
-        snapshotView.setVisibility(View.GONE);
+        btnStatus.setText("📷 Ấn để chụp tiếp");
         btnStatus.setEnabled(true);
         isProcessing = false;
     }

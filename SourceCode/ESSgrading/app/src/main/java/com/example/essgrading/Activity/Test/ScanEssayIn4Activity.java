@@ -1,13 +1,15 @@
 package com.example.essgrading.Activity.Test;
 
 import static android.widget.Toast.LENGTH_SHORT;
-
 import android.Manifest;
+import android.os.Handler;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
 import android.hardware.Camera;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -16,22 +18,18 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
-
 import androidx.appcompat.app.AlertDialog;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-
 import com.example.essgrading.API.ApiConfig;
 import com.example.essgrading.API.ApiService;
 import com.example.essgrading.Activity.BaseActivity;
 import com.example.essgrading.R;
-
 import org.json.JSONArray;
 import org.json.JSONObject;
-
 import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.util.concurrent.TimeUnit;
-
 import okhttp3.MediaType;
 import okhttp3.MultipartBody;
 import okhttp3.OkHttpClient;
@@ -42,15 +40,15 @@ import retrofit2.Callback;
 import retrofit2.Response;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
+import com.example.essgrading.Utils.CameraHelper;
+
 
 public class ScanEssayIn4Activity extends BaseActivity implements SurfaceHolder.Callback {
-
     private static final int CAMERA_PERMISSION_REQUEST_CODE = 100;
     private SurfaceView cameraView;
     private SurfaceHolder surfaceHolder;
     private Camera camera;
-    private TextView btnStatus;
-    private ImageView snapshotView;
+    private TextView btnStatus, btnDevice;
     private boolean isProcessing = false;
 
     @Override
@@ -58,11 +56,11 @@ public class ScanEssayIn4Activity extends BaseActivity implements SurfaceHolder.
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_scanessayin4);
         setupDrawer();
-        setHeaderTitle("Chấm điểm");
+        setHeaderTitle("Quét thông tin");
 
         cameraView    = findViewById(R.id.cameraPreview);
         btnStatus     = findViewById(R.id.btnStatus);
-        snapshotView  = findViewById(R.id.snapshotView);
+        btnDevice = findViewById(R.id.btnDevice);
 
         surfaceHolder = cameraView.getHolder();
         surfaceHolder.addCallback(this);
@@ -87,6 +85,14 @@ public class ScanEssayIn4Activity extends BaseActivity implements SurfaceHolder.
                 camera.takePicture(null, null, pictureCallback);
             }
         });
+
+        btnDevice.setOnClickListener(v -> openGallery());
+    }
+
+    private void openGallery() {
+        Intent galleryIntent = new Intent(Intent.ACTION_PICK);
+        galleryIntent.setType("image/*");
+        startActivityForResult(galleryIntent, 1);
     }
 
     private final Camera.PictureCallback pictureCallback = (data, cam) -> {
@@ -98,8 +104,6 @@ public class ScanEssayIn4Activity extends BaseActivity implements SurfaceHolder.
             Bitmap freeze = Bitmap.createBitmap(
                     raw, 0, 0, raw.getWidth(), raw.getHeight(), matrix, true
             );
-            snapshotView.setImageBitmap(freeze);
-            snapshotView.setVisibility(View.VISIBLE);
             btnStatus.setText("📷 Đang xử lý...");
         });
 
@@ -190,7 +194,6 @@ public class ScanEssayIn4Activity extends BaseActivity implements SurfaceHolder.
 
         // Reset UI & camera preview
         if (camera != null) camera.startPreview();
-        snapshotView.setVisibility(View.GONE);
         btnStatus.setEnabled(true);
         isProcessing = false;
     }
@@ -217,6 +220,8 @@ public class ScanEssayIn4Activity extends BaseActivity implements SurfaceHolder.
         dialog.show();
     }
 
+    private Handler autoFocusHandler = new Handler();
+
     private void openCamera() {
         try {
             camera = Camera.open(0);
@@ -225,6 +230,10 @@ public class ScanEssayIn4Activity extends BaseActivity implements SurfaceHolder.
                 camera.setPreviewDisplay(surfaceHolder);
                 camera.startPreview();
             }
+
+            // ✅ Dùng class tái sử dụng
+            CameraHelper.initCameraFocus(camera, surfaceHolder, autoFocusHandler);
+
         } catch (Exception e) {
             btnStatus.setText("Không thể mở camera");
             e.printStackTrace();
@@ -232,6 +241,7 @@ public class ScanEssayIn4Activity extends BaseActivity implements SurfaceHolder.
     }
 
     private void releaseCamera() {
+        CameraHelper.stopAutoFocusLoop(autoFocusHandler);
         if (camera != null) {
             camera.stopPreview();
             camera.release();
@@ -250,6 +260,15 @@ public class ScanEssayIn4Activity extends BaseActivity implements SurfaceHolder.
         super.onDestroy();
         releaseCamera();
     }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (camera == null && surfaceHolder != null && surfaceHolder.getSurface().isValid()) {
+            openCamera();
+        }
+    }
+
 
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
@@ -274,5 +293,61 @@ public class ScanEssayIn4Activity extends BaseActivity implements SurfaceHolder.
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
         releaseCamera();
+    }
+    
+    private void sendBitmapToApi(Bitmap bitmap) {
+        btnStatus.setText("📷 Đang xử lý...");
+        btnStatus.setEnabled(false);
+        isProcessing = true;
+
+        if (camera != null) {
+            camera.stopPreview();
+        }
+
+        new Thread(() -> {
+            try {
+                ByteArrayOutputStream stream = new ByteArrayOutputStream();
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 60, stream);
+                byte[] imageBytes = stream.toByteArray();
+
+                RequestBody requestFile = RequestBody.create(
+                        MediaType.parse("image/jpeg"),
+                        imageBytes
+                );
+                MultipartBody.Part body = MultipartBody.Part.createFormData(
+                        "image", "scan.jpg", requestFile
+                );
+
+                OkHttpClient client = new OkHttpClient.Builder()
+                        .connectTimeout(60, TimeUnit.SECONDS)
+                        .readTimeout(60, TimeUnit.SECONDS)
+                        .writeTimeout(60, TimeUnit.SECONDS)
+                        .build();
+
+                Retrofit retrofit = new Retrofit.Builder()
+                        .baseUrl(ApiConfig.UPLOAD_URL)
+                        .client(client)
+                        .addConverterFactory(GsonConverterFactory.create())
+                        .build();
+
+                ApiService service = retrofit.create(ApiService.class);
+                Call<ResponseBody> call = service.uploadEssay(body);
+
+                call.enqueue(new Callback<>() {
+                    @Override
+                    public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
+                        runOnUiThread(() -> handleResult(response, null));
+                    }
+
+                    @Override
+                    public void onFailure(Call<ResponseBody> call, Throwable t) {
+                        runOnUiThread(() -> handleResult(null, t));
+                    }
+                });
+
+            } catch (Exception e) {
+                runOnUiThread(() -> handleResult(null, e));
+            }
+        }).start();
     }
 }

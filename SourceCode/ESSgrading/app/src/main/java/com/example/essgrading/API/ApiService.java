@@ -8,6 +8,7 @@ import com.example.essgrading.Model.TestModel;
 import java.util.List;
 
 import okhttp3.MultipartBody;
+import okhttp3.RequestBody;
 import okhttp3.ResponseBody;
 import retrofit2.Call;
 import retrofit2.http.Body;
@@ -37,5 +38,8 @@ public interface ApiService {
 
     @Multipart
     @POST("mcq/detect")
-    Call<ResponseBody> uploadMCQ(@Part MultipartBody.Part image);
+    Call<ResponseBody> uploadMCQ(
+            @Part MultipartBody.Part file,
+            @Part("exam_id") RequestBody examIdPart
+    );
 }

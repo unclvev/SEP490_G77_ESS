@@ -68,14 +68,6 @@
                 android:layout_marginEnd="8dp"
                 android:layout_gravity="bottom|end"
                 android:background="@drawable/square_marker" />
-
-            <ImageView
-                android:id="@+id/snapshotVieư"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:visibility="gone"
-                android:adjustViewBounds="true"
-                android:scaleType="fitCenter" />
         </FrameLayout>
 
         <!-- Nút Status -->
