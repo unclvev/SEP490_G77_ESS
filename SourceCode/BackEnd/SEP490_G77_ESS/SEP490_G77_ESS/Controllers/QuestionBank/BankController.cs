@@ -399,11 +399,11 @@ namespace SEP490_G77_ESS.Controllers
         [Authorize]
         public async Task<IActionResult> DeleteBank(long id)
         {
-            //var authorizationResult = await _authorizationService.AuthorizeAsync(User, id, "BankDelete");
-            //if (!authorizationResult.Succeeded)
-            //{
-            //    return Forbid();
-            //}
+            var authorizationResult = await _authorizationService.AuthorizeAsync(User, id, "BankDelete");
+            if (!authorizationResult.Succeeded)
+            {
+                return Forbid();
+            }
             var bank = await _context.Banks
                 .Include(b => b.Sections)
                 .ThenInclude(s => s.Questions)
@@ -437,7 +437,7 @@ namespace SEP490_G77_ESS.Controllers
                 .Where(sh => sectionIds.Contains(sh.AncestorId) || sectionIds.Contains(sh.DescendantId));
             _context.SectionHierarchies.RemoveRange(sectionHierarchies);
 
-            // ✅ Xóa toàn bộ dữ liệu trong BankAccess liên quan đến Bank
+           
 
 
             // ✅ Xóa ngân hàng câu hỏi
