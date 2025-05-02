@@ -51,10 +51,18 @@ namespace SEP490_G77_ESS.Controllers.RBAC.Bank
             {
                 return Unauthorized();
             }
-            var checkOwer = await _context.ResourceAccesses.FirstOrDefaultAsync();
+            var ownerRecord = await _context.ResourceAccesses
+                                    .FirstOrDefaultAsync(r =>
+                                        r.ResourceType == request.Resource.ResourceType &&
+                                        r.ResourceId == request.Resource.ResourceId &&
+                                        r.Accid == long.Parse(claimAccId) &&
+                                        r.IsOwner == true
+                                    );
+            if (ownerRecord == null)
+                return Forbid("Bạn không có quyền mời người dùng cho tài nguyên này.");
 
-           
-            
+
+
             var existingAccess = await _context.ResourceAccesses
                                                .FirstOrDefaultAsync(r => r.ResourceType == request.Resource.ResourceType &&
                                                                                            r.ResourceId == request.Resource.ResourceId && 
