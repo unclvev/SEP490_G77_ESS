@@ -3,6 +3,7 @@ package com.example.essgrading.Utils;
 import android.content.Context;
 
 import com.example.essgrading.Activity.Authentication.AuthInterceptor;
+import com.example.essgrading.Activity.Authentication.TokenAuthenticator;
 import com.example.essgrading.Activity.Authentication.TokenManager;
 
 import okhttp3.OkHttpClient;
@@ -17,6 +18,7 @@ public class RetrofitClient {
 
         OkHttpClient client = new OkHttpClient.Builder()
                 .addInterceptor(new AuthInterceptor(tokenManager))
+                .authenticator(new TokenAuthenticator(context, tokenManager))
                 .connectTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
                 .readTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
                 .writeTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
