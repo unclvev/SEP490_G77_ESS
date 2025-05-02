@@ -1,5 +1,8 @@
 package com.example.essgrading.Activity.Authentication;
 
+import android.content.Context;
+import android.content.Intent;
+
 import com.example.essgrading.API.ApiConfig;
 import com.example.essgrading.API.ApiService;
 import com.example.essgrading.Activity.Authentication.TokenManager;
@@ -19,14 +22,15 @@ import retrofit2.converter.gson.GsonConverterFactory;
 
 public class TokenAuthenticator implements Authenticator {
     private TokenManager tokenManager;
+    private Context context;
 
-    public TokenAuthenticator(TokenManager tokenManager) {
+    public TokenAuthenticator(Context context, TokenManager tokenManager) {
+        this.context = context.getApplicationContext();
         this.tokenManager = tokenManager;
     }
 
     @Override
     public Request authenticate(Route route, Response response) throws IOException {
-        // tránh vòng lặp vô hạn
         if (response.request().header("Authorization") != null) {
             String refreshToken = tokenManager.getRefreshToken();
 
@@ -50,7 +54,10 @@ public class TokenAuthenticator implements Authenticator {
                         .header("Authorization", "Bearer " + newAccessToken)
                         .build();
             } else {
-                tokenManager.clear(); // hết hạn thật
+                tokenManager.clear(); // Xóa token đã lưu
+                Intent intent = new Intent("com.example.essgrading.LOGOUT");
+                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                context.sendBroadcast(intent);
                 return null;
             }
         }

@@ -74,6 +74,7 @@
             android:gravity="center"
             android:orientation="vertical">
 
+            <!-- Cho MCQ -->
             <Button
                 android:id="@+id/btnCorrectAnswers"
                 android:layout_width="250dp"
@@ -105,6 +106,44 @@
                 android:padding="10dp"
                 android:layout_margin="10dp"
                 android:focusable="false" />
+
+            <!-- Cho Essay -->
+            <LinearLayout
+                android:id="@+id/essayButtonsGroup"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:visibility="gone">
+
+                <Button
+                    android:id="@+id/btnScoreA3"
+                    android:layout_width="250dp"
+                    android:layout_height="wrap_content"
+                    android:text="Nhập điểm A3"
+                    style="@style/CustomButton" />
+
+                <Button
+                    android:id="@+id/btnScoreA4"
+                    android:layout_width="250dp"
+                    android:layout_height="wrap_content"
+                    android:text="Nhập điểm A4"
+                    style="@style/CustomButton" />
+
+                <Button
+                    android:id="@+id/btnInfoA3"
+                    android:layout_width="250dp"
+                    android:layout_height="wrap_content"
+                    android:text="Quét thông tin A3"
+                    style="@style/CustomButton" />
+
+                <Button
+                    android:id="@+id/btnInfoA4"
+                    android:layout_width="250dp"
+                    android:layout_height="wrap_content"
+                    android:text="Quét thông tin A4"
+                    style="@style/CustomButton" />
+            </LinearLayout>
 
             <Button
                 android:id="@+id/btnScoreReport"

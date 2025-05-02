@@ -102,7 +102,7 @@ public class TestListActivity extends BaseActivity implements SearchHandler {
                     Log.d("API_DEBUG", "Body: " + response.body());
                     Log.d("API_DEBUG", "Message: " + response.message());
 
-                    Toast.makeText(TestListActivity.this, "Không có dữ liệu hoặc lỗi phản hồi!", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(TestListActivity.this, "Thử đăng nhập lại. Không có dữ liệu hoặc lỗi phản hồi!", Toast.LENGTH_SHORT).show();
                 }
             }
 

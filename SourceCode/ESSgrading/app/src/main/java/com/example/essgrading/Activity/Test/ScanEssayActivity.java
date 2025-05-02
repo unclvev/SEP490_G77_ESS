@@ -35,6 +35,7 @@ import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
+import java.util.Objects;
 
 import okhttp3.MediaType;
 import okhttp3.MultipartBody;
@@ -52,7 +53,7 @@ public class ScanEssayActivity extends BaseActivity implements SurfaceHolder.Cal
     private Camera camera;
     private TextView btnStatus, btnDevice;
     private boolean isCameraProcessing, isDeviceProcessing = false;
-    private String examId;
+    private String examId, type;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -62,6 +63,14 @@ public class ScanEssayActivity extends BaseActivity implements SurfaceHolder.Cal
         setHeaderTitle("Quét thông tin");
 
         examId = getIntent().getStringExtra("testId");
+        type = getIntent().getStringExtra("type");
+        if(Objects.equals(type, "info-a3")){
+            setHeaderTitle("Quét thông tin A3");
+        } else if (Objects.equals(type, "info-a4")){
+            setHeaderTitle("Quét thông tin A4");
+        } else if (Objects.equals(type, "score-a3")) {
+            setHeaderTitle("Nhập điểm A3");
+        } else setHeaderTitle("Nhập điểm A4");
 
         cameraView = findViewById(R.id.cameraPreview);
         btnStatus = findViewById(R.id.btnStatus);
@@ -98,7 +107,6 @@ public class ScanEssayActivity extends BaseActivity implements SurfaceHolder.Cal
 
     private final Camera.PictureCallback pictureCallback = (data, cam) -> {
         runOnUiThread(() -> btnStatus.setText("📷 Đang xử lý..."));
-
         new Thread(() -> {
             try {
                 Bitmap raw = BitmapFactory.decodeByteArray(data, 0, data.length);
@@ -118,7 +126,6 @@ public class ScanEssayActivity extends BaseActivity implements SurfaceHolder.Cal
         isDeviceProcessing = true;
         if (camera != null) camera.stopPreview();
         runOnUiThread(() -> {
-            btnDevice.setText("Đang xử lý");
             btnDevice.setEnabled(false);
             btnStatus.setEnabled(false);
         });
@@ -132,7 +139,9 @@ public class ScanEssayActivity extends BaseActivity implements SurfaceHolder.Cal
                 RequestBody requestFile = RequestBody.create(MediaType.parse("image/jpeg"), imageBytes);
                 MultipartBody.Part imagePart = MultipartBody.Part.createFormData("image", "scan.jpg", requestFile);
 
-                RequestBody typePart = RequestBody.create(MediaType.parse("text/plain"), "info-a4");
+                RequestBody typePart = RequestBody.create(
+                        MediaType.parse("text/plain"), type
+                );
 
                 ApiService apiService = RetrofitClient.getInstance(this, getString(R.string.upload_url)).create(ApiService.class);
                 Call<ResponseBody> call = apiService.uploadEssay(imagePart, typePart, examId);
@@ -164,18 +173,39 @@ public class ScanEssayActivity extends BaseActivity implements SurfaceHolder.Cal
                 String result = response.body().string();
                 JSONObject json = new JSONObject(result);
                 JSONArray qrArr = json.getJSONArray("qr_content");
-                String qrCode = qrArr.getString(0);
-                String code = json.getString("student_code");
-
-                showResultDialog(qrCode, code);
+                String qrCode = qrArr.length() > 0 ? qrArr.getString(0) : "N/A";
+                String content;
+                if (type.startsWith("info")) {
+                    String studentCode = json.optString("student_code", "N/A");
+                    content = "Mã QR: " + qrCode + "\nSBD: " + studentCode;
+                } else {
+                    String score = json.optString("score", "N/A");
+                    content = "Mã QR: " + qrCode + "\nĐiểm: " + score;
+                }
+                showResultDialog(content);
             } catch (Exception e) {
                 Toast.makeText(this, "❌ Lỗi đọc kết quả", LENGTH_SHORT).show();
                 e.printStackTrace();
             }
         } else {
             int code = (response != null ? response.code() : -1);
-            Toast.makeText(this, "❌ Lỗi phản hồi: " + code, LENGTH_SHORT).show();
+            String message = "❌" + code;
+
+            try {
+                if (response != null && response.errorBody() != null) {
+                    String errorBody = response.errorBody().string();
+                    JSONObject jsonError = new JSONObject(errorBody);
+                    if (jsonError.has("error")) {
+                        message += ": " + jsonError.getString("error");
+                    }
+                }
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+
+            Toast.makeText(this, message, LENGTH_SHORT).show();
         }
+
         if (camera == null && surfaceHolder != null && surfaceHolder.getSurface().isValid()) {
             openCamera();
         } else if (camera != null) {
@@ -189,13 +219,12 @@ public class ScanEssayActivity extends BaseActivity implements SurfaceHolder.Cal
         isDeviceProcessing = false;
     }
 
-    private void showResultDialog(String qr, String code) {
+    private void showResultDialog(String content) {
         View dialogView = getLayoutInflater().inflate(R.layout.dialog_scan_result, null);
         TextView tvContent = dialogView.findViewById(R.id.tvResultContent);
         Button btnClose = dialogView.findViewById(R.id.btnCloseDialog);
 
-        String text = "Mã QR: " + qr + "\nSBD: " + code;
-        tvContent.setText(text);
+        tvContent.setText(content);
 
         AlertDialog dialog = new AlertDialog.Builder(this)
                 .setView(dialogView)

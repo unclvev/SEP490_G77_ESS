@@ -1,7 +1,11 @@
 package com.example.essgrading.Activity;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.os.Build;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -31,12 +35,38 @@ public class BaseActivity extends AppCompatActivity {
     protected TextView userEmail,userName; // Thêm biến cho email
     protected EditText searchInput;
     protected ImageView searchIcon;
+    private BroadcastReceiver logoutReceiver;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
     }
+    @Override
+    protected void onResume() {
+        super.onResume();
+        logoutReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                Toast.makeText(context, "Phiên đăng nhập đã hết hạn", Toast.LENGTH_LONG).show();
+                Intent loginIntent = new Intent(context, LoginActivity.class);
+                loginIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                startActivity(loginIntent);
+            }
+        };
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            registerReceiver(logoutReceiver, new IntentFilter("com.example.essgrading.LOGOUT"), Context.RECEIVER_NOT_EXPORTED);
+        }
+    }
 
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (logoutReceiver != null) {
+            unregisterReceiver(logoutReceiver);
+            logoutReceiver = null;
+        }
+    }
     protected void setupDrawer() {
         drawerLayout = findViewById(R.id.drawerLayout);
         navigationView = findViewById(R.id.navigationView);
