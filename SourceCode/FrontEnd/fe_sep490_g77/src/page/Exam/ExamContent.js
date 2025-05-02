@@ -40,6 +40,7 @@ import AddQuestionModal from "../../components/Exam/AddQuestionModel";
 import ImportStudentModal from "../../components/Exam/ImportStudent";
 import InviteUserModal from "../Manager/components/InviteUserModal";
 import ListMemberModal from "../Manager/components/ListMemberModal";
+import InviteUserForExam from "../Manager/components/InviteUserForExam";
 
 const { Text, Title } = Typography;
 const { Option } = Select;
@@ -512,10 +513,10 @@ const ExamDetail = () => {
         onClose={() => setImportModalVisible(false)}
       />
 
-      <InviteUserModal
+      <InviteUserForExam
         visible={inviteModalVisible}
         onClose={() => setInviteModalVisible(false)}
-        bankId={examid}
+        examId={examid}
         resourceType="exam"
       />
 
