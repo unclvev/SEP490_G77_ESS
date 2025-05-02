@@ -53,16 +53,12 @@ namespace SEP490_G77_ESS.Controllers.RBAC.Bank
             }
             var checkOwer = await _context.ResourceAccesses.FirstOrDefaultAsync();
 
-            var bank = await _context.Banks.FirstOrDefaultAsync(b => b.BankId == request.Resource.ResourceId);
-            if (bank == null)
-            {
-                return NotFound("Ngân hàng không tồn tại.");
-            }
-
+           
             
             var existingAccess = await _context.ResourceAccesses
-                                               .FirstOrDefaultAsync(r => r.ResourceId == request.Resource.ResourceId 
-                                                                                         && r.Accid == request.Resource.Accid);
+                                               .FirstOrDefaultAsync(r => r.ResourceType == request.Resource.ResourceType &&
+                                                                                           r.ResourceId == request.Resource.ResourceId && 
+                                                                                           r.Accid == request.Resource.Accid);
 
             if (existingAccess != null)
             {
