@@ -428,7 +428,7 @@ namespace SEP490_G77_ESS.Controllers
                 .Where(sh => sectionIds.Contains(sh.AncestorId) || sectionIds.Contains(sh.DescendantId));
             _context.SectionHierarchies.RemoveRange(sectionHierarchies);
 
-           
+
 
 
             // ✅ Xóa ngân hàng câu hỏi
