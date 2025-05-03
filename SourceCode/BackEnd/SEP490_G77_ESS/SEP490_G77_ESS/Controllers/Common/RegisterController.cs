@@ -114,5 +114,7 @@ namespace SEP490_G77_ESS.Controllers.Common
 
             return Redirect("http://localhost:3000/login");
         }
+
+
     }
 }

@@ -43,7 +43,7 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
                 Solution = q.Solution,
                 Modeid = q.Modeid ?? 0,
                 ImageUrl = q.ImageUrl,
-                Answers = (q.TypeId == 3) ? new List<string>() : q.AnswerContent?.Split(",").ToList() ?? new List<string>(),
+                Answers = (q.TypeId == 3) ? new List<string>() : q.AnswerContent?.Split(";", StringSplitOptions.None).ToList() ?? new List<string>(),
                 CorrectAnswers = _context.CorrectAnswers
                     .Where(a => a.Quesid == q.Quesid)
                     .OrderBy(a => a.AnsId) // giữ đúng thứ tự cho True/False
@@ -112,7 +112,7 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
                 if (questionDto.CorrectAnswers.Count != 1)
                     return BadRequest(new { message = "Câu hỏi trắc nghiệm chỉ được có một đáp án đúng!" });
 
-                question.AnswerContent = string.Join(",", questionDto.Answers);
+                question.AnswerContent = string.Join(";", questionDto.Answers);
             }
             else if (questionDto.TypeId == 2)
             {
@@ -153,99 +153,95 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
         {
             var section = await _context.Sections
                 .Include(s => s.Questions)
+                .ThenInclude(q => q.CorrectAnswers)
                 .FirstOrDefaultAsync(s => s.Secid == sectionId);
 
             if (section == null)
-            {
                 return NotFound(new { message = "Không tìm thấy Section!" });
-            }
 
             using var workbook = new XLWorkbook();
             var worksheet = workbook.Worksheets.Add("Section Questions");
 
-            // ✅ Header
-            worksheet.Cell(1, 1).Value = "Question Content";
-            worksheet.Cell(1, 2).Value = "Type ID";
-            worksheet.Cell(1, 3).Value = "Mode ID";
-            worksheet.Cell(1, 4).Value = "Solution";
-            worksheet.Cell(1, 5).Value = "Answer 1";
-            worksheet.Cell(1, 6).Value = "Answer 2";
-            worksheet.Cell(1, 7).Value = "Answer 3";
-            worksheet.Cell(1, 8).Value = "Answer 4";
-            worksheet.Cell(1, 9).Value = "Correct Answers";
-            worksheet.Cell(1, 10).Value = "Image URL";
+            // 1. Header
+            var headers = new[] {
+    "Question Content", "Type ID", "Mode ID", "Solution",
+    "Answer 1", "Answer 2", "Answer 3", "Answer 4",
+    "Correct Answers", "Image URL"
+};
+            for (int i = 0; i < headers.Length; i++)
+                worksheet.Cell(1, i + 1).Value = headers[i];
 
-            int row = 2;
-            // ✅ Luôn thêm dòng ví dụ mẫu trước (row 2)
-            worksheet.Cell(row, 1).Value = "[MATH:\\sqrt{4}]";
-            worksheet.Cell(row, 2).Value = 1; // Trắc nghiệm
-            worksheet.Cell(row, 3).Value = 1; // Mức độ
-            worksheet.Cell(row, 4).Value = "Phép cộng cơ bản.";
-            worksheet.Cell(row, 5).Value = "1";
-            worksheet.Cell(row, 6).Value = "2";
-            worksheet.Cell(row, 7).Value = "3";
-            worksheet.Cell(row, 8).Value = "4";
-            worksheet.Cell(row, 9).Value = "2";
-            worksheet.Cell(row, 10).FormulaA1 = "=IMAGE(\"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTE7X1Jz2BfKDUhA738FQCZwEiOC_S_DBefuA&s\")";
+            // 2. Mẫu ví dụ (row 2)
+            worksheet.Cell(2, 1).Value = "[MATH:\\sqrt{4}]";
+            worksheet.Cell(2, 2).Value = 1;
+            worksheet.Cell(2, 3).Value = 1;
+            worksheet.Cell(2, 4).Value = "Phép cộng cơ bản.";
+            worksheet.Cell(2, 5).Value = "1";
+            worksheet.Cell(2, 6).Value = "2";
+            worksheet.Cell(2, 7).Value = "3";
+            worksheet.Cell(2, 8).Value = "4";
+            worksheet.Cell(2, 9).Value = "2";
+            worksheet.Cell(2, 10).FormulaA1 =
+                "=IMAGE(\"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTE7X1Jz2BfKDUhA738FQCZwEiOC_S_DBefuA&s\")";
 
-
-            worksheet.Row(row).Height = 100;
+            // Điều chỉnh hàng và cột mẫu
+            worksheet.Row(2).Height = 100;
             worksheet.Column(10).Width = 30;
 
-            row++; // Bắt đầu từ dòng 3 cho câu hỏi thật
-            var correctAnswers = await _context.CorrectAnswers.ToListAsync();
+            // 3. Ghi dữ liệu thật (bắt đầu từ row 3)
             var baseUrl = $"{Request.Scheme}://{Request.Host}";
-
-            foreach (var question in section.Questions)
+            int row = 3;
+            foreach (var q in section.Questions)
             {
-                worksheet.Cell(row, 1).Value = StripHtmlTags(question.Quescontent);
+                worksheet.Cell(row, 1).Value = RestoreMathPlaceholders(q.Quescontent);
+                worksheet.Cell(row, 2).Value = q.TypeId;
+                worksheet.Cell(row, 3).Value = q.Modeid;
+                worksheet.Cell(row, 4).Value = q.Solution ?? "";
 
-                worksheet.Cell(row, 2).Value = question.TypeId;
-                worksheet.Cell(row, 3).Value = question.Modeid;
-                worksheet.Cell(row, 4).Value = question.Solution ?? "";
-
-                // ✅ Tách đáp án ra từng cột riêng (tối đa 4)
-                var answerList = (question.AnswerContent ?? "").Split(',').ToList();
+                // Answers
+                var answerList = (q.AnswerContent ?? "")
+                    .Split(';', StringSplitOptions.RemoveEmptyEntries)
+                    .ToList();
                 for (int i = 0; i < 4; i++)
+                    worksheet.Cell(row, 5 + i).Value = i < answerList.Count ? answerList[i] : "";
+
+                // CorrectAnswers
+                var corrects = q.CorrectAnswers
+                    .OrderBy(a => a.AnsId)
+                    .Select(a => a.Content);
+                worksheet.Cell(row, 9).Value = string.Join(";", corrects);
+
+                // Image
+                if (!string.IsNullOrEmpty(q.ImageUrl))
                 {
-                    worksheet.Cell(row, 5 + i).Value = (i < answerList.Count) ? answerList[i] : "";
-                }
-
-                var corrects = correctAnswers
-    .Where(a => a.Quesid == question.Quesid)
-    .OrderBy(a => a.AnsId)
-    .Select(a => a.Content)
-    .ToList();
-                string correctAnswerStr = question.TypeId == 2
-     ? string.Join(";", corrects)  // chỉ chuyển , → ; khi typeId=2
-     : string.Join(",", corrects);
-
-                worksheet.Cell(row, 9).Value = correctAnswerStr;
-
-
-                if (!string.IsNullOrEmpty(question.ImageUrl))
-                {
-                    string fullImageUrl = question.ImageUrl.StartsWith("http")
-     ? question.ImageUrl
-     : baseUrl + question.ImageUrl;
-                    worksheet.Cell(row, 10).FormulaA1 = $"IMAGE(\"{fullImageUrl}\")";
-
-                    // 👉 Đặt chiều cao hàng
+                    var url = q.ImageUrl.StartsWith("http")
+                        ? q.ImageUrl
+                        : baseUrl + q.ImageUrl;
+                    worksheet.Cell(row, 10).FormulaA1 = $"=IMAGE(\"{url}\")";
                     worksheet.Row(row).Height = 100;
-
-                    // 👉 Đặt chiều rộng cột (nếu chưa đặt)
-                    worksheet.Column(10).Width = 30; // Điều chỉnh theo tỷ lệ mong muốn
-
-                }
-                else
-                {
-                    worksheet.Cell(row, 10).Value = "";
+                    worksheet.Column(10).Width = 30;
                 }
 
                 row++;
             }
 
-            // ✅ Sheet hướng dẫn
+            // 4. Tạo Table & styling
+            var usedRange = worksheet.Range(1, 1, row - 1, headers.Length);
+            var table = usedRange.CreateTable("QuestionsTable");
+            table.Theme = XLTableTheme.TableStyleMedium9;
+            worksheet.SheetView.FreezeRows(1);
+
+            // Auto-fit và wrap text
+            worksheet.ColumnsUsed().AdjustToContents();
+            worksheet.RowsUsed().AdjustToContents();
+            worksheet.Style.Alignment.WrapText = true;
+
+            // Header in đậm, căn giữa
+            var headerRow = worksheet.Row(1);
+            headerRow.Style.Font.Bold = true;
+            headerRow.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+            // 5. Sheet hướng dẫn
             var guideSheet = workbook.Worksheets.Add("Import Guide");
             guideSheet.Cell(1, 1).Value = "HƯỚNG DẪN IMPORT EXCEL";
             guideSheet.Cell(2, 1).Value = "1. Question Content: Nội dung câu hỏi. Nếu có công thức toán học, cần giữ nguyên định dạng [MATH:...] (tham khảo công thức tại đây: https://www.mathvn.com/2021/09/latex-co-ban-cach-go-cac-cong-thuc-ki.html)";
@@ -253,18 +249,41 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
             guideSheet.Cell(4, 1).Value = "3. Mode ID: Mức độ khó.(1: Nhận biết, 2: Thổng hiểu, 3: Vận dụng )";
             guideSheet.Cell(5, 1).Value = "4. Solution: Giải thích cho câu hỏi).";
             guideSheet.Cell(6, 1).Value = "5-8. Answer 1–4: Các đáp án trắc nghiệm, mỗi ô 1 đáp án.";
-            guideSheet.Cell(7, 1).Value = "9. Correct Answers: Đáp án đúng (phân tách bằng ',', với dạng đúng sai thì các đáp án cách nhau bằng dấu ; với nhập đáp án thì phải gõ đủ 4 ký tự bao gồm dấu - và ,).";
+            guideSheet.Cell(7, 1).Value = "9. Correct Answers: Đáp án đúng (phân tách bằng ';', với dạng đúng sai thì các đáp án cách nhau bằng dấu ; với nhập đáp án thì phải gõ đủ 4 ký tự bao gồm dấu - và ,).";
             guideSheet.Cell(8, 1).Value = "10. Image URL: gõ công thức ảnh theo ví dụ có sẵn (không bắt buộc).";
 
-            guideSheet.Protect().AllowElement(XLSheetProtectionElements.SelectLockedCells);
+            guideSheet.ColumnsUsed().AdjustToContents();
+            guideSheet.RowsUsed().AdjustToContents();
+            guideSheet.SheetView.FreezeRows(1);
+            guideSheet.Row(1).Style.Font.Bold = true;
+            guideSheet.Style.Alignment.WrapText = true;
 
-            using var stream = new MemoryStream();
-            workbook.SaveAs(stream);
-            stream.Position = 0;
-
-            return File(stream.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                $"Section_{sectionId}_Questions.xlsx");
+            // 6. Xuất file
+            using var ms = new MemoryStream();
+            workbook.SaveAs(ms);
+            ms.Position = 0;
+            return File(ms.ToArray(),
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        $"Section_{sectionId}_Questions.xlsx");
         }
+
+
+        private string RestoreMathPlaceholders(string html)
+        {
+            if (string.IsNullOrWhiteSpace(html)) return string.Empty;
+
+            // ✅ Khôi phục [MATH:...] từ các thẻ HTML
+            string restored = Regex.Replace(html,
+                @"<span[^>]*class=[""']katex-math[""'][^>]*data-formula=[""'](.*?)[""'][^>]*>.*?</span>",
+                "[MATH:$1]",
+                RegexOptions.IgnoreCase);
+
+            // ✅ Xóa các tag HTML còn lại (nếu có)
+            restored = Regex.Replace(restored, "<.*?>", string.Empty);
+
+            return restored.Trim();
+        }
+
 
         private string StripHtmlTags(string html)
         {
@@ -273,6 +292,8 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
             // Loại bỏ tất cả thẻ HTML, nhưng giữ nguyên nội dung [MATH:...]
             return Regex.Replace(html, "<.*?>", string.Empty).Trim();
         }
+
+
 
 
 
@@ -362,10 +383,7 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
                     var correctAnswers = GetCellValueAsString(worksheet.Cell(row, 9));
 
                     // Kiểm tra nếu là câu hỏi True/False, thay đổi dấu phân cách từ ";" thành ","
-                    if (typeId == 2)
-                    {
-                        correctAnswers = correctAnswers.Replace(";", ",");
-                    }
+
 
                     // Đọc URL ảnh từ cột 10
                     var imageCell = worksheet.Cell(row, 10);
@@ -398,7 +416,7 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
                     string answers = null;
                     if (answersList.Count > 0)
                     {
-                        answers = string.Join(",", answersList);
+                        answers = string.Join(";", answersList);
                     }
 
                     // Xác thực và chuẩn hóa URL ảnh
@@ -442,8 +460,9 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
                                 continue;
                             }
                             // Kiểm tra xem đáp án đúng có nằm trong danh sách đáp án không
-                            var ansListCheck = answers.Split(',').Select(a => a.Trim()).ToList();
-                            var correctAnsCheck = correctAnswers.Split(',').Select(a => a.Trim()).ToList();
+                            var ansListCheck = answers.Split(';', StringSplitOptions.RemoveEmptyEntries)
+                           .Select(a => a.Trim()).ToList();
+                            var correctAnsCheck = correctAnswers.Split(';').Select(a => a.Trim()).ToList();
 
                             if (correctAnsCheck.Count != 1)
                             {
@@ -461,11 +480,11 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
                             break;
 
                         case 2: // True/False với 4 ý
-                            answers = "True,False";
-
-
-
-                            var tfAnswers = correctAnswers.Split(',').Select(x => x.Trim()).ToList();
+                                // Split trên ';' và bỏ các entry rỗng
+                            var tfAnswers = correctAnswers
+      .Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries)
+      .Select(x => x.Trim())
+      .ToList();
 
                             if (tfAnswers.Count != 4 || tfAnswers.Any(a => a != "True" && a != "False"))
                             {
@@ -477,21 +496,30 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
 
                         case 3: // Điền kết quả
                                 // Không cần answers
-                            answers = null;
-                            if (string.IsNullOrWhiteSpace(correctAnswers) || correctAnswers.Length != 4)
+                                // Điền kết quả
+                                // Không cần answers
+                            if (string.IsNullOrWhiteSpace(correctAnswers))
                             {
-                                errors.Add($"Dòng {row}: Đáp án cho câu hỏi điền kết quả phải có đúng 4 ký tự");
+                                errors.Add($"Dòng {row}: Đáp án cho câu hỏi điền kết quả không được để trống");
                                 row++;
                                 continue;
                             }
-                            // 🆕 Thêm validate regex chỉ nhận số, dấu , và dấu -
-                            if (!Regex.IsMatch(correctAnswers, @"^[\d\-,]{4}$"))
+
+                            correctAnswers = correctAnswers.Trim()
+    .Replace(".", ",")
+    .Replace(" ", "");
+                            if (!Regex.IsMatch(correctAnswers, @"^[0-9,\-]{1,6}$"))
                             {
-                                errors.Add($"Dòng {row}: Đáp án chỉ được chứa số, dấu - hoặc dấu , và phải đúng 4 ký tự");
+                                errors.Add($"Dòng {row}: Đáp án chỉ được chứa số, dấu - hoặc dấu , và tối đa 6 ký tự!");
                                 row++;
                                 continue;
                             }
+
+
+                            answers = null; // 🟢 Không cần AnswerContent cho dạng điền kết quả
                             break;
+
+
                     }
 
                     if (questionMap.TryGetValue(quesContent.ToLower(), out var existingQuestion))
@@ -504,13 +532,26 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
                         existingQuestion.ImageUrl = imageUrl;
                         _context.CorrectAnswers.RemoveRange(existingQuestion.CorrectAnswers.ToList());
 
-                        foreach (var ans in correctAnswers.Split(',').Select(a => a.Trim()))
+                        if (typeId == 3)
                         {
+                            // Điền kết quả: giữ nguyên cả chuỗi (ví dụ "1,23" hoặc "1.23")
                             await _context.CorrectAnswers.AddAsync(new CorrectAnswer
                             {
                                 Quesid = existingQuestion.Quesid,
-                                Content = ans
+                                Content = correctAnswers.Trim()
                             });
+                        }
+                        else
+                        {
+                            // Trắc nghiệm/TrueFalse: split từng phần tử
+                            foreach (var ans in correctAnswers.Split(';').Select(a => a.Trim()))
+                            {
+                                await _context.CorrectAnswers.AddAsync(new CorrectAnswer
+                                {
+                                    Quesid = existingQuestion.Quesid,
+                                    Content = ans
+                                });
+                            }
                         }
 
                         updateCount++;
@@ -530,14 +571,28 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
                         };
                         _context.Questions.Add(newQuestion);
                         await _context.SaveChangesAsync();
-                        foreach (var ans in correctAnswers.Split(',').Select(a => a.Trim()))
+                        if (typeId == 3)
                         {
+                            // Giữ nguyên chuỗi "1,23" làm một đáp án duy nhất
                             await _context.CorrectAnswers.AddAsync(new CorrectAnswer
                             {
                                 Quesid = newQuestion.Quesid,
-                                Content = ans
+                                Content = correctAnswers
                             });
                         }
+                        else
+                        {
+                            foreach (var ans in correctAnswers.Split(';', StringSplitOptions.RemoveEmptyEntries)
+                                    .Select(a => a.Trim()))
+                            {
+                                await _context.CorrectAnswers.AddAsync(new CorrectAnswer
+                                {
+                                    Quesid = newQuestion.Quesid,
+                                    Content = ans
+                                });
+                            }
+                        }
+
 
                         importCount++;
                     }
@@ -568,12 +623,14 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
                 string resultMessage = $"✅ Import thành công: {importCount} câu hỏi mới, {updateCount} câu hỏi cập nhật, {deleteCount} câu hỏi đã xóa.";
                 if (errors.Any())
                 {
-                    resultMessage += $"\n⚠️ {errors.Count} lỗi: {string.Join("; ", errors.Take(5))}";
-                    if (errors.Count > 5)
-                        resultMessage += "...";
+                    resultMessage += $" ⚠️ {errors.Count} lỗi phát sinh.";
                 }
 
-                return Ok(new { message = resultMessage });
+                return Ok(new
+                {
+                    message = resultMessage,
+                    errors = errors
+                });
             }
             catch (Exception ex)
             {
@@ -673,7 +730,7 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
                 if (questionDto.CorrectAnswers.Count != 1)
                     return BadRequest(new { message = "Câu hỏi trắc nghiệm chỉ được có một đáp án đúng!" });
 
-                question.AnswerContent = string.Join(",", questionDto.Answers);
+                question.AnswerContent = string.Join(";", questionDto.Answers);
             }
             else if (questionDto.TypeId == 2)
             {
@@ -689,7 +746,6 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
 
                 question.AnswerContent = null;
             }
-
             foreach (var answer in questionDto.CorrectAnswers)
             {
                 _context.CorrectAnswers.Add(new CorrectAnswer
@@ -783,8 +839,8 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
             if (section == null)
                 return NotFound(new { message = "Section không tồn tại!" });
 
-            var authorizationResult = await _authorizationService.AuthorizeAsync(User, section.BankId, "BankModify");
-            if (!authorizationResult.Succeeded)
+            var authorizationresult = await _authorizationService.AuthorizeAsync(User, section.BankId, "BankDelete");
+            if (!authorizationresult.Succeeded)
                 return Forbid();
             // ✅ Xóa ảnh nếu có
             if (!string.IsNullOrEmpty(question.ImageUrl))
@@ -806,6 +862,49 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
 
             return Ok(new { message = "Đã xóa câu hỏi!" });
         }
+        // DELETE api/Question/sections/{sectionId}/questions
+        [HttpDelete("sections/{sectionId}/questions")]
+        public async Task<IActionResult> DeleteQuestionsBySection(long sectionId)
+        {
+            // 1. Kiểm tra section tồn tại
+            var section = await _context.Sections.FindAsync(sectionId);
+            if (section == null)
+                return NotFound(new { message = $"Section với ID={sectionId} không tồn tại!" });
+
+            // 2. Lấy danh sách tất cả các câu hỏi kèm đáp án đúng
+            var questions = await _context.Questions
+                .Where(q => q.Secid == sectionId)
+                .Include(q => q.CorrectAnswers)
+                .ToListAsync();
+
+            if (!questions.Any())
+                return NotFound(new { message = $"Không có câu hỏi nào trong section {sectionId}." });
+
+            // 3. Xóa file ảnh (nếu có) và đáp án đúng
+            foreach (var q in questions)
+            {
+                if (!string.IsNullOrEmpty(q.ImageUrl))
+                {
+                    var imagePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", q.ImageUrl.TrimStart('/'));
+                    if (System.IO.File.Exists(imagePath))
+                        System.IO.File.Delete(imagePath);
+                }
+
+                // xóa toàn bộ bản ghi CorrectAnswer liên quan
+                _context.CorrectAnswers.RemoveRange(q.CorrectAnswers);
+            }
+
+            // 4. Xóa câu hỏi
+            _context.Questions.RemoveRange(questions);
+
+            // 5. Commit thay đổi
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = $"Đã xóa {questions.Count} câu hỏi của section {sectionId}." });
+        }
+
+
 
     }
 }
+

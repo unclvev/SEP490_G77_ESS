@@ -230,18 +230,34 @@ namespace SEP490_G77_ESS.Controllers.ExamManager
             var accId = await GetAccIdFromToken();
             if (accId == null)
                 return Unauthorized(new { message = "Không thể xác định tài khoản." });
-            var authorizationResult = await _authorizationService.AuthorizeAsync(User, examid, "ExamDelete");
-            if (!authorizationResult.Succeeded)
-                return Forbid();
-            var exam = await _context.Exams.FirstOrDefaultAsync(e => e.ExamId == examid && e.AccId == accId);
+
+            // Kiểm tra quyền xóa
+            //var authorizationResult = await _authorizationService.AuthorizeAsync(User, examid, "ExamDelete");
+            //if (!authorizationResult.Succeeded)
+            //    return Forbid();
+
+            // Tìm exam
+            var exam = await _context.Exams
+                .FirstOrDefaultAsync(e => e.ExamId == examid && e.AccId == accId);
             if (exam == null)
                 return NotFound(new { message = "Không tìm thấy bài kiểm tra hoặc bạn không có quyền xóa." });
 
+            // Xóa tất cả student results liên quan
+            var studentResults = await _context.StudentResults
+                .Where(sr => sr.ExamId == examid)
+                .ToListAsync();
+            if (studentResults.Any())
+            {
+                _context.StudentResults.RemoveRange(studentResults);
+            }
+
+            // Xóa exam
             _context.Exams.Remove(exam);
             await _context.SaveChangesAsync();
 
-            return Ok(new { message = "Đã xóa thành công bài kiểm tra." });
+            return Ok(new { message = "Đã xóa thành công bài kiểm tra và kết quả sinh viên." });
         }
+
 
         // Api Exam Matrix
 

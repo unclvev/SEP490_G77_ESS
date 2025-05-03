@@ -69,7 +69,7 @@ const RegistrationPage = () => {
     <div className="relative h-screen flex">
       <div className="absolute top-4 left-4">
         <Link to="/">
-          <img width="120" src="/images/logo.svg" alt="Logo" />
+          <img width="120" src="/logo.png" alt="Logo" />
         </Link>
       </div>
       <div
