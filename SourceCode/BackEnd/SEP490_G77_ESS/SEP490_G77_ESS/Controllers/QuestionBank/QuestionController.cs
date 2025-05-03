@@ -81,9 +81,9 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
             if (section == null)
                 return NotFound(new { message = "Section không tồn tại!" });
 
-            //var authorizationResult = await _authorizationService.AuthorizeAsync(User, section.BankId, "BankModify");
-            //if (!authorizationResult.Succeeded)
-            //    return Forbid();
+            var authorizationResult = await _authorizationService.AuthorizeAsync(User, section.BankId, "BankModify");
+            if (!authorizationResult.Succeeded)
+                return Forbid();
 
             if (string.IsNullOrEmpty(questionDto.Quescontent))
                 return BadRequest(new { message = "Nội dung câu hỏi không được để trống!" });
@@ -164,10 +164,10 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
 
             // 1. Header
             var headers = new[] {
-        "Question Content", "Type ID", "Mode ID", "Solution",
-        "Answer 1", "Answer 2", "Answer 3", "Answer 4",
-        "Correct Answers", "Image URL"
-    };
+    "Question Content", "Type ID", "Mode ID", "Solution",
+    "Answer 1", "Answer 2", "Answer 3", "Answer 4",
+    "Correct Answers", "Image URL"
+};
             for (int i = 0; i < headers.Length; i++)
                 worksheet.Cell(1, i + 1).Value = headers[i];
 
@@ -295,6 +295,8 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
 
 
 
+
+
         [HttpPost("{sectionId}/import-excel")]
         [Authorize]
         public async Task<IActionResult> ImportQuestionsFromExcel(long sectionId, IFormFile file)
@@ -302,11 +304,11 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
             if (file == null || file.Length == 0)
                 return BadRequest(new { message = "File không hợp lệ hoặc rỗng." });
             var section = await _context.Sections.FindAsync(sectionId);
-            //var authorizationResult = await _authorizationService.AuthorizeAsync(User, section.BankId, "BankModify");
-            //if (!authorizationResult.Succeeded)
-            //{
-            //    return Forbid();
-            //}
+            var authorizationResult = await _authorizationService.AuthorizeAsync(User, section.BankId, "BankModify");
+            if (!authorizationResult.Succeeded)
+            {
+                return Forbid();
+            }
             try
             {
                 using var stream = new MemoryStream();
@@ -381,7 +383,7 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
                     var correctAnswers = GetCellValueAsString(worksheet.Cell(row, 9));
 
                     // Kiểm tra nếu là câu hỏi True/False, thay đổi dấu phân cách từ ";" thành ","
-                  
+
 
                     // Đọc URL ảnh từ cột 10
                     var imageCell = worksheet.Cell(row, 10);
@@ -494,7 +496,7 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
 
                         case 3: // Điền kết quả
                                 // Không cần answers
-                       // Điền kết quả
+                                // Điền kết quả
                                 // Không cần answers
                             if (string.IsNullOrWhiteSpace(correctAnswers))
                             {
@@ -627,7 +629,7 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
                 return Ok(new
                 {
                     message = resultMessage,
-                    errors = errors// Trả thêm danh sách lỗi này
+                    errors = errors
                 });
             }
             catch (Exception ex)
@@ -687,9 +689,9 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
             if (section == null)
                 return NotFound(new { message = "Section không tồn tại!" });
 
-            //var authorizationResult = await _authorizationService.AuthorizeAsync(User, section.BankId, "BankModify");
-            //if (!authorizationResult.Succeeded)
-            //    return Forbid();
+            var authorizationResult = await _authorizationService.AuthorizeAsync(User, section.BankId, "BankModify");
+            if (!authorizationResult.Succeeded)
+                return Forbid();
 
             if (string.IsNullOrWhiteSpace(questionDto.Quescontent))
             {
@@ -837,9 +839,9 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
             if (section == null)
                 return NotFound(new { message = "Section không tồn tại!" });
 
-            //var authorizationResult = await _authorizationService.AuthorizeAsync(User, section.BankId, "BankModify");
-            //if (!authorizationResult.Succeeded)
-            //    return Forbid();
+            var authorizationresult = await _authorizationService.AuthorizeAsync(User, section.BankId, "BankDelete");
+            if (!authorizationresult.Succeeded)
+                return Forbid();
             // ✅ Xóa ảnh nếu có
             if (!string.IsNullOrEmpty(question.ImageUrl))
             {
@@ -900,6 +902,8 @@ namespace SEP490_G77_ESS.Controllers.QuestionBank
 
             return Ok(new { message = $"Đã xóa {questions.Count} câu hỏi của section {sectionId}." });
         }
+
+
 
     }
 }

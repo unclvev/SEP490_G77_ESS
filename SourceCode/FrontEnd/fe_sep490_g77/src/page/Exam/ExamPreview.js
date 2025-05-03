@@ -39,7 +39,15 @@ const ExamPreview = () => {
         const response = await getExam(examid);
         if (response?.data) {
           const parsed = JSON.parse(response.data.examdata);
-          const { Questions = [], exam: meta = {} } = parsed;
+          console.log(parsed);
+          const examCodes = parsed.ExamCodes || [];
+  
+          // Hiện tại chỉ lấy ExamCode đầu tiên (có thể mở rộng sau)
+          const firstExam = examCodes[0] || { Questions: [] };
+          const { Questions = [] } = firstExam;
+  
+          const meta = parsed.exam || {};
+  
           setQuestions(Questions);
           setExamName(meta.ExamName || "");
           setGrade(meta.Grade || "");
@@ -52,7 +60,30 @@ const ExamPreview = () => {
   }, [examid]);
 
   const handleSaveExam = async () => {
-    const payload = { exam: { examName, grade, subject }, examdata: { Questions: questions } };
+    const examCodeGroup = {
+      examCode: "", // bạn đang để rỗng
+      questions: questions.map(q => ({
+        questionId: q.QuestionId,
+        content: q.Content,
+        type: q.Type || "",
+        imageUrl: q.ImageUrl || "",
+        answers: q.Answers.map(a => ({
+          answerId: a.AnswerId,
+          content: a.Content,
+          isCorrect: !!a.IsCorrect // giữ nguyên nếu đã có, hoặc bạn có thể tính lại bên dưới
+        }))
+      }))
+    };
+  
+    const payload = {
+      exam: {
+        examName,
+        grade,
+        subject
+      },
+      examCodes: [examCodeGroup]
+    };
+  
     try {
       const res = await updateExamData(examid, payload);
       navigate(`/exam/content?id=${res.data.examId}`);
@@ -60,6 +91,13 @@ const ExamPreview = () => {
       console.error("Error saving exam:", error);
     }
   };
+  
+  
+  
+  const handleCancelExam = async () => {
+    
+  };
+  
 
   const handleDeleteAnswer = (qIndex, ansId) => {
     setQuestions(prev =>
@@ -160,7 +198,7 @@ const ExamPreview = () => {
 
           <div style={{ flex: 1, background: "#f4f6f7", padding: 10, borderRadius: 5, display: "flex", justifyContent: "center", alignItems: "center" }}>
             <Space>
-              <Button type="primary" onClick={handleSaveExam}>Hủy</Button>
+              <Button type="primary" onClick={handleCancelExam}>Hủy</Button>
             
               <Button type="primary" onClick={handleSaveExam}>Lưu đề</Button>
             </Space>

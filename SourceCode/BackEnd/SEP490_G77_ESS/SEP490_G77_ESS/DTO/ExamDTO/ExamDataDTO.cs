@@ -12,6 +12,7 @@
         public long QuestionId { get; set; }
         public string Content { get; set; }
         public string Type { get; set; }
+        public string ImageUrl { get; set; }
         public List<AnswerDTO> Answers { get; set; } = new List<AnswerDTO>();
     }
 

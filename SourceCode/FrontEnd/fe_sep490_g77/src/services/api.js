@@ -134,14 +134,13 @@ export const exportExcel = (examid) => Http.get(`/Analysis/export/${examid}`, { 
 
 //question-api
 
+export const deleteAllQuestionInSection = (sectionId) => Http.delete(`/Question/sections/${sectionId}/questions`);
 
 export const createQuestion = (data) => Http.post(`/Question/questions`, data);
 
 export const updateQuestion = (quesid, data) => Http.put(`/Question/questions/${quesid}`, data);
 
 export const deleteQuestion = (quesid) => Http.delete(`/Question/questions/${quesid}`);
-
-export const exportQuestionsExcel = (sectionId) => Http.get(`/Question/${sectionId}/export-excel`, { responseType: 'blob' });
 
 export const importQuestionsExcel = (sectionId, formData) =>
   Http.post(`/Question/${sectionId}/import-excel`, formData, {
@@ -175,21 +174,25 @@ export const getBankGrades = () => Http.get("/Bank/grades");
 
 export const getBankSubjects = () => Http.get("/Bank/subjects");
 
-export const getBankCurriculums = () => Http.get("/Bank/curriculums");
+export const getBankCurriculums = (gradeId, subjectId) => Http.get("/Bank/curriculums", { params: { gradeId, subjectId }} );
 
 export const generateBank = (accId, data) => Http.post(`/Bank/generate/${accId}`, data);
 
 export const getDefaultBank = (bankId) => Http.get(`/Bank/default/${bankId}`);
 
+export const getSharedBank = () => Http.get(`Bank/account/shared`);
+
 export const getDefaultSections = (bankId) => Http.get(`/Bank/default/${bankId}/sections`);
 
 export const getDefaultQuestions = (sectionId) => Http.get(`/Bank/default/${sectionId}/questions`);
 
+export const checkIsOwner = (bankId) => Http.get(`/Bank/isowner/${bankId}`);
+
 // question-api
 
-export const getBanksByAccount = (accid, params) => Http.get(`/Bank/account/${accid}`, { params });
+export const getBanksByAccount = (accid, params) => Http.get(`/Bank/account/${accid}`);
 
-export const getDefaultBanks = (params) => Http.get(`/Bank/default-banks`, { params });
+export const getDefaultBanks = (params) => Http.get(`/Bank/default-banks`);
 
 // 📚 Question Bank Section APIs
 
@@ -206,6 +209,4 @@ export const uploadImageBase64 = (base64Image) => Http.post(`/Question/upload-im
 export const importQuestionExcel = (sectionId, formData) => 
   Http.post(`/Question/${sectionId}/import-excel`, formData, { headers: { "Content-Type": "multipart/form-data" } });
 
-export const exportQuestionExcel = (sectionId) => {
-  window.location.href = `http://localhost:7052/api/Question/${sectionId}/export-excel`;
-};
+export const exportQuestionsExcel = (sectionId) => Http.get(`/Question/${sectionId}/export-excel`, { responseType: 'blob' });

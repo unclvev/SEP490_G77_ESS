@@ -13,15 +13,21 @@ const MainLayout = ({ children }) => {
 
       {/* Layout chính */}
       <div
-        className={`flex flex-col transition-all duration-300 ${
-          collapsed ? "ml-16" : "ml-64"
-        } flex-1`}
+        className={`
+          flex flex-col transition-all duration-300
+          ${collapsed ? "ml-16" : "ml-64"} flex-1
+          pt-16            /* ← thêm padding-top = 4rem */
+        `}
       >
         <Header collapsed={collapsed} />
-        <main className="p-6 pt-3 flex-grow">{children}</main>
+
+        <main className="p-6 flex-grow">
+          {children}
+        </main>
       </div>
     </div>
   );
 };
+
 
 export default MainLayout;

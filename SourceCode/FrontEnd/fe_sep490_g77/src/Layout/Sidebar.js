@@ -14,83 +14,52 @@ import {
 const Sidebar = ({ collapsed, setCollapsed }) => {
   return (
     <div
-      className={`h-screen fixed left-0 top-0 bg-white border border-blue-500 text-black transition-all duration-300 ${
+      className={`h-screen fixed left-0 top-0 bg-white border-r border-blue-500 text-black transition-all duration-300 ${
         collapsed ? "w-20" : "w-64"
-      } p-4`}
+      } flex flex-col p-4`}
     >
-      <div className="flex justify-end mb-4">
+
+      {/* Toggle button */}
+      <div className="mb-6 flex justify-center">
         <button onClick={() => setCollapsed(!collapsed)} className="text-xl">
           {collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
         </button>
       </div>
 
-      {!collapsed && (
-        <div className="mb-6 text-center">
-          <img src="/logo.png" alt="Logo" className="mx-auto w-16" />
-        </div>
-      )}
-
-      <ul className="space-y-4">
-        <li>
-          <Tooltip title={collapsed ? "Trang chủ" : ""} placement="right">
-            <a
-              href="/"
-              className="flex items-center space-x-3 text-lg font-semibold hover:text-gray-700"
-            >
-              <HomeOutlined className="text-2xl text-white" />
-              {!collapsed && <span>Trang chủ</span>}
-            </a>
-          </Tooltip>
-        </li>
-
-        <li>
-          <Tooltip title={collapsed ? "Ngân hàng câu hỏi" : ""} placement="right">
-            <a
-              href="/question-bank"
-              className="flex items-center space-x-3 text-lg font-semibold hover:text-gray-700"
-            >
-              <BookOutlined className="text-2xl text-green-300" />
-              {!collapsed && <span>Ngân hàng câu hỏi</span>}
-            </a>
-          </Tooltip>
-        </li>
-
-        <li>
-          <Tooltip title={collapsed ? "Đề thi" : ""} placement="right">
-            <a
-              href="/exam"
-              className="flex items-center space-x-3 text-lg font-semibold hover:text-gray-700 "
-            >
-              <FileTextOutlined className="text-2xl text-yellow-300" />
-              {!collapsed && <span>Đề thi</span>}
-            </a>
-          </Tooltip>
-        </li>
-
-        
-
-        <li>
-          <Tooltip title={collapsed ? "Chấm điểm" : ""} placement="right">
-            <a
-              href="/grading"
-              className="flex items-center space-x-3 text-lg font-semibold hover:text-gray-700"
-            >
-              <CheckOutlined className="text-2xl text-red-300" />
-              {!collapsed && <span>Chấm điểm</span>}
-            </a>
-          </Tooltip>
-        </li>
-        <li>
-          <Tooltip title={collapsed ? "Tự luận" : ""} placement="right">
-            <Link
-              to="/essay"
-              className="flex items-center space-x-4 text-lg hover:text-gray-300"
-            >
-              <UnorderedListOutlined className="text-2xl text-purple-300" />
-              {!collapsed && <span className="font-semibold">Tự Luận</span>}
-            </Link>
-          </Tooltip>
-        </li>
+      <ul className="flex-1 space-y-4">
+        {[
+          { path: '/', icon: <HomeOutlined className="text-2xl" />, label: 'Trang chủ' },
+          { path: '/question-bank', icon: <BookOutlined className="text-2xl text-green-300" />, label: 'Ngân hàng câu hỏi' },
+          { path: '/exam', icon: <FileTextOutlined className="text-2xl text-yellow-300" />, label: 'Đề thi' },
+          { path: '/grading', icon: <CheckOutlined className="text-2xl text-red-300" />, label: 'Chấm điểm' },
+          { path: '/essay', icon: <UnorderedListOutlined className="text-2xl text-purple-300" />, label: 'Tự luận', link: true },
+        ].map(({ path, icon, label, link }, idx) => (
+          <li key={idx}>
+            <Tooltip title={collapsed ? label : ''} placement="right">
+              {link ? (
+                <Link
+                  to={path}
+                  className={`flex items-center ${
+                    collapsed ? 'justify-center' : 'justify-start space-x-3'
+                  } text-lg font-semibold hover:text-gray-700`}
+                >
+                  {icon}
+                  {!collapsed && <span>{label}</span>}
+                </Link>
+              ) : (
+                <a
+                  href={path}
+                  className={`flex items-center ${
+                    collapsed ? 'justify-center' : 'justify-start space-x-3'
+                  } text-lg font-semibold hover:text-gray-700`}
+                >
+                  {icon}
+                  {!collapsed && <span>{label}</span>}
+                </a>
+              )}
+            </Tooltip>
+          </li>
+        ))}
       </ul>
     </div>
   );

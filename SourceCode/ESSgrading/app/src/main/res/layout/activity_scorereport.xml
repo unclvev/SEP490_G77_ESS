@@ -73,13 +73,14 @@
                 android:layout_width="65dp"
                 android:layout_height="wrap_content"
                 android:entries="@array/score_threshold"
-                android:background="@color/light_gray"/>
+                android:background="@color/deepblue"/>
 
             <ImageView
                 android:id="@+id/btnFilter"
                 android:layout_width="32dp"
                 android:layout_height="32dp"
                 android:src="@drawable/ic_filter"
+                android:background="@color/deepblue"
                 android:layout_marginLeft="8dp"/>
         </LinearLayout>
 

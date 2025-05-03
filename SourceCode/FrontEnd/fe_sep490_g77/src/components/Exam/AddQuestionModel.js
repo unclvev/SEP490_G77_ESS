@@ -1,9 +1,8 @@
 import React, { useState } from "react";
-import { Modal, Input, Radio, Row, Col, Typography, Upload, Button, Space } from "antd";
+import { Modal, Input, Radio, Row, Col, Typography, Upload, Button, Space, Select } from "antd";
 import { EditorState, Modifier } from "draft-js";
 import { Editor } from "react-draft-wysiwyg";
-import { stateToHTML } from "draft-js-export-html";
-import { PlusOutlined, UploadOutlined, SigmaOutlined } from "@ant-design/icons";
+import { UploadOutlined } from "@ant-design/icons";
 import { BlockMath } from "react-katex";
 import "react-draft-wysiwyg/dist/react-draft-wysiwyg.css";
 import "katex/dist/katex.min.css";
@@ -22,13 +21,6 @@ const AddQuestionModal = ({ visible, onClose, onAdd }) => {
   const [mathExpression, setMathExpression] = useState("");
   const [editingAnswerIndex, setEditingAnswerIndex] = useState(null);
   const [imageUrl, setImageUrl] = useState("");
-
-  const mathTemplates = [
-    { label: "Phân số", latex: "\\frac{a}{b}" },
-    { label: "Căn bậc hai", latex: "\\sqrt{x}" },
-    { label: "Tích phân", latex: "\\int_{a}^{b} f(x) dx" },
-    { label: "Lũy thừa", latex: "x^2" },
-  ];
 
   const handleAnswerChange = (value, index) => {
     const updated = answers.map((ans, i) =>
@@ -50,27 +42,16 @@ const AddQuestionModal = ({ visible, onClose, onAdd }) => {
     if (target === "question") {
       const contentState = editorState.getCurrentContent();
       const selection = editorState.getSelection();
-      const contentWithEntity = contentState.createEntity("KATEX", "IMMUTABLE", { formula: mathExpression });
-      const entityKey = contentWithEntity.getLastCreatedEntityKey();
-
-      const contentWithFormula = Modifier.insertText(
-        contentWithEntity,
+      const newContent = Modifier.insertText(
+        contentState,
         selection,
-        `[MATH:${mathExpression}]`,
-        null,
-        entityKey
+        `[MATH:${mathExpression}]`
       );
-
-      const newEditorState = EditorState.push(
-        editorState,
-        contentWithFormula,
-        "insert-characters"
-      );
-
-      setEditorState(newEditorState);
+      const newState = EditorState.push(editorState, newContent, "insert-characters");
+      setEditorState(EditorState.forceSelection(newState, newContent.getSelectionAfter()));
     } else if (editingAnswerIndex !== null) {
       const updated = [...answers];
-      updated[editingAnswerIndex].Content += `[MATH:${mathExpression}]`;
+      updated[editingAnswerIndex].Content += ` [MATH:${mathExpression}]`;
       setAnswers(updated);
     }
     setMathExpression("");
@@ -79,31 +60,29 @@ const AddQuestionModal = ({ visible, onClose, onAdd }) => {
   };
 
   const handleOk = () => {
-    console.log("121");
-    if (onAdd) {
-      const content = stateToHTML(editorState.getCurrentContent(), {
-        entityStyleFn: (entity) => {
-          if (entity.getType() === "KATEX") {
-            const formula = entity.getData().formula;
-            return {
-              element: "span",
-              attributes: {
-                class: "katex-math",
-                "data-formula": formula,
-              },
-            };
-          }
-        },
-      });
-      console.log(content);
-      onAdd({
-        Content: content,
-        Type: "Multiple Choice",
-        Answers: answers.filter((a) => a.Content.trim() !== ""),
-        ImageUrl: imageUrl,
-      });
-    }
+    const rawText = editorState.getCurrentContent().getPlainText();
+    if (!rawText.trim()) return;
+
+    const content = rawText;
+    const validAnswers = answers.filter((a) => a.Content.trim() !== "");
+    const correct = validAnswers.find((a) => a.IsCorrect);
+
+    const newQuestion = {
+      QuestionId: Date.now(),
+      Content: content,
+      Type: "Trắc nghiệm",
+      Answers: validAnswers.map((a, i) => ({
+        AnswerId: Date.now() + i + 1,
+        Content: a.Content,
+        IsCorrect: a.IsCorrect,
+      })),
+      ImageUrl: imageUrl,
+      CorrectAnswerId: correct ? Date.now() + validAnswers.findIndex((a) => a.IsCorrect) + 1 : null,
+    };
+
+    onAdd(newQuestion);
     onClose();
+
     setEditorState(EditorState.createEmpty());
     setAnswers([
       { Content: "", IsCorrect: false },
@@ -146,84 +125,99 @@ const AddQuestionModal = ({ visible, onClose, onAdd }) => {
       okText="Thêm"
       cancelText="Hủy"
     >
-      <div>
-        {/* Công thức Toán cho Câu hỏi */}
-        <Space style={{ marginBottom: 12 }}>
-          <Button onClick={() => setShowMathInput(!showMathInput)}>
-            {showMathInput ? "Ẩn nhập công thức" : "Thêm công thức toán học"}
+      <Button onClick={() => setShowMathInput(!showMathInput)} style={{ marginBottom: 12 }}>
+        {showMathInput ? "Ẩn khung thêm công thức" : "Thêm công thức toán học"}
+      </Button>
+
+      {showMathInput && (
+        <div style={{ marginBottom: 16, border: '1px solid #ccc', padding: 12, borderRadius: 6 }}>
+          <Text strong>Chọn công thức mẫu:</Text>
+          <Space wrap style={{ marginTop: 8, marginBottom: 8 }}>
+            {["\\frac{a}{b}", "\\sqrt{x}", "\\int_{a}^{b} f(x) dx", "\\frac{d}{dx}", "x^n", "\\lim_{x \\to 0}", "\\sum_{i=1}^n i", "\\begin{bmatrix} a & b \\ c & d \\end{bmatrix}", "\\pi", "\\angle ABC"].map((latex, idx) => (
+              <Button key={idx} size="small" onClick={() => setMathExpression(latex)}>
+                {latex}
+              </Button>
+            ))}
+          </Space>
+
+          <Input
+            value={mathExpression}
+            onChange={(e) => setMathExpression(e.target.value)}
+            placeholder="Hoặc nhập công thức LaTeX tùy chỉnh"
+            style={{ marginBottom: 8 }}
+          />
+
+          <Select
+            style={{ width: 200, marginBottom: 8 }}
+            placeholder="Chọn vị trí chèn"
+            value={editingAnswerIndex === null ? "question" : `answer-${editingAnswerIndex}`}
+            onChange={(val) => {
+              if (val === "question") setEditingAnswerIndex(null);
+              else setEditingAnswerIndex(parseInt(val.replace("answer-", ""), 10));
+            }}
+          >
+            <Select.Option value="question">Chèn vào câu hỏi</Select.Option>
+            {answers.map((_, idx) => (
+              <Select.Option key={idx} value={`answer-${idx}`}>
+                Đáp án {String.fromCharCode(65 + idx)}
+              </Select.Option>
+            ))}
+          </Select>
+
+          {mathExpression && (
+            <div style={{ marginBottom: 8 }}>
+              <BlockMath>{mathExpression}</BlockMath>
+            </div>
+          )}
+
+          <Button type="primary" onClick={() => insertMathFormula(editingAnswerIndex !== null ? "answer" : "question")}>
+            Chèn công thức
           </Button>
-        </Space>
-        {showMathInput && (
-          <div style={{ marginBottom: 16 }}>
-            <Space wrap>
-              {mathTemplates.map((tpl) => (
-                <Button size="small" key={tpl.label} onClick={() => setMathExpression(tpl.latex)}>
-                  {tpl.label}
-                </Button>
-              ))}
-            </Space>
-            <Input
-              style={{ marginTop: 8 }}
-              value={mathExpression}
-              onChange={(e) => setMathExpression(e.target.value)}
-              placeholder="Nhập hoặc chọn công thức LaTeX"
-            />
-            <Button type="primary" onClick={() => insertMathFormula(editingAnswerIndex !== null ? "answer" : "question")} style={{ marginTop: 8 }}>Chèn công thức</Button>
-            {mathExpression && (
-              <div style={{ marginTop: 8 }}><BlockMath>{mathExpression}</BlockMath></div>
-            )}
-          </div>
-        )}
+        </div>
+      )}
 
-        <Editor
-          editorState={editorState}
-          onEditorStateChange={setEditorState}
-          wrapperClassName="demo-wrapper"
-          editorClassName="demo-editor"
-          editorStyle={{ minHeight: "200px", border: "1px solid #ddd", padding: "4px" }}
-        />
+      <Editor
+        editorState={editorState}
+        onEditorStateChange={setEditorState}
+        wrapperClassName="demo-wrapper"
+        editorClassName="demo-editor"
+        editorStyle={{ minHeight: "200px", border: "1px solid #ddd", padding: "4px" }}
+      />
 
-        {/* Upload ảnh */}
-        <div style={{ marginTop: 12 }}>Ảnh minh họa (tối đa 800x800px, dưới 2MB):</div>
-        <Upload
-          showUploadList={false}
-          customRequest={handleImageUpload}
-          accept="image/*"
-        >
-          <Button icon={<UploadOutlined />} style={{ marginBottom: 8 }}>Tải ảnh lên</Button>
-        </Upload>
-        {imageUrl && (
-          <img src={imageUrl} alt="preview" style={{ maxWidth: "100%", marginBottom: 12 }} />
-        )}
+      <div style={{ marginTop: 12 }}>Ảnh minh họa:</div>
+      <Upload
+        showUploadList={false}
+        customRequest={handleImageUpload}
+        accept="image/*"
+      >
+        <Button icon={<UploadOutlined />} style={{ marginBottom: 8 }}>
+          Tải ảnh lên
+        </Button>
+      </Upload>
+      {imageUrl && (
+        <img src={imageUrl} alt="preview" style={{ maxWidth: "100%", marginBottom: 12 }} />
+      )}
 
-        {/* Đáp án */}
-        <div style={{ marginTop: 12 }}>Đáp án:</div>
-        <Radio.Group style={{ width: "100%" }}>
-          {answers.map((ans, idx) => (
-            <Row key={idx} gutter={8} style={{ marginBottom: 8 }}>
-              <Col span={2}>
-                <Radio
-                  checked={ans.IsCorrect}
-                  onChange={() => handleCorrectChange(idx)}
-                />
-              </Col>
-              <Col span={20}>
-                <Input
-                  placeholder={`Đáp án ${String.fromCharCode(65 + idx)}`}
-                  value={ans.Content}
-                  onChange={(e) => handleAnswerChange(e.target.value, idx)}
-                />
-              </Col>
-              <Col span={2}>
-                <Button size="small" icon={<PlusOutlined />} onClick={() => {
-                  setEditingAnswerIndex(idx);
-                  setShowMathInput(true);
-                }} />
-              </Col>
-            </Row>
-          ))}
-        </Radio.Group>
-      </div>
+      <div style={{ marginTop: 12 }}>Đáp án:</div>
+      <Radio.Group style={{ width: "100%" }}>
+        {answers.map((ans, idx) => (
+          <Row key={idx} gutter={8} style={{ marginBottom: 8 }}>
+            <Col span={2}>
+              <Radio
+                checked={ans.IsCorrect}
+                onChange={() => handleCorrectChange(idx)}
+              />
+            </Col>
+            <Col span={22}>
+              <Input
+                placeholder={`Đáp án ${String.fromCharCode(65 + idx)}`}
+                value={ans.Content}
+                onChange={(e) => handleAnswerChange(e.target.value, idx)}
+              />
+            </Col>
+          </Row>
+        ))}
+      </Radio.Group>
     </Modal>
   );
 };

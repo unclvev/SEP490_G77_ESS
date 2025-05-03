@@ -3,11 +3,11 @@ package com.example.essgrading.Activity.Test;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.util.Log;
 import android.widget.Toast;
-
+import com.example.essgrading.Utils.RetrofitClient;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-
 import com.example.essgrading.API.ApiConfig;
 import com.example.essgrading.API.ApiService;
 import com.example.essgrading.Activity.BaseActivity;
@@ -17,14 +17,12 @@ import com.example.essgrading.Model.ScoreModel;
 import com.example.essgrading.Model.TestModel;
 import com.example.essgrading.R;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
-
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
-
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -65,12 +63,7 @@ public class TestListActivity extends BaseActivity implements SearchHandler {
         SharedPreferences prefs = getSharedPreferences("UserPrefs", MODE_PRIVATE);
         long accId = Long.parseLong(prefs.getString("accId", "0"));
 
-        // Gọi API với Retrofit
-        Retrofit retrofit = new Retrofit.Builder()
-                .baseUrl(ApiConfig.BASE_URL)
-                .addConverterFactory(GsonConverterFactory.create())
-                .build();
-        ApiService apiService = retrofit.create(ApiService.class);
+        ApiService apiService = RetrofitClient.getInstance(this, getString(R.string.base_url)).create(ApiService.class);
         Call<List<TestModel>> call = apiService.getAllExamByAccId(accId);
         call.enqueue(new Callback<List<TestModel>>() {
             @Override
@@ -81,7 +74,7 @@ public class TestListActivity extends BaseActivity implements SearchHandler {
                     SimpleDateFormat inputFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS", Locale.getDefault());
                     SimpleDateFormat outputFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault());
                     for(TestModel test: response.body()){
-                        String formattedDate = test.getDate(); // Giữ nguyên nếu lỗi
+                        String formattedDate = test.getDate();
                         try {
                             Date date = inputFormat.parse(test.getDate());
                             if (date != null) {
@@ -105,7 +98,11 @@ public class TestListActivity extends BaseActivity implements SearchHandler {
 
                     Toast.makeText(TestListActivity.this, "Tải dữ liệu thành công!", Toast.LENGTH_SHORT).show();
                 } else {
-                    Toast.makeText(TestListActivity.this, "Không có dữ liệu hoặc lỗi phản hồi!", Toast.LENGTH_SHORT).show();
+                    Log.d("API_DEBUG", "Code: " + response.code());
+                    Log.d("API_DEBUG", "Body: " + response.body());
+                    Log.d("API_DEBUG", "Message: " + response.message());
+
+                    Toast.makeText(TestListActivity.this, "Thử đăng nhập lại. Không có dữ liệu hoặc lỗi phản hồi!", Toast.LENGTH_SHORT).show();
                 }
             }
 

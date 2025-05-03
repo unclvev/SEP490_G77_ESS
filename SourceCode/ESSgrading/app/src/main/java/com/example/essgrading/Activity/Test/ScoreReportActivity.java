@@ -15,6 +15,7 @@ import com.example.essgrading.Interface.SearchHandler;
 import com.example.essgrading.Model.ScoreModel;
 import com.example.essgrading.R;
 import com.example.essgrading.API.ApiService;
+import com.example.essgrading.Utils.RetrofitClient;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -64,7 +65,7 @@ public class ScoreReportActivity extends BaseActivity implements SearchHandler {
                 .baseUrl(ApiConfig.BASE_URL)
                 .addConverterFactory(GsonConverterFactory.create())
                 .build();
-        ApiService apiService = retrofit.create(ApiService.class);
+        ApiService apiService = RetrofitClient.getInstance(this, getString(R.string.base_url)).create(ApiService.class);
         Call<List<ScoreModel>> call = apiService.getScoreReport(testId);
 
         call.enqueue(new Callback<List<ScoreModel>>() {

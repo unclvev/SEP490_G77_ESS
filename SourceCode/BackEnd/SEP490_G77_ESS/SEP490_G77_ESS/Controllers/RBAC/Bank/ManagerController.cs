@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SEP490_G77_ESS.DTO.RBAC.Bank;
 using SEP490_G77_ESS.Models;
+using SEP490_G77_ESS.Services;
 
 namespace SEP490_G77_ESS.Controllers.RBAC.Bank
 {
@@ -13,10 +14,12 @@ namespace SEP490_G77_ESS.Controllers.RBAC.Bank
     public class ManagerController : ControllerBase
     {
         private readonly EssDbV11Context _context;
+        private readonly EmailService _emailService;
 
-        public ManagerController(EssDbV11Context context)
+        public ManagerController(EssDbV11Context context, EmailService emailService)
         {
             _context = context;
+            _emailService = emailService;
         }
 
         [HttpGet("SearchUserToInvite")]
@@ -51,18 +54,20 @@ namespace SEP490_G77_ESS.Controllers.RBAC.Bank
             {
                 return Unauthorized();
             }
-            var checkOwer = await _context.ResourceAccesses.FirstOrDefaultAsync();
+            var ownerRecord = await _context.ResourceAccesses
+                                    .FirstOrDefaultAsync(r =>
+                                        r.ResourceType == request.Resource.ResourceType &&
+                                        r.ResourceId == request.Resource.ResourceId &&
+                                        r.Accid == long.Parse(claimAccId) &&
+                                        r.IsOwner == true
+                                    );
+            if (ownerRecord == null)
+                return Forbid("Bạn không có quyền mời người dùng cho tài nguyên này.");
 
-            var bank = await _context.Banks.FirstOrDefaultAsync(b => b.BankId == request.Resource.ResourceId);
-            if (bank == null)
-            {
-                return NotFound("Ngân hàng không tồn tại.");
-            }
-
-            
             var existingAccess = await _context.ResourceAccesses
-                                               .FirstOrDefaultAsync(r => r.ResourceId == request.Resource.ResourceId 
-                                                                                         && r.Accid == request.Resource.Accid);
+                                               .FirstOrDefaultAsync(r => r.ResourceType == request.Resource.ResourceType &&
+                                                                                           r.ResourceId == request.Resource.ResourceId && 
+                                                                                           r.Accid == request.Resource.Accid);
 
             if (existingAccess != null)
             {
@@ -92,6 +97,35 @@ namespace SEP490_G77_ESS.Controllers.RBAC.Bank
                 IsOwner = false
             };
 
+            // 5. Lấy thông tin inviter & invited để gửi email
+            var inviterId = long.Parse(claimAccId);
+            var inviter = await _context.Accounts.FindAsync(inviterId);
+            var invitedUser = await _context.Accounts.FindAsync(request.Resource.Accid);
+
+            var invitedBy = inviter?.Email ?? inviterId.ToString();
+            var toEmail = invitedUser?.Email;
+            // Nếu resource là Bank, lấy tên ngân hàng từ DB
+            string resourceName;
+            if (request.Resource.ResourceType == "Bank")
+            {
+                var bank = await _context.Banks.FindAsync(request.Resource.ResourceId);
+                resourceName = bank?.Bankname ?? $"Bank #{request.Resource.ResourceId}";
+            }
+            else
+            {
+                resourceName = $"{request.Resource.ResourceType} #{request.Resource.ResourceId}";
+            }
+
+            // 6. Gọi service gửi mail
+            await _emailService.SendResourceInvitationEmailAsync(
+                toEmail,
+                resourceName,
+                request.AccessRole.RoleName,
+                request.AccessRole.CanModify.GetValueOrDefault(),
+                request.AccessRole.CanDelete.GetValueOrDefault(),
+                invitedBy
+            );
+
             _context.ResourceAccesses.Add(accessRec);
             await _context.SaveChangesAsync();
             return Ok("Người dùng đã được mời thành công.");
@@ -108,13 +142,6 @@ namespace SEP490_G77_ESS.Controllers.RBAC.Bank
             }
 
             long currentUserId = long.Parse(claimAccId);
-           
-            // Kiểm tra xem người dùng có phải là chủ ngân hàng không
-            var bank = await _context.Banks.FirstOrDefaultAsync(b => b.BankId == bankId && b.Accid == currentUserId);
-            if (bank == null)
-            {
-                return Unauthorized("Bạn không có quyền truy cập danh sách mời của ngân hàng này.");
-            }
 
             // Lấy danh sách các người dùng đã được mời vào ngân hàng
             var invitedUsers = await _context.ResourceAccesses
@@ -125,7 +152,8 @@ namespace SEP490_G77_ESS.Controllers.RBAC.Bank
                                                  Username = acc.Username,
                                                  Email = acc.Email,
                                                  Phone = acc.Phone,
-                                                 Role = ra.Role.RoleName,
+                                                 Role = (bool)ra.IsOwner ? "Owner" : ra.Role.RoleName,
+                                                 IsOwner = ra.IsOwner
                                              })
                                              .ToListAsync();
 
