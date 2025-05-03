@@ -323,6 +323,15 @@ public class ScanEssayActivity extends BaseActivity implements SurfaceHolder.Cal
                 Toast.makeText(this, "❌ Không thể xử lý ảnh", LENGTH_SHORT).show();
                 e.printStackTrace();
             }
+        } else {
+            if (camera == null && surfaceHolder != null && surfaceHolder.getSurface().isValid()) {
+                openCamera();
+            } else if (camera != null) {
+                camera.startPreview();
+            }
+            btnDevice.setText("Thiết bị");
+            btnDevice.setEnabled(true);
+            btnStatus.setEnabled(true);
         }
     }
 }
