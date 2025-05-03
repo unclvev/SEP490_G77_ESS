@@ -68,7 +68,8 @@ namespace SEP490_G77_ESS.Controllers.ExamManager
 
                 // Sheet: Thông tin cơ bản
                 var infoSheet = workbook.CreateSheet("Thông tin cơ bản");
-                var scores = results.Select(r => r.Score ?? 0).ToList();
+                var scoredResults = results.Where(r => r.Score != null).ToList();
+                var scores = scoredResults.Select(r => r.Score!.Value).ToList();
                 int total = scores.Count;
                 string avg = total > 0 ? Math.Round(scores.Average(), 2).ToString() : "0";
                 string max = total > 0 ? scores.Max().ToString() : "0";

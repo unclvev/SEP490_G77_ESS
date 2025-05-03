@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+
+    <!-- Trong suốt bên trong -->
+    <solid android:color="@android:color/transparent" />
+
+    <!-- Viền khung crop -->
+    <stroke
+        android:width="2dp"
+        android:color="#FFFFFFFF" />  <!-- Màu trắng, có thể đổi -->
+
+    <!-- Bo góc nếu muốn -->
+    <corners android:radius="4dp" />
+
+    <!-- Padding để nội dung không chạm tới viền -->
+    <padding
+        android:left="4dp"
+        android:top="4dp"
+        android:right="4dp"
+        android:bottom="4dp" />
+</shape>

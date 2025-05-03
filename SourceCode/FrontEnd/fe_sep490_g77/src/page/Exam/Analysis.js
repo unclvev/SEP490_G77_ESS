@@ -41,6 +41,7 @@ const top5Columns = [
 const Analysis = () => {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
+    const [data, setData] = useState([]);
     const [scoreData, setScoreData] = useState([]);
     const [chartData, setChartData] = useState([]);
     const [lineChartData, setLineChartData] = useState([]);
@@ -53,71 +54,119 @@ const Analysis = () => {
 
     useEffect(() => {
       const fetchData = async () => {
-          try {
-              const response = await getExamResults(examId);
-              const data = response.data || [];
-              const rexam = await getExam(examId);
-              const exam = rexam.data || {};
-              
-              // Lọc ra học sinh có điểm (score)
-              const filteredData = data.filter(s => s.score != null && s.score !== undefined && s.score > 0);
-  
-              setScoreData(filteredData);  // Set lại dữ liệu đã lọc
-              setLoading(false);
-              setExamName(exam.examname);
-              setSubjectName(exam.subject);
-              setCreatedate(exam.createdate);
-  
-              // ==== Tính biểu đồ cột (chartData) ====
-              const ranges = ["<3", ">=3 & <6", ">=6 & <7", ">=7 & <8", "8 - 10"];
-              const chartCount = [0, 0, 0, 0, 0];
-              filteredData.forEach(s => {
-                  const score = s.score;
-                  if (score < 3) chartCount[0]++;
-                  else if (score < 6) chartCount[1]++;
-                  else if (score < 7) chartCount[2]++;
-                  else if (score < 8) chartCount[3]++;
-                  else if (score <= 10) chartCount[4]++;
-              });
-              const newChartData = ranges.map((r, i) => ({ range: r, count: chartCount[i] }));
-              setChartData(newChartData);
-      
-              // Tính biểu đồ đường (lineChartData)
-              const scoreMap = {};
-              filteredData.forEach(s => {
-                  const score = s.score;
-                  scoreMap[score] = (scoreMap[score] || 0) + 1;
-              });
-              const lineData = Object.entries(scoreMap)
-                  .map(([score, count]) => ({ score: parseFloat(score), students: count }))
-                  .sort((a, b) => a.score - b.score);
-              setLineChartData(lineData);
-  
-              // ==== Tính thông tin cơ bản ====
-              const scores = filteredData.map((s) => s.score);
-              const total = scores.length;
-              const avg = total > 0 ? (scores.reduce((a, b) => a + b, 0) / total).toFixed(2) : 0;
-              const max = total > 0 ? Math.max(...scores) : 0;
-              const min = total > 0 ? Math.min(...scores) : 0;
-              const over5 = total > 0 ? ((scores.filter(s => s > 5).length / total) * 100).toFixed(2) : 0;
-              const over8 = total > 0 ? ((scores.filter(s => s > 8).length / total) * 100).toFixed(2) : 0;
-              setBasicStats({
-                  total,
-                  avg,
-                  max,
-                  min,
-                  over5,
-                  over8
-              });
-          } catch (error) {
-              toast.error("Lỗi khi lấy danh sách đề thi!");
-              console.error("Error fetching exams:", error);
-          }
+        try {
+          const response = await getExamResults(examId);
+          const data = response.data || [];
+          const rexam = await getExam(examId);
+          const exam = rexam.data || {};
+          
+          // Lọc ra học sinh có điểm khác null (bao gồm cả học sinh có điểm 0)
+          const filteredData = data.filter(s => s.score !== null && s.score !== undefined);
+          setData(data);
+          setScoreData(filteredData);  // Set lại dữ liệu đã lọc
+          setLoading(false);
+          setExamName(exam.examname);
+          setSubjectName(exam.subject);
+          setCreatedate(exam.createdate);
+    
+          // ==== Tính biểu đồ cột (chartData) ====
+          const ranges = ["<3", ">=3 & <6", ">=6 & <7", ">=7 & <8", "8 - 10"];
+          const chartCount = [0, 0, 0, 0, 0];
+          filteredData.forEach(s => {
+            const score = s.score;
+            if (score < 3) chartCount[0]++;
+            else if (score < 6) chartCount[1]++;
+            else if (score < 7) chartCount[2]++;
+            else if (score < 8) chartCount[3]++;
+            else if (score <= 10) chartCount[4]++;
+          });
+          const newChartData = ranges.map((r, i) => ({ range: r, count: chartCount[i] }));
+          setChartData(newChartData);
+    
+          // ==== Tính biểu đồ đường (lineChartData) ====
+          const scoreMap = {};
+          filteredData.forEach(s => {
+            const score = s.score;
+            scoreMap[score] = (scoreMap[score] || 0) + 1;
+          });
+          const lineData = Object.entries(scoreMap)
+            .map(([score, count]) => ({ score: parseFloat(score), students: count }))
+            .sort((a, b) => a.score - b.score);
+          setLineChartData(lineData);
+    
+          // ==== Tính biểu đồ tròn (pieChartData) ====
+          const pieStat = {
+            "Xuất sắc (>=9)": 0,
+            "Giỏi (>=8 & <9)": 0,
+            "Khá (>=6.5 & <8)": 0,
+            "Trung bình (>=5 & <6.5)": 0,
+            "Dưới trung bình (<5)": 0,
+          };
+          filteredData.forEach(s => {
+            const score = s.score;
+            if (score >= 9) pieStat["Xuất sắc (>=9)"]++;
+            else if (score >= 8) pieStat["Giỏi (>=8 & <9)"]++;
+            else if (score >= 6.5) pieStat["Khá (>=6.5 & <8)"]++;
+            else if (score >= 5) pieStat["Trung bình (>=5 & <6.5)"]++;
+            else pieStat["Dưới trung bình (<5)"]++;
+          });
+          const pieData = Object.entries(pieStat).map(([name, value]) => ({ name, value }));
+          setPieChartData(pieData);
+    
+          // ==== Tính thông tin cơ bản ====
+          const scores = filteredData.map((s) => s.score);
+          const total = scores.length;
+          const avg = total > 0 ? (scores.reduce((a, b) => a + b, 0) / total).toFixed(2) : 0;
+          const max = total > 0 ? Math.max(...scores) : 0;
+          const min = total > 0 ? Math.min(...scores) : 0;
+          const over5 = total > 0 ? ((scores.filter(s => s > 5).length / total) * 100).toFixed(2) : 0;
+          const over8 = total > 0 ? ((scores.filter(s => s > 8).length / total) * 100).toFixed(2) : 0;
+          setBasicStats({
+            total,
+            avg,
+            max,
+            min,
+            over5,
+            over8
+          });
+        } catch (error) {
+          toast.error("Lỗi khi lấy danh sách đề thi!");
+          console.error("Error fetching exams:", error);
+        }
       };
-  
+    
       fetchData();
-  }, [examId]);
+    }, [examId]);
+    
+    // Cập nhật logic xếp hạng cho học sinh chưa thi (điểm = null)
+    const rankedData = [...scoreData]
+      .sort((a, b) => b.score - a.score)
+      .map((student, index, arr) => {
+        let rank = index + 1;
+        if (index > 0 && arr[index - 1].score === student.score) {
+          rank = arr[index - 1].rank;  // Đặt xếp hạng giống với học sinh trước nếu điểm giống nhau
+        }
+        return { 
+          ...student, 
+          rank: student.score != null ? rank : "chưa có điểm", 
+          score: student.score != null ? student.score : "chưa thi" // Đổi điểm cho học sinh không có điểm
+        };
+    });
   
+    const listData = [...data]
+    .sort((a, b) => b.score - a.score)
+    .map((student, index, arr) => {
+      let rank = index + 1;
+      if (index > 0 && arr[index - 1].score === student.score) {
+        rank = arr[index - 1].rank;  // Đặt xếp hạng giống với học sinh trước nếu điểm giống nhau
+      }
+      return { 
+        ...student, 
+        rank: student.score != null ? rank : "cập nhật sau", 
+        score: student.score != null ? student.score : "chưa thi" // Đổi điểm cho học sinh không có điểm
+      };
+  });
+
   const handleExportExcel = async () => {
     try {
       const response = await exportExcel(examId);
@@ -146,18 +195,8 @@ const Analysis = () => {
     }
   };  
 
-    const rankedData = [...scoreData]
-    .sort((a, b) => b.score - a.score)
-    .map((student, index, arr) => {
-        let rank = index + 1;
-        if (index > 0 && arr[index - 1].score === student.score) {
-            rank = arr[index - 1].rank;  // Đặt xếp hạng giống với học sinh trước nếu điểm giống nhau
-        }
-        return { ...student, rank: student.score != null ? rank : "chưa có điểm" };
-    });
-
     const handleBackNavigate = () => {
-      navigate("/essay");
+      navigate("/");
     };
 
   return (
@@ -208,7 +247,7 @@ const Analysis = () => {
             <div className="p-4">
                 <Table 
                   columns={columns} 
-                  dataSource={rankedData} 
+                  dataSource={listData} 
                   pagination={false} 
                   rowKey="studentId" 
                 />

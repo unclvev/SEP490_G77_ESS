@@ -29,6 +29,11 @@
                 android:layout_height="match_parent"
                 android:background="@android:color/transparent"
                 android:padding="8dp" />
+
+            <com.example.essgrading.Utils.OverlayView
+                android:id="@+id/overlayView"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
         </FrameLayout>
 
         <LinearLayout

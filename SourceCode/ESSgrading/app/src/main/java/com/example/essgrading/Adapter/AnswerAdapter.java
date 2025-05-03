@@ -27,7 +27,7 @@ public class AnswerAdapter extends RecyclerView.Adapter<AnswerAdapter.AnswerView
 
     @Override
     public void onBindViewHolder(@NonNull AnswerViewHolder holder, int position) {
-        holder.txtQuestionNumber.setText(String.valueOf(position)); // Hiển thị số thứ tự câu hỏi
+        holder.txtQuestionNumber.setText(String.valueOf(position+1)); // Hiển thị số thứ tự câu hỏi
 
         for (int i = 0; i < 4; i++) { // Duyệt qua A, B, C, D
             if (answerData.get(position)[i] == 1) {

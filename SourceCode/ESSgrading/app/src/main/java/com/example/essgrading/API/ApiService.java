@@ -1,6 +1,7 @@
 package com.example.essgrading.API;
 
 import com.example.essgrading.Activity.Authentication.TokenResponse;
+import com.example.essgrading.Model.CorrectAnswer;
 import com.example.essgrading.Model.LoginRequest;
 import com.example.essgrading.Model.LoginResponse;
 import com.example.essgrading.Model.ScoreModel;
@@ -49,4 +50,11 @@ public interface ApiService {
             @Part MultipartBody.Part file,
             @Part("exam_id") RequestBody examIdPart
     );
+
+    @GET("/api/ListExamCode/{examId}/examcodes")
+    Call<List<String>> getExamCodes(@Path("examId") String examId);
+
+    @GET("/api/ListExamCode/{examId}/examcode/{examCode}/correct-answers")
+    Call<List<CorrectAnswer>> getCorrectAnswers(@Path("examId") String examId, @Path("examCode") String examCode);
+
 }

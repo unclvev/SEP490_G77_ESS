@@ -2,6 +2,8 @@ package com.example.essgrading.Activity.Test;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.View;
+import android.widget.AdapterView;
 import android.widget.ImageView;
 import android.widget.Spinner;
 import android.widget.TextView;
@@ -51,7 +53,7 @@ public class ScoreReportActivity extends BaseActivity implements SearchHandler {
         txtAverageScore = findViewById(R.id.txtAverageScore);
         spinnerThreshold = findViewById(R.id.spinnerThreshold);
         recyclerViewScores = findViewById(R.id.recyclerViewScores);
-        ImageView btnFilter = findViewById(R.id.btnFilter);
+        TextView txtThresholdResult = findViewById(R.id.txtThresholdResult);
 
         // Khởi tạo danh sách & Adapter
         scoreList = new ArrayList<>();
@@ -76,24 +78,34 @@ public class ScoreReportActivity extends BaseActivity implements SearchHandler {
                     scoreList.clear();
                     searchScoreList.clear();
 
+                    // Lọc ra những học sinh có điểm
+                    List<ScoreModel> scoredStudents = new ArrayList<>();
+                    for (ScoreModel s : responseList) {
+                        if (s.getScore() != null) {
+                            scoredStudents.add(s);
+                        }
+                    }
+
                     double max = Double.MIN_VALUE;
                     double min = Double.MAX_VALUE;
                     double total = 0;
 
-                    for (ScoreModel score : responseList) {
-                        scoreList.add(score);
-                        max = Math.max(max, score.getScore());
-                        min = Math.min(min, score.getScore());
-                        total += score.getScore();
+                    for (ScoreModel score : scoredStudents) {
+                        double s = Double.parseDouble(score.getScore());
+                        max = Math.max(max, s);
+                        min = Math.min(min, s);
+                        total += s;
                     }
 
-                    double avg = responseList.size() > 0 ? total / responseList.size() : 0;
+                    double avg = scoredStudents.size() > 0 ? total / scoredStudents.size() : 0;
 
-                    txtMaxScore.setText("Cao nhất: " + max);
-                    txtMinScore.setText("Thấp nhất: " + min);
-                    txtAverageScore.setText("Điểm trung bình: " + avg);
+                    txtMaxScore.setText("Cao nhất: " + (scoredStudents.size() > 0 ? max : "N/A"));
+                    txtMinScore.setText("Thấp nhất: " + (scoredStudents.size() > 0 ? min : "N/A"));
+                    txtAverageScore.setText("Điểm trung bình: " + (scoredStudents.size() > 0 ? String.format("%.2f", avg) : "N/A"));
 
-                    searchScoreList.addAll(scoreList); // rất quan trọng
+                    // Thêm tất cả vào danh sách hiển thị
+                    scoreList.addAll(responseList);
+                    searchScoreList.addAll(responseList);
                     scoreAdapter.notifyDataSetChanged();
                 }
             }
@@ -104,6 +116,33 @@ public class ScoreReportActivity extends BaseActivity implements SearchHandler {
                 t.printStackTrace();
             }
         });
+        spinnerThreshold.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                String selected = spinnerThreshold.getSelectedItem().toString(); // ví dụ: "5", "6", ...
+                double threshold = Double.parseDouble(selected);
+
+                // Đếm số học sinh có điểm >= threshold
+                int passedCount = 0;
+                int total = 0;
+                for (ScoreModel s : scoreList) {
+                    if (s.getScore() != null) {
+                        double score = Double.parseDouble(s.getScore());
+                        if (score >= threshold) passedCount++;
+                        total++;
+                    }
+                }
+
+                double percent = total > 0 ? (passedCount * 100.0 / total) : 0;
+                txtThresholdResult.setText(String.format("%.2f%%", percent));
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+                txtThresholdResult.setText("0%");
+            }
+        });
+
     }
 
     // Xử lý sự kiện search text
