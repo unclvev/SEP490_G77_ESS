@@ -43,7 +43,7 @@
             android:exported="true"/>
         <activity android:name=".Activity.Test.TestOptionActivity"
             android:exported="true"/>
-        <activity android:name=".Activity.Test.ScanEssayIn4Activity"
+        <activity android:name=".Activity.Test.ScanEssayActivity"
             android:exported="true"/>
         <activity android:name=".Activity.Test.GradingMCQActivity"
             android:exported="true"/>

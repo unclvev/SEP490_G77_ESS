@@ -71,7 +71,11 @@ namespace SEP490_G77_ESS.Controllers.Common
             {
                 return NotFound(new { message = "Token không hợp lệ" });
             }
-
+            if (account.Userpass == request.NewPassword)
+            {
+                return Conflict("Mật khẩu mới không nên trùng với mật khẩu cũ");
+            }
+            
             account.Userpass = _passwordHandler.HashPassword(request.NewPassword);
             account.PasswordResetToken = null;
 

@@ -428,7 +428,7 @@ namespace SEP490_G77_ESS.Controllers
                 .Where(sh => sectionIds.Contains(sh.AncestorId) || sectionIds.Contains(sh.DescendantId));
             _context.SectionHierarchies.RemoveRange(sectionHierarchies);
 
-            // ✅ Xóa toàn bộ dữ liệu trong BankAccess liên quan đến Bank
+           
 
 
             // ✅ Xóa ngân hàng câu hỏi
@@ -470,6 +470,7 @@ namespace SEP490_G77_ESS.Controllers
         [Authorize]
         public async Task<ActionResult<object>> GenerateQuestionBank(long accid, [FromBody] Bank bank)
         {
+
             var grade = await _context.Grades.FindAsync(bank.GradeId);
             var subject = await _context.Subjects.FindAsync(bank.SubjectId);
             var curriculum = bank.CurriculumId != null ? await _context.Curricula.FindAsync(bank.CurriculumId) : null;
@@ -503,7 +504,6 @@ namespace SEP490_G77_ESS.Controllers
                 ResourceId = newBank.BankId,
                 ResourceType = "Bank",
                 IsOwner = true,
-
 
             };
             _context.ResourceAccesses.Add(owner);
@@ -632,7 +632,6 @@ namespace SEP490_G77_ESS.Controllers
                 children = children
             };
         }
-
 
         // ✅ Lấy danh sách các Khối học
         [HttpGet("grades")]

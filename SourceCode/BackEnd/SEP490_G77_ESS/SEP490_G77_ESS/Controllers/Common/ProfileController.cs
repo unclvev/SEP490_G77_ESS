@@ -101,7 +101,7 @@ namespace SEP490_G77_ESS.Controllers.Common
             }
             if (!long.TryParse(claimAccId, out long accId))
             {
-                return BadRequest("Invalid account id in token.");
+                return BadRequest("Token không hợp lệ");
             }
 
             var account = await _context.Accounts.FirstOrDefaultAsync(a => a.AccId == accId);
@@ -114,6 +114,11 @@ namespace SEP490_G77_ESS.Controllers.Common
             if (!_passwordHandler.VerifyPassword(changePasswordDto.OldPassword, account.Userpass))
             {
                 return BadRequest(new { message = "Mật khẩu cũ không đúng." });
+            }
+            // kiểm tra xem mật khẩu mới có giống mật khẩu cũ 
+            if (_passwordHandler.VerifyPassword(changePasswordDto.NewPassword, account.Userpass))
+            {
+                return BadRequest(new { message = "Mật khẩu mới không được trùng với mật khẩu cũ, vui lòng chọn mật khẩu khác." });
             }
 
             // Kiểm tra mật khẩu mới và xác nhận mật khẩu mới có khớp không

@@ -55,18 +55,19 @@ namespace SEP490_G77_ESS.Controllers.RBAC.Bank
                 return Unauthorized();
             }
             var ownerRecord = await _context.ResourceAccesses
-                .FirstOrDefaultAsync(r =>
-                r.ResourceType == request.Resource.ResourceType &&
-                r.ResourceId == request.Resource.ResourceId &&
-                r.Accid == long.Parse(claimAccId) &&
-                r.IsOwner == true
-                );
+                                    .FirstOrDefaultAsync(r =>
+                                        r.ResourceType == request.Resource.ResourceType &&
+                                        r.ResourceId == request.Resource.ResourceId &&
+                                        r.Accid == long.Parse(claimAccId) &&
+                                        r.IsOwner == true
+                                    );
             if (ownerRecord == null)
                 return Forbid("Bạn không có quyền mời người dùng cho tài nguyên này.");
-            
+
             var existingAccess = await _context.ResourceAccesses
-                                               .FirstOrDefaultAsync(r => r.ResourceId == request.Resource.ResourceId 
-                                                                                         && r.Accid == request.Resource.Accid);
+                                               .FirstOrDefaultAsync(r => r.ResourceType == request.Resource.ResourceType &&
+                                                                                           r.ResourceId == request.Resource.ResourceId && 
+                                                                                           r.Accid == request.Resource.Accid);
 
             if (existingAccess != null)
             {
@@ -141,7 +142,6 @@ namespace SEP490_G77_ESS.Controllers.RBAC.Bank
             }
 
             long currentUserId = long.Parse(claimAccId);
-           
 
             // Lấy danh sách các người dùng đã được mời vào ngân hàng
             var invitedUsers = await _context.ResourceAccesses
@@ -152,7 +152,8 @@ namespace SEP490_G77_ESS.Controllers.RBAC.Bank
                                                  Username = acc.Username,
                                                  Email = acc.Email,
                                                  Phone = acc.Phone,
-                                                 Role = ra.Role.RoleName,
+                                                 Role = (bool)ra.IsOwner ? "Owner" : ra.Role.RoleName,
+                                                 IsOwner = ra.IsOwner
                                              })
                                              .ToListAsync();
 
