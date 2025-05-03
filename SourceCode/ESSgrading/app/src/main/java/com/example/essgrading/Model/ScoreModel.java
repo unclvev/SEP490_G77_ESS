@@ -11,7 +11,7 @@ public class ScoreModel {
     private String studentId;
 
     @SerializedName("score")
-    private double score;
+    private String score;
 
     @SerializedName("examCode")
     private String examCode;
@@ -22,7 +22,7 @@ public class ScoreModel {
     @SerializedName("time")
     private String time;
 
-    public ScoreModel(String studentName, String studentId, double score, String examCode, String className, String time) {
+    public ScoreModel(String studentName, String studentId, String score, String examCode, String className, String time) {
         this.studentName = studentName;
         this.studentId = studentId;
         this.score = score;
@@ -33,7 +33,7 @@ public class ScoreModel {
 
     public String getStudentName() { return studentName; }
     public String getStudentId() { return studentId; }
-    public double getScore() { return score; }
+    public String getScore() { return score; }
     public String getExamCode() { return examCode; }
     public String getClassName() { return className; }
     public String getTime() { return time; }

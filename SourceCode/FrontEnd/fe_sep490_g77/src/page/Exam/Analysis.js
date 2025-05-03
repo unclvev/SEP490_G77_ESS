@@ -1,9 +1,8 @@
 import { LeftOutlined } from "@ant-design/icons";
 import { Button, Card, Table, Tabs } from "antd";
 import { React, useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
-
 import {
   Bar,
   BarChart,
@@ -40,8 +39,9 @@ const top5Columns = [
 ];
 
 const Analysis = () => {
-
+    const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
+    const [data, setData] = useState([]);
     const [scoreData, setScoreData] = useState([]);
     const [chartData, setChartData] = useState([]);
     const [lineChartData, setLineChartData] = useState([]);
@@ -57,21 +57,22 @@ const Analysis = () => {
         try {
           const response = await getExamResults(examId);
           const data = response.data || [];
-          console.log(data[0]);
-          // const rsubject = await getSubjectNameById(data[0].subject);
           const rexam = await getExam(examId);
           const exam = rexam.data || {};
-          setScoreData(data);
+          
+          // Lọc ra học sinh có điểm khác null (bao gồm cả học sinh có điểm 0)
+          const filteredData = data.filter(s => s.score !== null && s.score !== undefined);
+          setData(data);
+          setScoreData(filteredData);  // Set lại dữ liệu đã lọc
           setLoading(false);
           setExamName(exam.examname);
-          // setSubjectName(rsubject.data.subjectName);
           setSubjectName(exam.subject);
           setCreatedate(exam.createdate);
-
+    
           // ==== Tính biểu đồ cột (chartData) ====
           const ranges = ["<3", ">=3 & <6", ">=6 & <7", ">=7 & <8", "8 - 10"];
           const chartCount = [0, 0, 0, 0, 0];
-          data.forEach(s => {
+          filteredData.forEach(s => {
             const score = s.score;
             if (score < 3) chartCount[0]++;
             else if (score < 6) chartCount[1]++;
@@ -82,9 +83,9 @@ const Analysis = () => {
           const newChartData = ranges.map((r, i) => ({ range: r, count: chartCount[i] }));
           setChartData(newChartData);
     
-          // Tính biểu đồ đường (lineChartData)
+          // ==== Tính biểu đồ đường (lineChartData) ====
           const scoreMap = {};
-          data.forEach(s => {
+          filteredData.forEach(s => {
             const score = s.score;
             scoreMap[score] = (scoreMap[score] || 0) + 1;
           });
@@ -92,27 +93,28 @@ const Analysis = () => {
             .map(([score, count]) => ({ score: parseFloat(score), students: count }))
             .sort((a, b) => a.score - b.score);
           setLineChartData(lineData);
+    
           // ==== Tính biểu đồ tròn (pieChartData) ====
           const pieStat = {
             "Xuất sắc (>=9)": 0,
             "Giỏi (>=8 & <9)": 0,
-            "Khá (>=6.5 &  <8)": 0,
+            "Khá (>=6.5 & <8)": 0,
             "Trung bình (>=5 & <6.5)": 0,
             "Dưới trung bình (<5)": 0,
           };
-          data.forEach(s => {
+          filteredData.forEach(s => {
             const score = s.score;
             if (score >= 9) pieStat["Xuất sắc (>=9)"]++;
             else if (score >= 8) pieStat["Giỏi (>=8 & <9)"]++;
-            else if (score >= 6.5) pieStat["Khá (>=6.5 &  <8)"]++;
+            else if (score >= 6.5) pieStat["Khá (>=6.5 & <8)"]++;
             else if (score >= 5) pieStat["Trung bình (>=5 & <6.5)"]++;
             else pieStat["Dưới trung bình (<5)"]++;
           });
           const pieData = Object.entries(pieStat).map(([name, value]) => ({ name, value }));
           setPieChartData(pieData);
-
+    
           // ==== Tính thông tin cơ bản ====
-          const scores = data.map((s) => s.score);
+          const scores = filteredData.map((s) => s.score);
           const total = scores.length;
           const avg = total > 0 ? (scores.reduce((a, b) => a + b, 0) / total).toFixed(2) : 0;
           const max = total > 0 ? Math.max(...scores) : 0;
@@ -134,43 +136,74 @@ const Analysis = () => {
       };
     
       fetchData();
-    }, []);    
-  
-    const handleExportExcel = async () => {
-      try {
-        const response = await exportExcel(examId);
-        if (response.status === 200) {
-          const blob = new Blob([response.data], {
-            type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-          });
-          const link = document.createElement("a");
-          link.href = URL.createObjectURL(blob);
-          link.download = "BangDiem.xlsx";
-          link.click();
-        } else {
-          toast.error("Không thể tải file Excel");
-        }
-      } catch (error) {
-        console.error("Error exporting Excel:", error);
-        toast.error("Lỗi khi xuất file Excel");
-      }
-    };
-
+    }, [examId]);
+    
+    // Cập nhật logic xếp hạng cho học sinh chưa thi (điểm = null)
     const rankedData = [...scoreData]
+      .sort((a, b) => b.score - a.score)
+      .map((student, index, arr) => {
+        let rank = index + 1;
+        if (index > 0 && arr[index - 1].score === student.score) {
+          rank = arr[index - 1].rank;  // Đặt xếp hạng giống với học sinh trước nếu điểm giống nhau
+        }
+        return { 
+          ...student, 
+          rank: student.score != null ? rank : "chưa có điểm", 
+          score: student.score != null ? student.score : "chưa thi" // Đổi điểm cho học sinh không có điểm
+        };
+    });
+  
+    const listData = [...data]
     .sort((a, b) => b.score - a.score)
     .map((student, index, arr) => {
       let rank = index + 1;
       if (index > 0 && arr[index - 1].score === student.score) {
-        rank = index;
+        rank = arr[index - 1].rank;  // Đặt xếp hạng giống với học sinh trước nếu điểm giống nhau
       }
-      return { ...student, rank };
-    });
+      return { 
+        ...student, 
+        rank: student.score != null ? rank : "cập nhật sau", 
+        score: student.score != null ? student.score : "chưa thi" // Đổi điểm cho học sinh không có điểm
+      };
+  });
+
+  const handleExportExcel = async () => {
+    try {
+      const response = await exportExcel(examId);
+  
+      if (response.status === 200) {
+        const blob = new Blob([response.data], {
+          type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = "Bảng điểm "+ examName + ".xlsx";
+        link.click();
+      } else {
+        toast.error("Không thể tải file Excel");
+      }
+    } catch (error) {
+      if (error.response && error.response.data instanceof Blob) {
+        const text = await error.response.data.text();
+        console.error("Lỗi từ backend:", text);
+        toast.error("Lỗi export Excel: " + text);
+      } else {
+        toast.error("Lỗi khi export Excel");
+      }
+  
+      console.error("Error exporting Excel:", error);
+    }
+  };  
+
+    const handleBackNavigate = () => {
+      navigate("/");
+    };
 
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
       {/* Header */}
       <div className="flex items-center mb-4">
-        <LeftOutlined className="text-xl cursor-pointer" />
+        <LeftOutlined className="text-xl cursor-pointer" onClick={handleBackNavigate} />
         <h2 className="text-lg font-semibold ml-3">THỐNG KÊ</h2>
       </div>
 
@@ -214,7 +247,7 @@ const Analysis = () => {
             <div className="p-4">
                 <Table 
                   columns={columns} 
-                  dataSource={rankedData} 
+                  dataSource={listData} 
                   pagination={false} 
                   rowKey="studentId" 
                 />

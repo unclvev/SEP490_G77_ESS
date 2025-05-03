@@ -1,7 +1,6 @@
 package com.example.essgrading.Activity.Test;
 
 import static android.widget.Toast.LENGTH_SHORT;
-
 import android.Manifest;
 import android.os.Handler;
 import android.content.Intent;
@@ -19,24 +18,20 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
-
 import androidx.appcompat.app.AlertDialog;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-
 import com.example.essgrading.API.ApiService;
 import com.example.essgrading.Activity.BaseActivity;
 import com.example.essgrading.R;
 import com.example.essgrading.Utils.CameraHelper;
+import com.example.essgrading.Utils.OverlayView;
 import com.example.essgrading.Utils.RetrofitClient;
-
 import org.json.JSONArray;
 import org.json.JSONObject;
-
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.util.Objects;
-
 import okhttp3.MediaType;
 import okhttp3.MultipartBody;
 import okhttp3.RequestBody;
@@ -58,7 +53,7 @@ public class ScanEssayActivity extends BaseActivity implements SurfaceHolder.Cal
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_scanessayin4);
+        setContentView(R.layout.activity_scanessay);
         setupDrawer();
         setHeaderTitle("Quét thông tin");
 
@@ -71,6 +66,15 @@ public class ScanEssayActivity extends BaseActivity implements SurfaceHolder.Cal
         } else if (Objects.equals(type, "score-a3")) {
             setHeaderTitle("Nhập điểm A3");
         } else setHeaderTitle("Nhập điểm A4");
+        OverlayView overlay = findViewById(R.id.overlayView);
+        float frameRatio;
+        switch (type) {
+            case "info-a3":  frameRatio = 2f/3f;  break;
+            case "score-a3": frameRatio = 1f/2f;  break;
+            default:         frameRatio = 5f/18f; break;
+        }
+        overlay.setRatio(frameRatio);
+
 
         cameraView = findViewById(R.id.cameraPreview);
         btnStatus = findViewById(R.id.btnStatus);
@@ -99,6 +103,35 @@ public class ScanEssayActivity extends BaseActivity implements SurfaceHolder.Cal
         btnDevice.setOnClickListener(v -> openGallery());
     }
 
+    private Bitmap cropToFrame(Bitmap src) {
+        // 1.1) Xác định tỉ lệ height/width
+        float ratio;
+        switch (type) {
+            case "info-a3":    ratio = 2f / 3f;  break;
+            case "score-a3":   ratio = 1f / 2f;  break;
+            default:           ratio = 5f / 18f; break; // info-a4 & score-a4
+        }
+
+        int w = src.getWidth();
+        int h = src.getHeight();
+
+        // 1.2) Tính cropW, cropH sao cho giữ nguyên ratio, nằm giữa ảnh
+        int cropW, cropH;
+        if (h > w * ratio) {
+            cropW = w;
+            cropH = Math.round(w * ratio);
+        } else {
+            cropH = h;
+            cropW = Math.round(h / ratio);
+        }
+
+        int x = (w - cropW) / 2;
+        int y = (h - cropH) / 2;
+
+        // 1.3) Trả về bitmap đã crop
+        return Bitmap.createBitmap(src, x, y, cropW, cropH);
+    }
+
     private void openGallery() {
         Intent intent = new Intent(Intent.ACTION_PICK);
         intent.setType("image/*");
@@ -112,9 +145,9 @@ public class ScanEssayActivity extends BaseActivity implements SurfaceHolder.Cal
                 Bitmap raw = BitmapFactory.decodeByteArray(data, 0, data.length);
                 Matrix matrix = new Matrix();
                 matrix.postRotate(90);
-                Bitmap bmp = Bitmap.createBitmap(raw, 0, 0, raw.getWidth(), raw.getHeight(), matrix, true);
-
-                sendBitmapToApi(bmp);
+                Bitmap rotated = Bitmap.createBitmap(raw, 0, 0, raw.getWidth(), raw.getHeight(), matrix, true);
+                Bitmap cropped = cropToFrame(rotated);
+                sendBitmapToApi(cropped);
 
             } catch (Exception e) {
                 runOnUiThread(() -> handleResult(null, e));
@@ -323,6 +356,15 @@ public class ScanEssayActivity extends BaseActivity implements SurfaceHolder.Cal
                 Toast.makeText(this, "❌ Không thể xử lý ảnh", LENGTH_SHORT).show();
                 e.printStackTrace();
             }
+        } else {
+            if (camera == null && surfaceHolder != null && surfaceHolder.getSurface().isValid()) {
+                openCamera();
+            } else if (camera != null) {
+                camera.startPreview();
+            }
+            btnDevice.setText("Thiết bị");
+            btnDevice.setEnabled(true);
+            btnStatus.setEnabled(true);
         }
     }
 }
