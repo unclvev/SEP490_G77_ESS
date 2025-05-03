@@ -351,42 +351,17 @@ namespace SEP490_G77_ESS.Controllers
 
 
 
-        // ✅ Thêm mới ngân hàng câu hỏi
-        [HttpPost]
-        public async Task<ActionResult<Bank>> CreateBank([FromBody] Bank bank)
-        {
-            if (string.IsNullOrEmpty(bank.Bankname))
-            {
-                return BadRequest(new { message = "Tên ngân hàng câu hỏi không được để trống" });
-            }
-
-            bank.CreateDate = DateTime.Now;
-            _context.Banks.Add(bank);
-            await _context.SaveChangesAsync();
-            // ✅ Tạo quan hệ quyền truy cập cho ngân hàng này
-            var owner = new ResourceAccess
-            {
-                Accid = bank.Accid,
-                ResourceId = bank.BankId,
-                ResourceType = "Bank",
-                IsOwner = true,
-
-            };
-
-
-            return CreatedAtAction(nameof(GetBank), new { id = bank.BankId }, bank);
-        }
 
         // ✅ Cập nhật chỉ Bankname
         [HttpPut("{id}/name")]
-        [Authorize]
+        //[Authorize]
         public async Task<IActionResult> UpdateBankName(long id, [FromBody] Bank bank)
         {
-            var authorizationResult = await _authorizationService.AuthorizeAsync(User, id, "BankModify");
-            if (!authorizationResult.Succeeded)
-            {
-                return Forbid("");
-            }
+            //var authorizationResult = await _authorizationService.AuthorizeAsync(User, id, "BankModify");
+            //if (!authorizationResult.Succeeded)
+            //{
+            //    return Forbid("");
+            //}
 
             if (string.IsNullOrEmpty(bank.Bankname))
             {
@@ -424,11 +399,11 @@ namespace SEP490_G77_ESS.Controllers
         [Authorize]
         public async Task<IActionResult> DeleteBank(long id)
         {
-            var authorizationResult = await _authorizationService.AuthorizeAsync(User, id, "BankDelete");
-            if (!authorizationResult.Succeeded)
-            {
-                return Forbid();
-            }
+            //var authorizationResult = await _authorizationService.AuthorizeAsync(User, id, "BankDelete");
+            //if (!authorizationResult.Succeeded)
+            //{
+            //    return Forbid();
+            //}
             var bank = await _context.Banks
                 .Include(b => b.Sections)
                 .ThenInclude(s => s.Questions)
@@ -504,10 +479,11 @@ namespace SEP490_G77_ESS.Controllers
         [Authorize]
         public async Task<ActionResult<object>> GenerateQuestionBank(long accid, [FromBody] Bank bank)
         {
+
             var grade = await _context.Grades.FindAsync(bank.GradeId);
             var subject = await _context.Subjects.FindAsync(bank.SubjectId);
             var curriculum = bank.CurriculumId != null ? await _context.Curricula.FindAsync(bank.CurriculumId) : null;
-
+           
             if (grade == null || subject == null || (bank.CurriculumId != null && curriculum == null))
             {
                 return BadRequest(new { message = "Không tìm thấy Khối học, Môn học hoặc Chương trình!" });
@@ -531,6 +507,14 @@ namespace SEP490_G77_ESS.Controllers
 
             _context.Banks.Add(newBank);
             await _context.SaveChangesAsync();
+            var owner = new ResourceAccess
+            {
+                Accid = newBank.Accid,
+                ResourceId = newBank.BankId,
+                ResourceType = "Bank",
+                IsOwner = true,
+
+            };
 
             // Get all default sections for this curriculum
             var defaultSections = await _context.DefaultSectionHierarchies

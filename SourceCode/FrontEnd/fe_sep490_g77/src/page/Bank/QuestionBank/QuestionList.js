@@ -14,6 +14,9 @@ import 'katex/dist/katex.min.css';
 import { InlineMath, BlockMath } from 'react-katex';
 import { Modal } from 'antd'; 
 import { useRef } from "react";
+import { exportQuestionsExcel } from '../../../services/api';
+// Đảm bảo đường dẫn đúng
+import { saveAs } from 'file-saver'
 import { getQuestions, getQuestionTypes, getLevels, createQuestion, updateQuestion, deleteQuestion,uploadImageBase64,importQuestionExcel,exportQuestionExcel} from "../../../services/api";
 
 const { TextArea } = Input;
@@ -517,10 +520,18 @@ const saveEditedFormula = () => {
     }
   };
 
-  const handleExportExcel = () => {
-    exportQuestionExcel(sectionId);
+  const handleExportExcel = async () => {
+    const sectionId = 50121; // thay bằng ID thật bạn đang test
+    try {
+      const response = await exportQuestionsExcel(sectionId);
+      const filename = `Questions_Section_${sectionId}.xlsx`;
+      saveAs(response.data, filename);
+    } catch (error) {
+      console.error("Export Excel failed:", error);
+      alert("Export failed. Please try again.");
+    }
   };
-
+  
   const handleImportExcel = async ({ file }) => {
     const formData = new FormData();
     formData.append("file", file);
