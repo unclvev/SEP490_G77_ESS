@@ -60,7 +60,12 @@ const ExamCreation = () => {
       try {
         const sectionId = info.node.key.replace("section-", "");
         const response = await countQExam(sectionId, 1);
-        const levelMapping = { Basic: "easy", Intermediate: "medium", Advanced: "hard" };
+        const levelMapping = {
+          "Thông hiểu": "easy",
+          "Vận dụng": "medium",
+          "Nâng cao": "hard"
+        };
+        
         const questionCounts = response.data.reduce((acc, item) => {
           acc[levelMapping[item.level] || item.level] = item.count || 0;
           return acc;
@@ -113,13 +118,13 @@ const ExamCreation = () => {
       return;
     }
     const proceed = async () => {
-      console.log("aaaa");
       const examStructure = selectedTopics.map((topic) => ({
         sectionId: topic.key.replace("section-", ""),
         easy: topic.levels.easy,
         medium: topic.levels.medium,
         hard: topic.levels.hard,
       }));
+      console.log(examStructure);
       try {
         const response = await createExam(examStructure);
         if (response.data?.examId) {

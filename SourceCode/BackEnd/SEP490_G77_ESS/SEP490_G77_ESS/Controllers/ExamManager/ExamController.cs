@@ -48,6 +48,7 @@ namespace SEP490_G77_ESS.Controllers.ExamManager
                     e.Examdata,
                     e.AccId, // ID người tạo bài thi
                     e.Subject,
+                    e.Grade,
                 })
                 .FirstOrDefaultAsync();
 
@@ -65,6 +66,7 @@ namespace SEP490_G77_ESS.Controllers.ExamManager
                 createdate = exam.Createdate,
                 examdata = exam.Examdata,
                 subject = exam.Subject,
+                grade = exam.Grade,
             });
         }
 
@@ -103,7 +105,7 @@ namespace SEP490_G77_ESS.Controllers.ExamManager
             {
                 ExamId = new Random().Next(1, 1000), // Tạo ID ngẫu nhiên cho exam
                 ExamName = request.Examname ?? "Generated Exam",
-                Questions = new List<DTO.ExamDTO.QuestionDto>()
+                Questions = new List<DTO.ExamDTO.QuestionEDto>()
             };
 
             foreach (var topic in request.GenerateData.Topics)
@@ -134,12 +136,12 @@ namespace SEP490_G77_ESS.Controllers.ExamManager
 
                     foreach (var question in questions)
                     {
-                        var questionDto = new DTO.ExamDTO.QuestionDto
+                        var questionDto = new DTO.ExamDTO.QuestionEDto
                         {
                             QuestionId = question.Quesid,
                             Content = question.Quescontent ?? "No Content",
                             Type = question.Type?.TypeName ?? "Unknown",
-                            Answers = new List<AnswerDto>()
+                            Answers = new List<AnswerEDto>()
                         };
 
                         var correctAnswers = await _context.CorrectAnswers
@@ -149,7 +151,7 @@ namespace SEP490_G77_ESS.Controllers.ExamManager
                         int answerIndex = 1;
                         foreach (var answer in correctAnswers)
                         {
-                            questionDto.Answers.Add(new AnswerDto
+                            questionDto.Answers.Add(new AnswerEDto
                             {
                                 AnswerId = answer.AnsId,
                                 Content = answer.Content ?? "No Answer",
@@ -161,7 +163,7 @@ namespace SEP490_G77_ESS.Controllers.ExamManager
                         // Thêm các câu sai (giả định)
                         while (questionDto.Answers.Count < 3) // Đảm bảo có ít nhất 3 đáp án
                         {
-                            questionDto.Answers.Add(new AnswerDto
+                            questionDto.Answers.Add(new AnswerEDto
                             {
                                 AnswerId = new Random().Next(1000, 9999),
                                 Content = "Wrong Answer " + answerIndex,

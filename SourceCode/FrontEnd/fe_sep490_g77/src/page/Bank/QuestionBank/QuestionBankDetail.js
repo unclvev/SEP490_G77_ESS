@@ -54,14 +54,14 @@ const QuestionBankDetail = () => {
     }
   }, [bankId]);
 
-  const fetchIsOwner =  async () => {
-    try{
+  const fetchIsOwner = async () => {
+    try {
       const response = await checkIsOwner(bankId);
       setIsOwner(response.data.isOwner);
-    } catch (error){
+    } catch (error) {
       toast.error("Không kiểm tra được chủ ngân hàng");
     }
-  }
+  };
 
   /** ✅ Lấy thông tin ngân hàng câu hỏi */
   const fetchBankInfo = async () => {
@@ -130,7 +130,14 @@ const QuestionBankDetail = () => {
       setIsModalVisible(false);
       setSectionName("");
     } catch (error) {
-      toast.error("Lỗi khi cập nhật section!");
+      if (
+        error.response?.status === 403 ||
+        error.response?.data?.message?.includes("Forbid")
+      ) {
+        toast.error("Bạn không có quyền sửa phần này");
+      } else {
+        toast.error("Lỗi khi sửa học phần!");
+      }
     }
   };
 
@@ -141,7 +148,14 @@ const QuestionBankDetail = () => {
       fetchSections();
       toast.success("Xóa section thành công!");
     } catch (error) {
-      toast.error("Lỗi khi xóa section!");
+      if (
+        error.response?.status === 403 ||
+        error.response?.data?.message?.includes("Forbid")
+      ) {
+        toast.error("Bạn không có quyền xóa phần này");
+      } else {
+        toast.error("Lỗi khi xóa học phần!");
+      }
     }
   };
 
@@ -216,13 +230,11 @@ const QuestionBankDetail = () => {
       <div className="bg-white p-6 shadow-md rounded-lg mb-6 w-3/4 mx-auto">
         {bankInfo ? (
           <>
-            <h1 className="text-2xl font-bold mb-2">
-               {bankInfo.bankname}
-            </h1>
+            <h1 className="text-2xl font-bold mb-2">{bankInfo.bankname}</h1>
             <p className="text-gray-600">Khối: {bankInfo.grade}</p>
             <p className="text-gray-600">Môn: {bankInfo.subject}</p>
             <p className="text-gray-600 font-semibold">
-              Tổng số câu hỏi:{" "} 
+              Tổng số câu hỏi:{" "}
               <span className="text-blue-600">
                 {bankInfo.totalquestion !== undefined
                   ? bankInfo.totalquestion
@@ -247,7 +259,7 @@ const QuestionBankDetail = () => {
           type="primary"
           icon={<UserAddOutlined />}
           onClick={() => setInviteModalVisible(true)}
-          disabled = {!isOwner}
+          disabled={!isOwner}
         >
           Mời Người Dùng
         </Button>

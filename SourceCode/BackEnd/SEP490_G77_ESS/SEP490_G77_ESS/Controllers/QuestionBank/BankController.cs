@@ -936,7 +936,7 @@ namespace SEP490_G77_ESS.Controllers
             if (section == null)
                 return NotFound(new { message = "Không tìm thấy section" });
 
-            var authorizationResult = await _authorizationService.AuthorizeAsync(User, section.BankId, "BankModify");
+            var authorizationResult = await _authorizationService.AuthorizeAsync(User, section.BankId, "BankDelete");
             if (!authorizationResult.Succeeded)
             {
                 return Forbid();

@@ -623,7 +623,14 @@ const QuestionList = () => {
       toast.success("Xóa câu hỏi thành công!");
       fetchQuestions();
     } catch (error) {
-      toast.error("Lỗi khi xóa câu hỏi!");
+      if (
+        error.response?.status === 403 ||
+        error.response?.data?.message?.includes("Forbid")
+      ) {
+        toast.error("Bạn không có quyền xóa câu hỏi");
+      } else {
+        toast.error("Lỗi khi xóa câu hỏi!");
+      }
     }
   };
 
@@ -633,19 +640,22 @@ const QuestionList = () => {
       const blob = new Blob([res.data], {
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       });
-  
+
       // Tạo tên file đẹp với ngày tháng năm và thời gian
       const date = new Date();
       const formattedDate = `${date.getFullYear()}${(date.getMonth() + 1)
         .toString()
         .padStart(2, "0")}${date.getDate().toString().padStart(2, "0")}`;
-      const formattedTime = `${date.getHours().toString().padStart(2, "0")}${date
-        .getMinutes()
+      const formattedTime = `${date
+        .getHours()
         .toString()
-        .padStart(2, "0")}${date.getSeconds().toString().padStart(2, "0")}`;
-  
+        .padStart(2, "0")}${date.getMinutes().toString().padStart(2, "0")}${date
+        .getSeconds()
+        .toString()
+        .padStart(2, "0")}`;
+
       const fileName = `expq_${formattedDate}_${formattedTime}_section_${sectionId}.xlsx`;
-  
+
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
@@ -658,40 +668,39 @@ const QuestionList = () => {
       console.error("Export Excel failed:", error);
     }
   };
-  
 
   const handleImportExcel = async ({ file }) => {
     const formData = new FormData();
     formData.append("file", file);
-  
+
     try {
       const response = await importQuestionExcel(sectionId, formData);
-  
+
       if (response.status === 200) {
         const { message, errors } = response.data;
-  
+
         toast.success(message);
-  
+
         // Kiểm tra và hiển thị lỗi cụ thể nếu có
         if (errors && errors.length > 0) {
           errors.forEach((errorDetail, index) => {
             toast.error(`Lỗi dòng ${index + 1}: ${errorDetail}`, {
-              autoClose: false // không tự động tắt, người dùng phải đóng tay
+              autoClose: false, // không tự động tắt, người dùng phải đóng tay
             });
           });
         }
-  
+
         await fetchQuestions();
       } else {
         toast.error("❌ Import không thành công, vui lòng thử lại!");
       }
     } catch (error) {
       toast.error(error.response?.data?.message || "❌ Lỗi khi import Excel!");
-      
+
       if (error.response?.data?.errors) {
         error.response.data.errors.forEach((errorDetail, index) => {
           toast.error(`Lỗi dòng ${index + 1}: ${errorDetail}`, {
-            autoClose: false
+            autoClose: false,
           });
         });
       }
