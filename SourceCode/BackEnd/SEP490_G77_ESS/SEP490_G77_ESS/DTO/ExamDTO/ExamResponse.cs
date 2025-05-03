@@ -4,18 +4,18 @@
     {
         public long ExamId { get; set; }
         public string ExamName { get; set; } = string.Empty;
-        public List<QuestionDto> Questions { get; set; } = new();
+        public List<QuestionEDto> Questions { get; set; } = new();
     }
 
-    public class QuestionDto
+    public class QuestionEDto
     {
         public long QuestionId { get; set; }
         public string Content { get; set; } = string.Empty;
         public string Type { get; set; } = string.Empty;
-        public List<AnswerDto> Answers { get; set; } = new();
+        public List<AnswerEDto> Answers { get; set; } = new();
     }
 
-    public class AnswerDto
+    public class AnswerEDto
     {
         public long AnswerId { get; set; }
         public string Content { get; set; } = string.Empty;

@@ -1,21 +1,21 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { useSelector } from 'react-redux';
-import { jwtDecode } from 'jwt-decode';
-import { Form, Input, Select, Button, Avatar } from 'antd';
-import { UserOutlined } from '@ant-design/icons';
-import { toast } from 'react-toastify';
-import { getProfile, updateProfile, changePassword } from '../../services/api';
+import React, { useState, useRef, useEffect } from "react";
+import { useSelector } from "react-redux";
+import { jwtDecode } from "jwt-decode";
+import { Form, Input, Select, Button, Avatar } from "antd";
+import { UserOutlined } from "@ant-design/icons";
+import { toast } from "react-toastify";
+import { getProfile, updateProfile, changePassword } from "../../services/api";
 
 const { Option } = Select;
 
 const ProfilePage = () => {
   const [form] = Form.useForm();
   const [passwordForm] = Form.useForm();
-  const [avatarUrl, setAvatarUrl] = useState('https://via.placeholder.com/150');
+  const [avatarUrl, setAvatarUrl] = useState();
   const [userInfo, setUserInfo] = useState({
     accid: null,
-    accname: '',
-    email: ''
+    accname: "",
+    email: "",
   });
   const fileInputRef = useRef(null);
 
@@ -25,14 +25,22 @@ const ProfilePage = () => {
   useEffect(() => {
     if (token) {
       try {
-        const decoded = jwtDecode(token);
+        const decoded = jwtDecode(token.token);
         setUserInfo({
-          accid: decoded.AccId || null,
-          accname: decoded.AccName || '',
-          email: decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'] || ''
+          accid: decoded.AccId,
+          accname: decoded.AccName,
+          email:
+            decoded[
+              "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"
+            ],
         });
+        const email =
+          decoded[
+            "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"
+          ];
+        setAvatarUrl(`https://api.dicebear.com/6.x/initials/svg?seed=${email}`);
       } catch (error) {
-        console.error('Invalid token', error);
+        console.error("Invalid token", error);
       }
     }
   }, [token]);
@@ -54,14 +62,14 @@ const ProfilePage = () => {
           setAvatarUrl(profile.avatarUrl);
         }
         // Update user info with profile data
-        setUserInfo(prev => ({
+        setUserInfo((prev) => ({
           ...prev,
           accname: profile.accname || prev.accname,
-          email: profile.email || prev.email
+          email: profile.email || prev.email,
         }));
       })
       .catch(() => {
-        toast.error('Không thể tải thông tin người dùng!');
+        toast.error("Không thể tải thông tin người dùng!");
       });
   }, [form]);
 
@@ -69,10 +77,10 @@ const ProfilePage = () => {
     const payload = { ...values, avatarUrl };
     try {
       await updateProfile(payload);
-      toast.success('Cập nhật thông tin thành công!');
+      toast.success("Cập nhật thông tin thành công!");
     } catch (error) {
       const errMsg =
-        error.response?.data?.message || 'Cập nhật thông tin thất bại!';
+        error.response?.data?.message || "Cập nhật thông tin thất bại!";
       toast.error(errMsg);
     }
   };
@@ -80,11 +88,10 @@ const ProfilePage = () => {
   const handleChangePassword = async (values) => {
     try {
       await changePassword(values);
-      toast.success('Đổi mật khẩu thành công!');
+      toast.success("Đổi mật khẩu thành công!");
       passwordForm.resetFields();
     } catch (error) {
-      const errMsg =
-        error.response?.data?.message || 'Đổi mật khẩu thất bại!';
+      const errMsg = error.response?.data?.message || "Đổi mật khẩu thất bại!";
       toast.error(errMsg);
     }
   };
@@ -114,27 +121,28 @@ const ProfilePage = () => {
             icon={<UserOutlined />}
             src={avatarUrl}
             className="mr-4 cursor-pointer"
-            onClick={handleAvatarClick}
+            //onClick={handleAvatarClick}
           />
-          <input
+          {/* <input
             type="file"
             accept="image/*"
             ref={fileInputRef}
             onChange={handleFileChange}
             style={{ display: 'none' }}
-          />
+          /> */}
           <div>
             <h2 className="text-xl font-semibold mb-0">
-              {userInfo.accname || 'Tên người dùng'}
+              {userInfo.accname || "Tên người dùng"}
             </h2>
             <p className="text-sm text-gray-600">
-              {userInfo.email || 'Email người dùng'}
+              {userInfo.email || "Email người dùng"}
             </p>
             {userInfo.accid && (
-              <p className="text-xs text-gray-500">Mã tài khoản: {userInfo.accid}</p>
+              <p className="text-xs text-gray-500">
+                Mã tài khoản: {userInfo.accid}
+              </p>
             )}
           </div>
-
         </div>
         {/* <Button type="primary" className="rounded-full px-6">
           Thay đổi
@@ -186,7 +194,6 @@ const ProfilePage = () => {
             </Button>
           </div>
         </Form>
-
       </div>
 
       <div className="mt-10">
@@ -200,7 +207,7 @@ const ProfilePage = () => {
           <Form.Item
             label="Mật khẩu cũ"
             name="oldPassword"
-            rules={[{ required: true, message: 'Vui lòng nhập mật khẩu cũ' }]}
+            rules={[{ required: true, message: "Vui lòng nhập mật khẩu cũ" }]}
           >
             <Input.Password placeholder="Nhập mật khẩu cũ" />
           </Form.Item>
@@ -208,7 +215,20 @@ const ProfilePage = () => {
           <Form.Item
             label="Mật khẩu mới"
             name="newPassword"
-            rules={[{ required: true, message: 'Vui lòng nhập mật khẩu mới' }]}
+            dependencies={["oldPassword"]}
+            rules={[
+              { required: true, message: "Vui lòng nhập mật khẩu mới" },
+              ({ getFieldValue }) => ({
+                validator(_, value) {
+                  if (!value || getFieldValue("oldPassword") !== value) {
+                    return Promise.resolve();
+                  }
+                  return Promise.reject(
+                    new Error("Mật khẩu mới không được trùng với mật khẩu cũ!")
+                  );
+                },
+              }),
+            ]}
           >
             <Input.Password placeholder="Nhập mật khẩu mới" />
           </Form.Item>
@@ -216,17 +236,17 @@ const ProfilePage = () => {
           <Form.Item
             label="Nhập lại mật khẩu mới"
             name="confirmNewPassword"
-            dependencies={['newPassword']}
+            dependencies={["newPassword"]}
             hasFeedback
             rules={[
-              { required: true, message: 'Vui lòng nhập lại mật khẩu mới' },
+              { required: true, message: "Vui lòng nhập lại mật khẩu mới" },
               ({ getFieldValue }) => ({
                 validator(_, value) {
-                  if (!value || getFieldValue('newPassword') === value) {
+                  if (!value || getFieldValue("newPassword") === value) {
                     return Promise.resolve();
                   }
                   return Promise.reject(
-                    new Error('Mật khẩu nhập lại không trùng khớp!')
+                    new Error("Mật khẩu nhập lại không trùng khớp!")
                   );
                 },
               }),

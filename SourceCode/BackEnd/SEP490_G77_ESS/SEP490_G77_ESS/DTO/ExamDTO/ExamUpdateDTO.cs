@@ -2,33 +2,35 @@
 {
     public class ExamUpdateDTO
     {
-        public ExamInfoDTO Exam { get; set; }
-        public ExamDataDetailDTO Examdata { get; set; }
+        public ExamMetaData Exam { get; set; }
+        public List<ExamCodeGroup> ExamCodes { get; set; }
     }
 
-    public class ExamInfoDTO
+    public class ExamMetaData
     {
         public string ExamName { get; set; }
         public string Grade { get; set; }
         public string Subject { get; set; }
     }
 
-    public class ExamDataDetailDTO
+    public class ExamCodeGroup
     {
-        public List<QuestionDTO> Questions { get; set; } = new List<QuestionDTO>();
+        public string ExamCode { get; set; }
+        public List<QuestionUDto> Questions { get; set; }
     }
 
-    public class QuestionUDTO
+    public class QuestionUDto
     {
         public long QuestionId { get; set; }
         public string Content { get; set; }
         public string Type { get; set; }
-        public List<AnswerDTO> Answers { get; set; } = new List<AnswerDTO>();
+        public string ImageUrl { get; set; }
+        public List<AnswerUDto> Answers { get; set; }
     }
 
-    public class AnswerUDTO
+    public class AnswerUDto
     {
-        public long AnswerId { get; set; }
+        public int AnswerId { get; set; }
         public string Content { get; set; }
         public bool IsCorrect { get; set; }
     }

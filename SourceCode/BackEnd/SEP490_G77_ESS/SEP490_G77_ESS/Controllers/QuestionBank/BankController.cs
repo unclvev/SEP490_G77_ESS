@@ -8,6 +8,8 @@ using SEP490_G77_ESS.Models;
 using SEP490_G77_ESS.DTO.BankdDTO;
 using ClosedXML.Excel;
 using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
+using MathNet.Numerics.Distributions;
 
 namespace SEP490_G77_ESS.Controllers
 {
@@ -25,49 +27,74 @@ namespace SEP490_G77_ESS.Controllers
             _authorizationService = authorizationService;
         }
 
-        // ✅ Lấy danh sách ngân hàng câu hỏi
-        [HttpGet("account/{accid}")]
-        public async Task<ActionResult<IEnumerable<object>>> GetBanksByAccount(
-    long accid,
-    [FromQuery] string query = "",
-    [FromQuery] string grade = "",
-    [FromQuery] string subject = "",
-    [FromQuery] string curriculum = "")
+        private async Task<long?> GetAccIdFromToken()
         {
-            // 1. Xác định danh sách bankId được share cho user này (IsOwner hoặc CanRead)
-            var sharedBankIds = _context.ResourceAccesses
-                .Where(ra =>
-                    ra.Accid == accid &&
-                    ra.ResourceType == "Bank" &&
-                    // bạn có thể check sử dụng Include + ra.Role.CanRead nếu cần
-                    (ra.IsOwner == true || ra.Role.CanRead == true)
-                )
-                .Select(ra => ra.ResourceId);
+            var email = User.FindFirst(ClaimTypes.Email)?.Value;
+            var account = await _context.Accounts.FirstOrDefaultAsync(a => a.Email == email);
+            return account?.AccId;
+        }
 
-            // 2. Build query: lấy tất cả Bank mà accid == userId (owner) OR nằm trong sharedBankIds
+        // ✅ Lấy danh sách ngân hàng do chính user tạo
+        [HttpGet("account/{accid}")]
+        public async Task<ActionResult<IEnumerable<object>>> GetBanksByAccount(long accid)
+        {
+            // 1. Lấy tất cả Bank mà accid == userId (chỉ owner)
             var banksQuery = _context.Banks
-                .Where(b =>
-                    b.Accid == accid ||
-                    sharedBankIds.Contains(b.BankId)
-                )
+                .Where(b => b.Accid == accid)
                 .Include(b => b.Grade)
                 .Include(b => b.Subject)
                 .Include(b => b.Curriculum)
                 .Include(b => b.Sections)
                 .AsQueryable();
 
-            // 3. Áp filter search như cũ
-            if (!string.IsNullOrEmpty(query))
-                banksQuery = banksQuery.Where(b => b.Bankname.Contains(query));
+            // 3. Project kết quả và trả về
+            var banks = await banksQuery
+                .OrderByDescending(b => b.CreateDate)
+                .Select(b => new
+                {
+                    b.BankId,
+                    b.Bankname,
+                    TotalQuestion = _context.Questions
+                        .Count(q => q.Secid != null && b.Sections.Any(s => s.Secid == q.Secid)),
+                    b.CreateDate,
+                    Grade = b.Grade != null ? b.Grade.GradeLevel : "Không xác định",
+                    Subject = b.Subject != null ? b.Subject.SubjectName : "Không xác định",
+                    Curriculum = b.Curriculum != null ? b.Curriculum.CurriculumName : "Không xác định"
+                })
+                .ToListAsync();
 
-            if (!string.IsNullOrEmpty(grade))
-                banksQuery = banksQuery.Where(b => b.Grade.GradeLevel == grade);
+            return Ok(banks);
+        }
 
-            if (!string.IsNullOrEmpty(subject))
-                banksQuery = banksQuery.Where(b => b.Subject.SubjectName.Contains(subject));
 
-            if (!string.IsNullOrEmpty(curriculum))
-                banksQuery = banksQuery.Where(b => b.Curriculum.CurriculumName.Contains(curriculum));
+        // ✅ Lấy danh sách ngân hàng được share bởi người khác (chỉ CanRead, không bao gồm owner)
+        [HttpGet("account/shared")]
+        public async Task<ActionResult<IEnumerable<object>>> GetBanksSharedWithAccount()
+        {
+
+            var accId = await GetAccIdFromToken();
+            if (accId == null)
+                return Unauthorized(new { message = "Không thể xác định tài khoản." });
+            // 1. Xác định danh sách bankId được share với user này (IsOwner == false && Role.CanRead == true)
+            var sharedBankIds = _context.ResourceAccesses
+                .Include(ra => ra.Role)
+                .Where(ra =>
+                    ra.Accid == accId &&
+                    ra.ResourceType == "Bank" &&
+                    ra.IsOwner == false &&
+                    ra.Role.CanRead == true
+                )
+                .Select(ra => ra.ResourceId);
+
+            // 2. Lấy tất cả Bank mà bankId nằm trong sharedBankIds
+            var banksQuery = _context.Banks
+                .Where(b => sharedBankIds.Contains(b.BankId))
+                .Include(b => b.Grade)
+                .Include(b => b.Subject)
+                .Include(b => b.Curriculum)
+                .Include(b => b.Sections)
+                .AsQueryable();
+
 
             // 4. Project kết quả và trả về
             var banks = await banksQuery
@@ -88,115 +115,68 @@ namespace SEP490_G77_ESS.Controllers
             return Ok(banks);
         }
 
+
         [HttpGet("default-banks")]
-        public async Task<IActionResult> GetDefaultBanks(
-            [FromQuery] string grade = "",
-            [FromQuery] string subject = "",
-            [FromQuery] string curriculum = "")
+        public async Task<IActionResult> GetDefaultBanks()
         {
-            var banksQuery = _context.DefaultSectionHierarchies
-                .Include(d => d.Grade)
-                .Include(d => d.Subject)
-                .Include(d => d.Curriculum)
+            // 1.Lấy tất cả Bank mà accid == userId(chỉ owner)
+            var banksQuery = _context.Banks
+                .Where(b => b.Accid == null)
+                .Include(b => b.Grade)
+                .Include(b => b.Subject)
+                .Include(b => b.Curriculum)
+                .Include(b => b.Sections)
                 .AsQueryable();
 
-            if (!string.IsNullOrEmpty(grade))
-                banksQuery = banksQuery.Where(d => d.Grade.GradeLevel == grade);
-            if (!string.IsNullOrEmpty(subject))
-                banksQuery = banksQuery.Where(d => d.Subject.SubjectName.Contains(subject));
-            if (!string.IsNullOrEmpty(curriculum))
-                banksQuery = banksQuery.Where(d => d.Curriculum.CurriculumName.Contains(curriculum));
-
-            // Get the basic bank information first
-            var banks = await banksQuery.ToListAsync();
-
-            // Create a list to hold our final result
-            var result = new List<object>();
-
-            // Process each bank individually
-            foreach (var bank in banks)
-            {
-                try
+            // 3. Project kết quả và trả về
+            var banks = await banksQuery
+                .OrderByDescending(b => b.CreateDate)
+                .Select(b => new
                 {
-                    // Get all section IDs for this bank's curriculum
-                    var sectionIds = await _context.DefaultSectionHierarchies
-                        .Where(s => s.CurriculumId == bank.CurriculumId)
-                        .Select(s => s.DfSectionId)
-                        .ToListAsync();
+                    b.BankId,
+                    b.Bankname,
+                    TotalQuestion = _context.Questions
+                        .Count(q => q.Secid != null && b.Sections.Any(s => s.Secid == q.Secid)),
+                    b.CreateDate,
+                    Grade = b.Grade != null ? b.Grade.GradeLevel : "Không xác định",
+                    Subject = b.Subject != null ? b.Subject.SubjectName : "Không xác định",
+                    Curriculum = b.Curriculum != null ? b.Curriculum.CurriculumName : "Không xác định"
+                })
+                .ToListAsync();
 
-                    // Count questions using the same logic as in GetDefaultBank
-                    var questionCount = await _context.Questions
-                        .Where(q => q.DfSectionId.HasValue && sectionIds.Contains(q.DfSectionId.Value))
-                        .CountAsync();
-
-                    // Add to result with all fields explicitly set
-                    result.Add(new
-                    {
-                        BankId = bank.DfSectionId,
-                        BankName = $"{bank.Subject.SubjectName}-{bank.Grade.GradeLevel}",
-                        Grade = bank.Grade.GradeLevel,
-                        Subject = bank.Subject.SubjectName,
-                        Curriculum = bank.Curriculum.CurriculumName,
-                        TotalQuestion = questionCount
-                    });
-                }
-                catch (Exception ex)
-                {
-                    // Log the exception but continue processing other banks
-                    Console.WriteLine($"Error processing bank {bank.DfSectionId}: {ex.Message}");
-                }
-            }
-
-            return Ok(result);
+            return Ok(banks);
         }
-
-
-
-
-
-
 
 
         [HttpGet("default/{id}")]
         public async Task<ActionResult<object>> GetDefaultBank(long id)
         {
-            // ✅ Lấy thông tin ngân hàng dựa trên `id`
-            var bankInfo = await _context.DefaultSectionHierarchies
-                .Include(d => d.Grade)
-                .Include(d => d.Subject)
-                .Include(d => d.Curriculum)
-                .Where(d => d.DfSectionId == id)
+            var bank = await _context.Banks
+                .Include(b => b.Sections)
+                .Where(b => b.BankId == id)
+                .Select(b => new
+                {
+                    b.BankId,
+                    b.Bankname,
+                    Totalquestion = _context.Questions
+                        .Where(q => q.Secid != null && b.Sections.Select(s => s.Secid).Contains(q.Secid.Value))
+                        .Count(), // ✅ Không lấy giá trị từ DB mà tính toán lại
+                    b.CreateDate,
+                    Grade = b.Grade != null ? b.Grade.GradeLevel : "Không xác định",
+                    Subject = b.Subject != null ? b.Subject.SubjectName : "Không xác định",
+                    Sections = b.Sections.Select(s => new
+                    {
+                        s.Secid,
+                        s.Secname,
+                        QuestionCount = _context.Questions.Count(q => q.Secid == s.Secid) // ✅ Đếm số câu hỏi trong từng section
+                    }).ToList()
+                })
                 .FirstOrDefaultAsync();
 
-            if (bankInfo == null)
+            if (bank == null)
             {
                 return NotFound(new { message = "Không tìm thấy ngân hàng câu hỏi" });
             }
-
-            // ✅ Lấy `curriculum_id` của ngân hàng này
-            var curriculumId = bankInfo.CurriculumId;
-
-            // ✅ Lấy tất cả `df_section_id` thuộc curriculum này
-            var sectionIds = await _context.DefaultSectionHierarchies
-                .Where(s => s.CurriculumId == curriculumId)
-                .Select(s => s.DfSectionId)
-                .ToListAsync();
-
-            // ✅ Tính tổng số câu hỏi của tất cả sections trong ngân hàng
-            var totalQuestions = await _context.Questions
-                .Where(q => q.DfSectionId.HasValue && sectionIds.Contains(q.DfSectionId.Value))
-                .CountAsync();
-
-            // ✅ Trả về dữ liệu đúng
-            var bank = new
-            {
-                BankId = bankInfo.DfSectionId,
-                BankName = $"{bankInfo.Subject.SubjectName} - {bankInfo.Grade.GradeLevel}",
-                Grade = bankInfo.Grade.GradeLevel,
-                Subject = bankInfo.Subject.SubjectName,
-                Curriculum = bankInfo.Curriculum.CurriculumName,
-                TotalQuestion = totalQuestions // 🟢 Giá trị chính xác
-            };
 
             return Ok(bank);
         }
@@ -205,44 +185,61 @@ namespace SEP490_G77_ESS.Controllers
         [HttpGet("default/{bankId}/sections")]
         public async Task<ActionResult<IEnumerable<object>>> GetDefaultSectionsByBankId(long bankId)
         {
-            var curriculumId = await _context.DefaultSectionHierarchies
-                .Where(d => d.DfSectionId == bankId)
-                .Select(d => d.CurriculumId)
-                .FirstOrDefaultAsync();
+            // 1. Kiểm tra tồn tại bank
+            var bank = await _context.Banks.FindAsync(bankId);
+            if (bank == null)
+                return NotFound(new { message = "Không tìm thấy ngân hàng câu hỏi" });
 
-            if (curriculumId == null)
+            // 2. Lấy tất cả sections của bank
+            var sections = await _context.Sections
+                .Where(s => s.BankId == bankId)
+                .ToListAsync();
+            if (!sections.Any())
+                return Ok(new List<object>());
+
+            // 3. Chuẩn bị tập ID của sections
+            var sectionIds = sections.Select(s => s.Secid).ToHashSet();
+
+            // 4. Lấy tất cả hierarchy liên quan
+            var sectionHierarchies = await _context.SectionHierarchies
+                .Where(sh => sectionIds.Contains(sh.AncestorId)
+                          && sectionIds.Contains(sh.DescendantId))
+                .ToListAsync();
+
+            // 5. Đếm số câu hỏi theo section
+            var questionCounts = await _context.Questions
+                .Where(q => q.Secid.HasValue && sectionIds.Contains(q.Secid.Value))
+                .GroupBy(q => q.Secid.Value)
+                .Select(g => new { SectionId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.SectionId, x => x.Count);
+
+            // 6. Xác định root sections
+            List<Section> rootSections;
+            if (sectionHierarchies.Any())
             {
-                return NotFound(new { message = "Không tìm thấy curriculum cho bank này!" });
+                // các descendant thực sự (depth > 0)
+                var descendantIds = sectionHierarchies
+                    .Where(h => h.AncestorId != h.DescendantId)
+                    .Select(h => h.DescendantId)
+                    .ToHashSet();
+
+                // các self-hierarchy depth=0 mà không phải là descendant của ai khác
+                rootSections = sectionHierarchies
+                    .Where(h => h.AncestorId == h.DescendantId && h.Depth == 0
+                             && !descendantIds.Contains(h.DescendantId))
+                    .Select(h => sections.First(s => s.Secid == h.AncestorId))
+                    .Distinct()
+                    .ToList();
+            }
+            else
+            {
+                // fallback: nếu chưa có hierarchy, lấy toàn bộ
+                rootSections = sections;
             }
 
-            var sections = await _context.DefaultSectionHierarchies
-                .Where(s => s.CurriculumId == curriculumId)
-                .ToListAsync();
-
-            var hierarchyRelations = await _context.DefaultSectionHierarchies
-                .Where(s => s.AncestorId != null && s.DescendantId != null && s.AncestorId != s.DescendantId)
-                .ToListAsync();
-
-            var descendantIds = hierarchyRelations.Select(h => h.DescendantId.Value).ToHashSet();
-
-            var rootSections = sections
-                .Where(s => (s.AncestorId == s.DfSectionId) || (s.AncestorId == null && !descendantIds.Contains(s.DfSectionId)))
-                .ToList();
-
-            var sectionLookup = sections.ToDictionary(s => s.DfSectionId);
-            var hierarchyLookup = hierarchyRelations
-                .GroupBy(h => h.AncestorId)
-                .ToDictionary(g => g.Key, g => g.Select(h => h.DescendantId.Value).ToList());
-
-            // ✅ Lấy số lượng câu hỏi theo từng section
-            var questionCounts = await _context.Questions
-                .Where(q => q.DfSectionId.HasValue && sections.Select(s => s.DfSectionId).Contains(q.DfSectionId.Value))
-                .GroupBy(q => q.DfSectionId)
-                .Select(g => new { SectionId = g.Key, Count = g.Count() })
-                .ToDictionaryAsync(g => g.SectionId.Value, g => g.Count);
-
+            // 7. Xây cây trả về
             var sectionTree = rootSections
-                .Select(s => BuildSectionTree(s, sectionLookup, hierarchyLookup, questionCounts))
+                .Select(s => BuildSectionTreeForResponse(s, sections, sectionHierarchies, questionCounts))
                 .ToList();
 
             return Ok(sectionTree);
@@ -281,33 +278,30 @@ namespace SEP490_G77_ESS.Controllers
         [HttpGet("default/{sectionId}/questions")]
         public async Task<ActionResult<IEnumerable<object>>> GetQuestionsForSection(long sectionId)
         {
-            // ✅ Kiểm tra sectionId có tồn tại không
-            var sectionExists = await _context.DefaultSectionHierarchies.AnyAsync(s => s.DfSectionId == sectionId);
-            if (!sectionExists)
-            {
-                return NotFound(new { message = "Không tìm thấy section này!" });
-            }
-
-            // ✅ Chỉ lấy câu hỏi thuộc sectionId cụ thể
             var questions = await _context.Questions
-                .Where(q => q.DfSectionId == sectionId)
-                .Select(q => new
-                {
-                    q.Quesid,
-                    q.Quescontent,
-                    q.TypeId,
-                    q.Modeid,
-                    q.Solution,
-                    q.AnswerContent,
-                    q.ImageUrl,
-                    CorrectAnswers = _context.CorrectAnswers
-                        .Where(a => a.Quesid == q.Quesid)
-                        .Select(a => a.Content)
-                        .ToList()
-                })
-                .ToListAsync();
+               .Where(q => q.Secid == sectionId)
+               .Include(q => q.Type)
+               .Include(q => q.Mode)
+               .ToListAsync();
 
-            return Ok(questions.Any() ? questions : new List<object>()); // ✅ Đảm bảo luôn trả về []
+            var result = questions.Select(q => new QuestionDto
+            {
+                Quesid = q.Quesid,
+                Quescontent = q.Quescontent,
+                Secid = q.Secid ?? 0,
+                TypeId = q.TypeId,
+                Solution = q.Solution,
+                Modeid = q.Modeid ?? 0,
+                ImageUrl = q.ImageUrl,
+                Answers = (q.TypeId == 3) ? new List<string>() : q.AnswerContent?.Split(",").ToList() ?? new List<string>(),
+                CorrectAnswers = _context.CorrectAnswers
+                    .Where(a => a.Quesid == q.Quesid)
+                    .OrderBy(a => a.AnsId) // giữ đúng thứ tự cho True/False
+                    .Select(a => a.Content)
+                    .ToList(),
+            }).ToList();
+
+            return Ok(result);
         }
 
 
@@ -348,9 +342,6 @@ namespace SEP490_G77_ESS.Controllers
 
             return Ok(bank);
         }
-
-
-
 
         // ✅ Cập nhật chỉ Bankname
         [HttpPut("{id}/name")]
@@ -642,8 +633,6 @@ namespace SEP490_G77_ESS.Controllers
             };
         }
 
-
-
         // ✅ Lấy danh sách các Khối học
         [HttpGet("grades")]
         public async Task<ActionResult<IEnumerable<object>>> GetGrades()
@@ -672,56 +661,66 @@ namespace SEP490_G77_ESS.Controllers
         [HttpGet("{bankId}/sections")]
         public async Task<ActionResult<IEnumerable<object>>> GetSectionsByBankId(long bankId)
         {
-            // Find the bank to ensure it exists
+            // 1. Kiểm tra tồn tại bank
             var bank = await _context.Banks.FindAsync(bankId);
             if (bank == null)
-            {
                 return NotFound(new { message = "Không tìm thấy ngân hàng câu hỏi" });
-            }
 
-            // Get all sections for this bank
+            // 2. Lấy tất cả sections của bank
             var sections = await _context.Sections
                 .Where(s => s.BankId == bankId)
                 .ToListAsync();
+            if (!sections.Any())
+                return Ok(new List<object>());
 
-            // Get section hierarchies for this bank
+            // 3. Chuẩn bị tập ID của sections
+            var sectionIds = sections.Select(s => s.Secid).ToHashSet();
+
+            // 4. Lấy tất cả hierarchy liên quan
             var sectionHierarchies = await _context.SectionHierarchies
-                .Where(sh => sections.Select(s => s.Secid).Contains(sh.AncestorId) &&
-                             sections.Select(s => s.Secid).Contains(sh.DescendantId))
+                .Where(sh => sectionIds.Contains(sh.AncestorId)
+                          && sectionIds.Contains(sh.DescendantId))
                 .ToListAsync();
 
-            // Get question counts for each section
+            // 5. Đếm số câu hỏi theo section
             var questionCounts = await _context.Questions
-                .Where(q => q.Secid != null && sections.Select(s => s.Secid).Contains(q.Secid.Value))
-                .GroupBy(q => q.Secid)
-                .Select(g => new
-                {
-                    Key = g.Key ?? 0,
-                    Count = g.Count()
-                })
-                .ToDictionaryAsync(g => g.Key, g => g.Count);
+                .Where(q => q.Secid.HasValue && sectionIds.Contains(q.Secid.Value))
+                .GroupBy(q => q.Secid.Value)
+                .Select(g => new { SectionId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.SectionId, x => x.Count);
 
-            var descendantIds = sectionHierarchies
-      .Where(h => h.AncestorId != h.DescendantId)
-      .Select(h => h.DescendantId)
-      .ToHashSet();
+            // 6. Xác định root sections
+            List<Section> rootSections;
+            if (sectionHierarchies.Any())
+            {
+                // các descendant thực sự (depth > 0)
+                var descendantIds = sectionHierarchies
+                    .Where(h => h.AncestorId != h.DescendantId)
+                    .Select(h => h.DescendantId)
+                    .ToHashSet();
 
-            var rootSections = sectionHierarchies
-                .Where(h => h.AncestorId == h.DescendantId && h.Depth == 0 && !descendantIds.Contains(h.DescendantId))
-                .Select(h => h.AncestorId)
-                .Distinct()
-                .Select(id => sections.FirstOrDefault(s => s.Secid == id))
-                .Where(s => s != null)
-                .ToList();
+                // các self-hierarchy depth=0 mà không phải là descendant của ai khác
+                rootSections = sectionHierarchies
+                    .Where(h => h.AncestorId == h.DescendantId && h.Depth == 0
+                             && !descendantIds.Contains(h.DescendantId))
+                    .Select(h => sections.First(s => s.Secid == h.AncestorId))
+                    .Distinct()
+                    .ToList();
+            }
+            else
+            {
+                // fallback: nếu chưa có hierarchy, lấy toàn bộ
+                rootSections = sections;
+            }
 
-
-            // Build the section tree for root sections
+            // 7. Xây cây trả về
             var sectionTree = rootSections
                 .Select(s => BuildSectionTreeForResponse(s, sections, sectionHierarchies, questionCounts))
                 .ToList();
 
             return Ok(sectionTree);
         }
+
 
         // Modified BuildSectionTreeForResponse to match generation method
         private object BuildSectionTreeForResponse(
@@ -763,14 +762,35 @@ namespace SEP490_G77_ESS.Controllers
 
 
         [HttpGet("curriculums")]
-        public async Task<ActionResult<IEnumerable<object>>> GetCurriculums()
+        public async Task<ActionResult<IEnumerable<object>>> GetCurriculums(
+            [FromQuery] long? gradeId,
+            [FromQuery] long? subjectId)
         {
-            var curriculums = await _context.Curricula
-                .Select(c => new { c.CurriculumId, c.CurriculumName })
+            var query = _context.Curricula
+                .Include(c => c.Grade)
+                .Include(c => c.Subject)
+                .AsQueryable();
+
+            if (gradeId.HasValue)
+                query = query.Where(c => c.GradeId == gradeId.Value);
+            if (subjectId.HasValue)
+                query = query.Where(c => c.SubjectId == subjectId.Value);
+
+            var curriculums = await query
+                .Select(c => new
+                {
+                    c.CurriculumId,
+                    c.CurriculumName,
+                    c.GradeId,
+                    GradeName = c.Grade!.GradeLevel,
+                    c.SubjectId,
+                    SubjectName = c.Subject!.SubjectName
+                })
                 .ToListAsync();
 
             return Ok(curriculums);
         }
+
 
 
 
@@ -884,11 +904,6 @@ namespace SEP490_G77_ESS.Controllers
         }
 
 
-
-
-
-
-
         // ✅ Cập nhật tên Section
         [HttpPut("section/{sectionId}")]
         [Authorize]
@@ -919,20 +934,58 @@ namespace SEP490_G77_ESS.Controllers
             var section = await _context.Sections.FindAsync(sectionId);
             if (section == null)
                 return NotFound(new { message = "Không tìm thấy section" });
-            var authorizationResult = await _authorizationService.AuthorizeAsync(User, section.BankId, "BankModify");
+
+            var authorizationResult = await _authorizationService.AuthorizeAsync(User, section.BankId, "BankDelete");
             if (!authorizationResult.Succeeded)
             {
                 return Forbid();
             }
 
+            // ✅ Xóa SectionHierarchy liên quan
             var sectionRelations = _context.SectionHierarchies
                 .Where(sh => sh.AncestorId == sectionId || sh.DescendantId == sectionId);
             _context.SectionHierarchies.RemoveRange(sectionRelations);
 
+            // ✅ Tìm tất cả câu hỏi thuộc section này
+            var questions = await _context.Questions
+                .Where(q => q.Secid == sectionId)
+                .ToListAsync();
+
+            var questionIds = questions.Select(q => q.Quesid).ToList();
+
+            // ✅ Xóa CorrectAnswers liên quan
+            var correctAnswers = await _context.CorrectAnswers
+                .Where(ca => ca.Quesid != null && questionIds.Contains(ca.Quesid.Value))
+                .ToListAsync();
+            _context.CorrectAnswers.RemoveRange(correctAnswers);
+
+            // ✅ Xóa câu hỏi
+            _context.Questions.RemoveRange(questions);
+
+            // ✅ Xóa section
             _context.Sections.Remove(section);
+
             await _context.SaveChangesAsync();
 
-            return Ok(new { message = "Xóa section thành công" });
+            return Ok(new { message = "Xóa section và tất cả câu hỏi liên quan thành công" });
         }
+
+        [HttpGet("isowner/{bankId}")]
+        [Authorize]
+        public async Task<IActionResult> IsOwner(long bankId)
+        {
+            var accId = await GetAccIdFromToken();
+            if (accId == null)
+                return Unauthorized(new { message = "Không thể xác định tài khoản." });
+
+            var bank = await _context.Banks.FindAsync(bankId);
+            if (bank == null)
+                return NotFound(new { message = "Không tìm thấy ngân hàng." });
+
+            bool isOwner = bank.Accid == accId;
+            return Ok(new { isOwner });
+        }
+
+
     }
 }

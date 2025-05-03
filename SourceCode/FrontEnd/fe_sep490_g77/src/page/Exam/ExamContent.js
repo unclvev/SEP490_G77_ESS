@@ -9,6 +9,8 @@ import {
   Input,
   Row,
   Col,
+  Tabs,
+  message,
 } from "antd";
 import "@ant-design/v5-patch-for-react-19";
 import {
@@ -40,10 +42,12 @@ import AddQuestionModal from "../../components/Exam/AddQuestionModel";
 import ImportStudentModal from "../../components/Exam/ImportStudent";
 import InviteUserModal from "../Manager/components/InviteUserModal";
 import ListMemberModal from "../Manager/components/ListMemberModal";
+import useExamCodeManager from "../../components/Exam/ExamCodeManager";
 import InviteUserForExam from "../Manager/components/InviteUserForExam";
 
 const { Text, Title } = Typography;
 const { Option } = Select;
+const { TabPane } = Tabs;
 
 const ExamDetail = () => {
   const [searchParams] = useSearchParams();
@@ -57,6 +61,18 @@ const ExamDetail = () => {
   const [isDirty, setIsDirty] = useState(false);
 
   const [questions, setQuestions] = useState([]);
+
+  const {
+    examCodes,
+    activeIndex,
+    currentExamCode,
+    handleChangeTab,
+    handleAddExamCode,
+    handleDeleteExamCode,
+    updateCurrentQuestions,
+    setExamCodes,
+    setActiveIndex,
+  } = useExamCodeManager([]);
 
   const [examInfo, setExamInfo] = useState({
     examName: "",
@@ -87,33 +103,34 @@ const ExamDetail = () => {
       try {
         const { data } = await getExam(examid);
         const parsed = JSON.parse(data.examdata);
+        const codes = parsed.ExamCodes || [];
 
         setExamInfo({
-          examName: parsed.exam.ExamName || "",
-          grade: parsed.exam.Grade || "",
-          subject: parsed.exam.Subject || "",
+          examName: data.examname || "",
+          grade: data.grade || "",
+          subject: data.subject || "",
           createdAt: new Date(data.createdate).toLocaleString(),
           creator: data.accId || "",
           attempts: data.attempts || 0,
         });
-        setExamCode(parsed.exam.ExamCode || "");
 
-        // Load questions
-        setQuestions(parsed.examdata.Questions || []);
+        setExamCodes(codes);
+        setActiveIndex(0);
+        setExamCode(codes[0]?.ExamCode || "");
 
-        // Initialize payload for dirty-check
         setInitialPayload({
-          exam: {
-            ExamName: parsed.exam.ExamName,
-            Grade: parsed.exam.Grade,
-            Subject: parsed.exam.Subject,
+          Exam: {
+            ExamName: data.examname,
+            Grade: data.grade,
+            Subject: data.subject,
           },
-          examdata: { Questions: parsed.examdata.Questions },
+          ExamCodes: codes,
         });
       } catch (err) {
         console.error(err);
       }
     };
+
     fetchExam();
   }, [examid]);
 
@@ -121,15 +138,20 @@ const ExamDetail = () => {
   useEffect(() => {
     if (!initialPayload) return;
     const current = {
-      exam: {
+      Exam: {
         ExamName: examInfo.examName,
         Grade: examInfo.grade,
         Subject: examInfo.subject,
       },
-      examdata: { Questions: questions },
+      ExamCodes: [
+        {
+          ExamCode: examCode,
+          Questions: questions,
+        },
+      ],
     };
     setIsDirty(JSON.stringify(current) !== JSON.stringify(initialPayload));
-  }, [examInfo, questions, initialPayload]);
+  }, [examInfo, questions, examCode, initialPayload]);
 
   // --- Load grade/subject options ---
   useEffect(() => {
@@ -221,7 +243,6 @@ const ExamDetail = () => {
     let gradeText = examInfo.grade;
     let subjectText = examInfo.subject;
 
-    // Nếu vẫn là ID (số hoặc ID dạng string), thì đổi thành chữ
     const foundGrade = gradeOptions.find((g) => g.gradeId === gradeText);
     if (foundGrade) gradeText = foundGrade.gradeLevel;
 
@@ -231,14 +252,25 @@ const ExamDetail = () => {
     if (foundSubject) subjectText = foundSubject.subjectName;
 
     const payload = {
-      Exam: {
-        ExamName: examInfo.examName,
-        Grade: gradeText,
-        Subject: subjectText,
+      exam: {
+        examName: examInfo.examName,
+        grade: gradeText,
+        subject: subjectText,
       },
-      Examdata: {
-        Questions: questions,
-      },
+      examCodes: examCodes.map((code, idx) => ({
+        examCode: idx === activeIndex ? examCode : code.ExamCode || "",
+        questions: (code.Questions || []).map((q) => ({
+          questionId: q.QuestionId,
+          content: q.Content,
+          type: q.Type || "",
+          imageUrl: q.ImageUrl || "",
+          answers: (q.Answers || []).map((a) => ({
+            answerId: a.AnswerId,
+            content: a.Content,
+            isCorrect: !!a.IsCorrect,
+          })),
+        })),
+      })),
     };
 
     console.log("Saving payload", JSON.stringify(payload, null, 2));
@@ -286,6 +318,30 @@ const ExamDetail = () => {
         }
       },
     });
+  };
+
+  const getMaxAnswerId = () => {
+    let max = 0;
+    examCodes.forEach((code) => {
+      (code.Questions || []).forEach((q) => {
+        (q.Answers || []).forEach((a) => {
+          if (a.AnswerId > max) max = a.AnswerId;
+        });
+      });
+    });
+    return max;
+  };
+
+  const getMaxQuestionId = (examCodes) => {
+    let maxId = 0;
+    for (const code of examCodes) {
+      for (const q of code.Questions || []) {
+        if (q.QuestionId > maxId) {
+          maxId = q.QuestionId;
+        }
+      }
+    }
+    return maxId;
   };
 
   const handleImportStudent = () => {
@@ -357,6 +413,7 @@ const ExamDetail = () => {
                     value: g.gradeId,
                   }))}
                   style={{ width: "100%", marginTop: 8 }}
+                  disabled
                 />
               </Col>
               <Col span={12}>
@@ -371,6 +428,7 @@ const ExamDetail = () => {
                     value: s.subjectId,
                   }))}
                   style={{ width: "100%", marginTop: 8 }}
+                  disabled
                 />
               </Col>
             </Row>
@@ -442,50 +500,127 @@ const ExamDetail = () => {
         </div>
 
         {/* Main content */}
+        {/* Main content */}
         <div style={{ flex: 1, padding: 20, overflowY: "auto" }}>
-          {questions.length === 0 ? (
-            <div style={{ textAlign: "center", marginTop: 100 }}>
-              <Title level={3}>Chưa có dữ liệu câu hỏi</Title>
-            </div>
-          ) : (
-            questions.map((q, idx) => (
-              <QuestionCardV2
-                key={q.QuestionId}
-                question={q}
-                index={idx}
-                totalQuestions={questions.length}
-                onQuestionChange={handleQuestionChange}
-                onAnswerChange={handleAnswerChange}
-                onCorrectChange={handleCorrectChange}
-                onAnswerDelete={handleAnswerDelete}
-                onDelete={handleDeleteQuestion}
-                onMoveUp={handleMoveUp}
-                onMoveDown={handleMoveDown}
-              />
-            ))
-          )}
+          <Tabs
+            activeKey={activeIndex.toString()}
+            onChange={handleChangeTab}
+            type="editable-card"
+            onEdit={(targetKey, action) => {
+              if (action === "add") handleAddExamCode();
+              else if (action === "remove") {
+                const ok = handleDeleteExamCode(Number(targetKey));
+                if (!ok) message.warning("Phải có ít nhất một mã đề.");
+              }
+            }}
+            hideAdd={false}
+          >
+            {examCodes.map((code, index) => (
+              <TabPane
+                tab={code.ExamCode || `Mã đề ${index + 1}`}
+                key={index.toString()}
+                closable={examCodes.length > 1}
+              >
+                {(code.Questions || []).length === 0 ? (
+                  <Title level={4} style={{ textAlign: "center" }}>
+                    Chưa có câu hỏi
+                  </Title>
+                ) : (
+                  code.Questions.map((q, idx) => (
+                    <QuestionCardV2
+                      key={q.QuestionId}
+                      question={q}
+                      index={idx}
+                      totalQuestions={code.Questions.length}
+                      onQuestionChange={(i, newContent) => {
+                        const newQs = [...code.Questions];
+                        newQs[i] = { ...newQs[i], Content: newContent };
+                        updateCurrentQuestions(newQs);
+                      }}
+                      onAnswerChange={(i, ansId, txt) => {
+                        const newQs = [...code.Questions];
+                        newQs[i].Answers = newQs[i].Answers.map((a) =>
+                          a.AnswerId === ansId ? { ...a, Content: txt } : a
+                        );
+                        updateCurrentQuestions(newQs);
+                      }}
+                      onCorrectChange={(i, ansId) => {
+                        const newQs = [...code.Questions];
+                        newQs[i].CorrectAnswerId = ansId;
+                        newQs[i].Answers = newQs[i].Answers.map((a) => ({
+                          ...a,
+                          IsCorrect: a.AnswerId === ansId,
+                        }));
+                        updateCurrentQuestions(newQs);
+                      }}
+                      onDelete={(i) => {
+                        const newQs = [...code.Questions];
+                        newQs.splice(i, 1);
+                        updateCurrentQuestions(newQs);
+                      }}
+                      onMoveUp={(i) => {
+                        if (i === 0) return;
+                        const newQs = [...code.Questions];
+                        [newQs[i - 1], newQs[i]] = [newQs[i], newQs[i - 1]];
+                        updateCurrentQuestions(newQs);
+                      }}
+                      onMoveDown={(i) => {
+                        if (i === code.Questions.length - 1) return;
+                        const newQs = [...code.Questions];
+                        [newQs[i + 1], newQs[i]] = [newQs[i], newQs[i + 1]];
+                        updateCurrentQuestions(newQs);
+                      }}
+                      onAnswerDelete={(i, ansId) => {
+                        const newQs = [...code.Questions];
+                        newQs[i].Answers = newQs[i].Answers.filter(
+                          (a) => a.AnswerId !== ansId
+                        );
+                        updateCurrentQuestions(newQs);
+                      }}
+                      onFullUpdate={(i, updatedQ) => {
+                        const updated = [...examCodes];
+                        updated[activeIndex].Questions[i] = { ...updatedQ };
+                        setExamCodes(updated);
+                      }}
+                    />
+                  ))
+                )}
+              </TabPane>
+            ))}
+          </Tabs>
         </div>
       </div>
       <AddQuestionModal
         visible={addModalVisible}
         onClose={() => setAddModalVisible(false)}
         onAdd={(newQuestion) => {
-          setQuestions((prev) => [
-            ...prev,
-            {
-              QuestionId: Date.now(), // ID tạm (có thể đổi random hơn nếu cần)
-              Content: newQuestion.Content,
-              Type: newQuestion.Type, // Thường là "Multiple Choice"
-              Answers: newQuestion.Answers.map((ans, idx) => ({
-                AnswerId: Date.now() + idx + 1, // Tạo ID riêng cho mỗi đáp án
-                Content: ans.Content,
-                IsCorrect: ans.IsCorrect,
-              })),
-              ImageUrl: newQuestion.ImageUrl || "", // nếu có ảnh
-              CorrectAnswerId:
-                newQuestion.Answers.find((a) => a.IsCorrect)?.AnswerId || null,
-            },
-          ]);
+          const maxQid = getMaxQuestionId(examCodes);
+          const maxAid = getMaxAnswerId(examCodes);
+        
+          const newQid = maxQid + 1;
+        
+          const newQuestionObj = {
+            QuestionId: newQid,
+            Content: newQuestion.Content,
+            Type: newQuestion.Type,
+            Answers: newQuestion.Answers.map((ans, idx) => ({
+              AnswerId: maxAid + idx + 1,
+              Content: ans.Content,
+              IsCorrect: ans.IsCorrect,
+            })),
+            ImageUrl: newQuestion.ImageUrl || "",
+            CorrectAnswerId:
+              newQuestion.Answers.find((a) => a.IsCorrect)
+                ? maxAid +
+                  newQuestion.Answers.findIndex((a) => a.IsCorrect) +
+                  1
+                : null,
+          };
+        
+          // Gán vào examCodes[activeIndex]
+          const updated = [...examCodes];
+          updated[activeIndex].Questions.push(newQuestionObj);
+          setExamCodes(updated);
           setAddModalVisible(false);
         }}
       />

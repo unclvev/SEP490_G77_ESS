@@ -76,12 +76,12 @@ const EssQuestionBankDetail = () => {
       <div className="bg-white p-6 shadow-md rounded-lg mb-6 w-3/4 mx-auto">
         {bankInfo ? (
           <>
-            <h1 className="text-2xl font-bold mb-2">{bankInfo.bankName}</h1>
+            <h1 className="text-2xl font-bold mb-2">{bankInfo.bankname}</h1>
             <p className="text-gray-600">Khối: <span className="font-semibold">{bankInfo.grade}</span></p>
             <p className="text-gray-600">Môn: <span className="font-semibold">{bankInfo.subject}</span></p>
-            <p className="text-gray-600">Chương trình học: <span className="font-semibold">{bankInfo.curriculum}</span></p>
+            {/* <p className="text-gray-600">Chương trình học: <span className="font-semibold">{bankInfo.curriculum}</span></p> */}
             <p className="text-gray-600 font-semibold">
-              Tổng số câu hỏi: <span className="text-blue-600">{bankInfo.totalQuestion}</span>
+              Tổng số câu hỏi: <span className="text-blue-600">{bankInfo.totalquestion}</span>
             </p>
           </>
         ) : (

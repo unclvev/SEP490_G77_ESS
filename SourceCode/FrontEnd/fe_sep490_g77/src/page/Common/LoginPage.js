@@ -59,7 +59,7 @@ const LoginPage = () => {
       <div className="flex min-h-screen bg-white">
         <div className="flex-none p-4">
           <Link to="/">
-            <img width="120" src="/images/logo.svg" alt="Logo" />
+            <img width="120" src="\logo.png" alt="Logo" />
           </Link>
         </div>
         <div className="flex-1 flex justify-center items-center">

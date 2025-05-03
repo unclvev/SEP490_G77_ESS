@@ -41,117 +41,16 @@ namespace SEP490_G77_ESS.Controllers.ExamManager
         }
 
 
-        [HttpPost]
-        public async Task<IActionResult> AddExamDataDemo([FromQuery] int examid, [FromBody] ExamDataDTO examData)
-        {
-            var edata = await _context.Exams.FirstOrDefaultAsync(e => e.ExamId == examid);
-            if (edata == null)
-            {
-                return NotFound();
-            }
-
-            // Chuyển examData thành chuỗi JSON để lưu vào ExamData
-            string jsonData = JsonConvert.SerializeObject(examData);
-
-            // Cập nhật ExamData
-            edata.Examdata = jsonData;
-
-            // Lưu vào database
-            _context.Exams.Update(edata);
-            await _context.SaveChangesAsync();
-
-            return Ok(new { message = "Exam data added successfully!" });
-        }
-
-
-        //Demo Data
-        [HttpPost("AddExamDataDemo")]
-        public async Task<IActionResult> AddExamDataDemo([FromQuery] int examid)
-        {
-            var edata = await _context.Exams.FirstOrDefaultAsync(e => e.ExamId == examid);
-            if (edata == null)
-            {
-                return NotFound();
-            }
-
-            // Tạo dữ liệu mẫu
-            var examData = new ExamDataDTO
-            {
-                ExamId = examid,
-                ExamName = "Sample Exam",
-                Questions = new List<QuestionDTO>
-            {
-                new QuestionDTO
-                {
-                    QuestionId = 1,
-                    Content = "What is 2 + 2?",
-                    Type = "Multiple Choice",
-                    Answers = new List<AnswerDTO>
-                    {
-                        new AnswerDTO { AnswerId = 1, Content = "3", IsCorrect = false },
-                        new AnswerDTO { AnswerId = 2, Content = "4", IsCorrect = true },
-                        new AnswerDTO { AnswerId = 3, Content = "5", IsCorrect = false }
-                    }
-                },
-                new QuestionDTO
-                {
-                    QuestionId = 2,
-                    Content = "What is the capital of France?",
-                    Type = "Multiple Choice",
-                    Answers = new List<AnswerDTO>
-                    {
-                        new AnswerDTO { AnswerId = 4, Content = "Berlin", IsCorrect = false },
-                        new AnswerDTO { AnswerId = 5, Content = "Paris", IsCorrect = true },
-                        new AnswerDTO { AnswerId = 6, Content = "Madrid", IsCorrect = false }
-                    }
-                }
-            }
-            };
-
-            // Chuyển dữ liệu thành JSON string
-            string jsonData = JsonConvert.SerializeObject(examData);
-
-            // Cập nhật Examdata
-            edata.Examdata = jsonData;
-
-            // Lưu vào database
-            _context.Exams.Update(edata);
-            await _context.SaveChangesAsync();
-
-            return Ok(new { message = "Exam data added successfully!", data = examData });
-        }
-
-        //create exam from data
-        //example data:
-        /*Cấu trúc đề thi: [
-            {
-                "sectionId": "10004",
-                "easy": 2,
-                "medium": 0,
-                "hard": 0
-            },
-            {
-                "sectionId": "10002",
-                "easy": 0,
-                "medium": 0,
-                "hard": 0
-            }
-        ]*/
-
         [HttpPost("GenerateExam")]
         public async Task<IActionResult> GenerateExam([FromBody] List<ExamSectionRequest> examSections)
         {
             if (examSections == null || examSections.Count == 0)
-            {
                 return BadRequest("Invalid exam structure.");
-            }
 
             var selectedQuestions = new List<QuestionDTO>();
 
             foreach (var section in examSections)
             {
-                // Lấy các câu hỏi theo section với điều kiện theo mức độ khó (Modeid)
-                // và include các dữ liệu cần thiết như CorrectAnswers và Type.
                 var questionsRaw = await _context.Questions
                     .Include(q => q.CorrectAnswers)
                     .Include(q => q.Type)
@@ -169,15 +68,15 @@ namespace SEP490_G77_ESS.Controllers.ExamManager
                     {
                         QuestionId = q.Quesid,
                         Content = q.Quescontent,
-                        Type = q.Type != null ? q.Type.TypeName : "Unknown",
+                        Type = q.Type?.TypeName ?? "Unknown",
+                        ImageUrl = q.ImageUrl, // Gán đường dẫn ảnh nếu có
                         Answers = new List<AnswerDTO>()
                     };
 
-                    // Nếu có dữ liệu trong AnswerContent thì tách các đáp án
                     if (!string.IsNullOrWhiteSpace(q.AnswerContent))
                     {
                         var answerList = q.AnswerContent
-                            .Split(',')
+                            .Split(';')
                             .Select(ans => ans.Trim())
                             .Where(ans => !string.IsNullOrEmpty(ans))
                             .ToList();
@@ -201,19 +100,24 @@ namespace SEP490_G77_ESS.Controllers.ExamManager
                 }
             }
 
-            // long? accId = await GetAccIdFromToken();
-            long? accId = 15;
+            long? accId = await GetAccIdFromToken();
 
-            var examData = new ExamDataDTO
+            
+            var examDataFormat = new
             {
-                ExamId = 0,
-                ExamName = "Generated Exam",
+                ExamCodes = new List<object>
+        {
+            new
+            {
+                ExamCode = "", 
                 Questions = selectedQuestions
+            }
+        }
             };
 
             var exam = new Exam
             {
-                Examdata = JsonConvert.SerializeObject(examData),
+                Examdata = JsonConvert.SerializeObject(examDataFormat),
                 Examname = "Generated Exam",
                 Createdate = DateTime.UtcNow,
                 AccId = accId
@@ -222,48 +126,49 @@ namespace SEP490_G77_ESS.Controllers.ExamManager
             _context.Exams.Add(exam);
             await _context.SaveChangesAsync();
 
-            examData.ExamId = exam.ExamId;
-            exam.Examdata = JsonConvert.SerializeObject(examData);
-            _context.Exams.Update(exam);
-            await _context.SaveChangesAsync();
-
             return Ok(new { exam.ExamId, exam.Examdata });
         }
 
-        //update exam data in exam preview
+
         [HttpPut("UpdateExamData")]
         public async Task<IActionResult> UpdateExamData([FromQuery] int examid, [FromBody] ExamUpdateDTO examUpdate)
         {
-            // Tìm kiếm exam theo examid
             var exam = await _context.Exams.FirstOrDefaultAsync(e => e.ExamId == examid);
             if (exam == null)
             {
                 return NotFound(new { message = $"Exam với examId {examid} không tồn tại." });
             }
 
-            // Cập nhật tên đề thi từ phần Exam của DTO
+            // ✅ Cập nhật các cột rời từ examUpdate.Exam
             if (examUpdate.Exam != null)
             {
                 exam.Examname = examUpdate.Exam.ExamName;
+                exam.Grade = examUpdate.Exam.Grade;
+                exam.Subject = examUpdate.Exam.Subject;
             }
 
-            // Tạo đối tượng chứa toàn bộ dữ liệu: exam info và examdata (Questions)
-            var fullExamData = new
+            // ✅ Lưu phần examdata chỉ chứa ExamCodes
+            var examData = new
             {
-                exam = examUpdate.Exam,       // chứa ExamName, Grade, Subject
-                examdata = examUpdate.Examdata  // chứa danh sách câu hỏi
+                ExamCodes = examUpdate.ExamCodes
             };
 
-            // Serialize đối tượng fullExamData thành chuỗi JSON
-            string jsonData = JsonConvert.SerializeObject(fullExamData);
-            exam.Examdata = jsonData;
+            exam.Examdata = JsonConvert.SerializeObject(examData);
 
-            // Cập nhật vào database
             _context.Exams.Update(exam);
             await _context.SaveChangesAsync();
 
-            return Ok(new { message = "Exam data updated successfully!", exam.ExamId, exam.Examdata });
+            return Ok(new
+            {
+                message = "Exam data updated successfully!",
+                exam.ExamId,
+                exam.Examname,
+                exam.Grade,
+                exam.Subject,
+                exam.Examdata
+            });
         }
+
 
         [HttpPost("GenerateExamByCriteria")]
         public async Task<IActionResult> GenerateExamByCriteria([FromBody] List<ExamSection3TDTO> examSections)

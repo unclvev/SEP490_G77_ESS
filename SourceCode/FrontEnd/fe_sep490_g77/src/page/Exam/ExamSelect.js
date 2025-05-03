@@ -1,84 +1,88 @@
 import React from 'react';
-import { Layout, Row, Col, Upload, Card, Space, Typography } from 'antd';
+import { Layout, Row, Col, Card, Space, Typography } from 'antd';
 import { Link } from 'react-router-dom';
 import {
-  UploadOutlined,
   EditOutlined,
   FileSearchOutlined,
   BarcodeOutlined,
 } from '@ant-design/icons';
 
-const { Dragger } = Upload;
 const { Title, Text } = Typography;
 const { Content } = Layout;
 
 const ExamSelect = () => {
-  // Cấu hình upload, bạn có thể mở rộng nếu cần upload thực sự
-  const propsUpload = {
-    name: 'file',
-    multiple: true,
-    action: '', // API xử lý upload thực tế, tạm để trống
-    onChange(info) {
-      // Xử lý trạng thái file, log ra console để xem
-      console.log(info);
-    },
-  };
-
   return (
     <Layout style={{ minHeight: '100vh', background: '#fff' }}>
-      <Content style={{ padding: '24px' }}>
-        <Row gutter={24}>
-          {/* Khu vực upload (bên trái) */}
-          
+      <Content>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            minHeight: '100vh',
+          }}
+        >
+          <Col xs={22} sm={18} md={12} lg={10} xl={8}>
+            <Space
+              direction="vertical"
+              size="large"
+              style={{ width: '100%' }}
+            >
+              <Title level={3} style={{ textAlign: 'center' }}>
+                Chọn cách tạo đề
+              </Title>
 
-          {/* Khu vực các lựa chọn (bên phải) */}
-          <Col xs={24} md={8}>
-            <Space direction="vertical" style={{ width: '100%', cursor: 'not-allowed' }}>
-              {/* Card: Tự soạn đề thi / Bài tập */}
               <Link to={`/`}>
                 <Card
-                
                   hoverable
-                  style={{ borderRadius: 8 }}
-                  bodyStyle={{ padding: '16px' }}
+                  style={{ borderRadius: 12 }}
+                  bodyStyle={{ padding: '20px 24px' }}
                 >
-                  <Space>
-                    <EditOutlined />
-                    <Text>Tự soạn đề thi / Bài tập</Text>
+                  <Space size="large">
+                    <EditOutlined style={{ fontSize: 24 }} />
+                    <Text style={{ fontSize: 18 }}>
+                      Tự soạn đề thi / Bài tập
+                    </Text>
                   </Space>
                 </Card>
               </Link>
 
-              {/* Card: Tạo đề thi MCQ 3 phần */}
               <Link to={`/exam/matrix`}>
                 <Card
                   hoverable
-                  style={{ borderRadius: 8 }}
-                  bodyStyle={{ padding: '16px' }}
+                  style={{ borderRadius: 12 }}
+                  bodyStyle={{ padding: '20px 24px' }}
                 >
-                  <Space>
-                    <FileSearchOutlined />
-                    <Text>Tạo đề thi MCQ 50 câu</Text>
+                  <Space size="large">
+                    <FileSearchOutlined style={{ fontSize: 24 }} />
+                    <Text style={{ fontSize: 18 }}>
+                      Tạo đề thi MCQ 50 câu
+                    </Text>
                   </Space>
                 </Card>
               </Link>
 
-              {/* Card: Tạo đề thi MCQ 50 câu */}
               <Link to={`/exam/matrix3t`}>
                 <Card
                   hoverable
-                  style={{ borderRadius: 8 }}
-                  bodyStyle={{ padding: '16px',  cursor: 'not-allowed' }}
+                  style={{
+                    borderRadius: 12,
+                    opacity: 0.6,
+                    pointerEvents: 'none',
+                  }}
+                  bodyStyle={{ padding: '20px 24px' }}
                 >
-                  <Space>
-                    <BarcodeOutlined />
-                    <Text>Tạo đề thi MCQ 3 phần</Text>
+                  <Space size="large">
+                    <BarcodeOutlined style={{ fontSize: 24 }} />
+                    <Text style={{ fontSize: 18 }}>
+                      Tạo đề thi MCQ 3 phần (Đang phát triển)
+                    </Text>
                   </Space>
                 </Card>
               </Link>
             </Space>
           </Col>
-        </Row>
+        </div>
       </Content>
     </Layout>
   );

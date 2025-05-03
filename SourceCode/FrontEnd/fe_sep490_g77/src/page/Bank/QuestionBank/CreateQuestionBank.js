@@ -3,29 +3,29 @@ import { Select, Button, message, Spin } from "antd";
 import axios from "axios";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
-import { useSelector } from 'react-redux';
+import { useSelector } from "react-redux";
 import { jwtDecode } from "jwt-decode";
-import { useLocation } from 'react-router-dom';
-import { getBankGrades, getBankSubjects, getBankCurriculums, generateBank } from '../../../services/api';
+import {
+  getBankGrades,
+  getBankSubjects,
+  getBankCurriculums,
+  generateBank,
+} from "../../../services/api";
 
 const { Option } = Select;
 
 const CreateQuestionBank = () => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams(); // ✅ Lấy params từ URL
+  const [searchParams] = useSearchParams();
   const token = useSelector((state) => state.token);
 
-    let accid = searchParams.get("accid") || localStorage.getItem("accid"); // Mặc định cũ
-
-    // Nếu token tồn tại, giải mã để lấy AccId
-    if (token) {
-        try {
-            const decoded = jwtDecode(token.token);
-            accid = decoded.AccId || accid; // Ưu tiên lấy từ token nếu có
-        } catch (error) {
-            console.error("Invalid token", error);
-        }
-    }
+  let accid = searchParams.get("accid") || localStorage.getItem("accid");
+  if (token) {
+    try {
+      const decoded = jwtDecode(token.token);
+      accid = decoded.AccId || accid;
+    } catch {}
+  }
 
   const [grades, setGrades] = useState([]);
   const [subjects, setSubjects] = useState([]);
@@ -36,54 +36,50 @@ const CreateQuestionBank = () => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!accid) {
-      toast .error("❌ Không tìm thấy thông tin tài khoản!");
-      return;
-    }
+    // Load grades & subjects once
+    getBankGrades()
+      .then((r) => setGrades(r.data))
+      .catch(() => toast.error("Lỗi tải khối!"));
+    getBankSubjects()
+      .then((r) => setSubjects(r.data))
+      .catch(() => toast.error("Lỗi tải môn!"));
+  }, []);
 
-    const fetchGrades = async () => {
-      try {
-        const response = await getBankGrades();
-        setGrades(response.data || []);
-      } catch (error) {
-        toast.error("Lỗi khi tải danh sách Khối học.");
-      }
-    };
-
-    const fetchSubjects = async () => {
-      try {
-        const response = await getBankSubjects();
-        setSubjects(response.data || []);
-      } catch (error) {
-        toast.error("Lỗi khi tải danh sách Môn học.");
-      }
-    };
-
+  useEffect(() => {
+    // mỗi lần grade/subject thay đổi → reset curriculum & curriculums
+    setCurriculum(null);
+    setCurriculums([]);
+  
+    // nếu chưa đủ điều kiện thì thôi
+    if (!grade || !subject) return;
+  
+    // hàm async để gọi API
     const fetchCurriculums = async () => {
       try {
-        const response = await getBankCurriculums();
-        setCurriculums(response.data || []);
+        const response = await getBankCurriculums(grade, subject);
+        console.log("Curriculums data:", response.data);
+        setCurriculums(response.data);
       } catch (error) {
-        toast.error("Lỗi khi tải danh sách Chương trình học.");
+        console.error("Lỗi tải chương trình học:", error);
+        if (error.response) {
+          toast.error(`Lỗi ${error.response.status}: ${error.response.data?.message || "Không tải được"}.`);
+        } else if (error.request) {
+          toast.error("Không nhận được phản hồi từ server.");
+        } else {
+          toast.error(`Lỗi: ${error.message}`);
+        }
+        setCurriculums([]);
       }
     };
-
-    fetchGrades();
-    fetchSubjects();
+  
     fetchCurriculums();
-  }, [accid]);
+  }, [grade, subject]);
+  
 
   const handleCreateBank = async () => {
     if (!grade || !subject || !curriculum) {
-      toast.error("⚠️ Vui lòng chọn đầy đủ Khối học, Môn học và Chương trình!");
-      return;
+      return toast.error("⚠️ Vui lòng chọn đủ Khối – Môn – Chương trình.");
     }
-
-    if (!accid) {
-      toast.error("❌ Không tìm thấy thông tin tài khoản!");
-      return;
-    }
-
     try {
       setLoading(true);
       const requestData = {
@@ -91,16 +87,11 @@ const CreateQuestionBank = () => {
         subjectId: subject,
         curriculumId: curriculum === "custom" ? null : curriculum,
       };
-
-      // ✅ Gửi accid vào API
-      const response = await generateBank(accid, requestData);  
-
-      if (response.status === 200) {
-        toast.success(`✅ Ngân hàng câu hỏi "${response.data.bankName}" đã được tạo thành công!`);
-        navigate(`/question-bank-detail/${response.data.bankId}`);
-      }
-    } catch (error) {
-      toast.error("❌ Không thể tạo ngân hàng câu hỏi.");
+      const res = await generateBank(accid, requestData);
+      toast.success(`Ngân hàng "${res.data.bankName}" tạo thành công!`);
+      navigate(`/question-bank-detail/${res.data.bankId}`);
+    } catch {
+      toast.error("❌ Tạo ngân hàng thất bại.");
     } finally {
       setLoading(false);
     }
@@ -108,18 +99,18 @@ const CreateQuestionBank = () => {
 
   return (
     <div className="p-6 bg-gray-100 min-h-screen flex flex-col items-center">
-      <h1 className="text-2xl md:text-3xl font-bold mb-6 text-center">
-        TẠO NGÂN HÀNG CÂU HỎI
-      </h1>
-
-      <div className="flex flex-col md:flex-row gap-3 items-center">
-        {/* 🔹 Chọn Khối học */}
+      <h1 className="text-2xl font-bold mb-6">TẠO NGÂN HÀNG CÂU HỎI</h1>
+      <div className="flex gap-4">
+        {/* 1) Khối học */}
         <Select
           placeholder="Chọn Khối học"
           className="w-52"
-          onChange={(value) => setGrade(value)}
           value={grade}
-          loading={grades.length === 0}
+          onChange={(value) => {
+            setGrade(value);
+            setSubject(null);
+          }}
+          loading={!grades.length}
         >
           {grades.map((g) => (
             <Option key={g.gradeId} value={g.gradeId}>
@@ -128,13 +119,14 @@ const CreateQuestionBank = () => {
           ))}
         </Select>
 
-        {/* 🔹 Chọn Môn học */}
+        {/* 2) Môn học (disable nếu chưa chọn khối) */}
         <Select
-          placeholder="Chọn Môn học"
+          placeholder={grade ? "Chọn Môn học" : "Chọn Khối trước"}
           className="w-52"
-          onChange={(value) => setSubject(value)}
           value={subject}
-          loading={subjects.length === 0}
+          onChange={(value) => setSubject(value)}
+          disabled={!grade}
+          loading={!subjects.length}
         >
           {subjects.map((s) => (
             <Option key={s.subjectId} value={s.subjectId}>
@@ -143,19 +135,19 @@ const CreateQuestionBank = () => {
           ))}
         </Select>
 
-        {/* 🔹 Chọn Chương trình học */}
+        {/* 3) Chương trình (disable nếu chưa chọn môn; lúc enable sẽ gọi API) */}
         <Select
-          placeholder="Chọn Chương trình học"
+          placeholder={subject ? "Chọn Chương trình" : "Chọn Môn trước"}
           className="w-52"
-          onChange={(value) => setCurriculum(value)}
           value={curriculum}
-          loading={curriculums.length === 0}
+          onChange={(value) => setCurriculum(value)}
+          disabled={!subject}
+          loading={!curriculums.length && subject}
         >
-          {/* ✅ Thêm lựa chọn "Custom" */}
+          {/* Luôn luôn có trước Custom */}
           <Option key="custom" value="custom">
             Custom
           </Option>
-
           {curriculums.map((c) => (
             <Option key={c.curriculumId} value={c.curriculumId}>
               {c.curriculumName}
@@ -163,12 +155,11 @@ const CreateQuestionBank = () => {
           ))}
         </Select>
 
-        {/* 🔹 Nút tạo ngân hàng */}
         <Button
           type="primary"
-          className="bg-blue-500 hover:bg-blue-600 text-white px-6"
           onClick={handleCreateBank}
           loading={loading}
+          disabled={!curriculum}
         >
           {loading ? <Spin /> : "Tạo ngân hàng"}
         </Button>

@@ -37,6 +37,8 @@ import PrintPreview from "./page/Exam/PrintPreview.js";
 import ExamSetting from "./page/Exam/ExamSetting.js";
 import ManagerPage from "./page/Manager/ManagerPage";
 import Guideline from "./page/Grading/GuidelineInstallApp";
+import QuestionSection from "./components/Bank/QuestionCard.js";
+import UpdateQuestionModal from "./components/Bank/UpdateQuestion.js";
 
 function App() {
   return (
@@ -48,7 +50,7 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegistrationPage />} />
-          <Route path="/profile" element={<Profile /> } />
+          <Route path="/profile" element={<MainLayout><Profile /></MainLayout>} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/error" element={<ErrorPage />} />
@@ -79,9 +81,11 @@ function App() {
           <Route path="/essay" element={<MainLayout><CreateEssayExam></CreateEssayExam></MainLayout>}/>
           <Route path="/exam/matrix3t" element={<MainLayout><ExamCreation3T/></MainLayout>}></Route>
           <Route path="/exam/select" element={<MainLayout><ExamSelect/></MainLayout>}></Route>
-          <Route path="/temp" element={<TempComponent/>}></Route> 
+
           <Route path="/essay/create" element={<MainLayout><CreateNewEssayPage /></MainLayout>} />
           <Route path="/grading" element={<MainLayout><Guideline /></MainLayout>} />
+
+          <Route path="/temp" element={<QuestionSection />} />
         </Routes>
       </Router>
                                                 

@@ -53,6 +53,12 @@ Http.interceptors.response.use(
 
 
         if (error.response?.status === 401 && !originalRequest._retry) {
+            // Check if this is an authorization error (permission denied)
+            if (error.response?.data?.message?.includes("Bạn không có quyền")) {
+                // If it's a permission error, don't try to refresh token
+                return Promise.reject(error);
+            }
+
             if (isRefreshing) {
                 return new Promise((resolve, reject) => {
                     failedQueue.push({ resolve, reject });
@@ -76,19 +82,27 @@ Http.interceptors.response.use(
 
             try {
                 const refreshToken = store.getState().token?.refreshToken;
+                console.log("Attempting to refresh token...");
                 if (!refreshToken) {
+                    console.error("No refresh token available");
                     throw new Error('No refresh token available');
                 }
 
-
-                const response = await axios.post(`${BASE_API_LOCAL}/Login/refresh`, refreshToken);
-
+                const response = await axios.post(`${BASE_API_LOCAL}/Login/refresh`, 
+                    { refreshToken: refreshToken },
+                    {
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    }
+                );
 
                 if (!response.data.accessToken) {
+                    console.error("Invalid refresh token response:", response.data);
                     throw new Error('Invalid refresh token response');
                 }
 
-
+                console.log("Token refresh successful");
                 const newToken = response.data.accessToken;
                
                 // Update token in store

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SEP490_G77_ESS.DTO.RBAC.Bank;
 using SEP490_G77_ESS.Models;
+using SEP490_G77_ESS.Services;
 
 namespace SEP490_G77_ESS.Controllers.RBAC.Bank
 {
@@ -13,10 +14,12 @@ namespace SEP490_G77_ESS.Controllers.RBAC.Bank
     public class ManagerController : ControllerBase
     {
         private readonly EssDbV11Context _context;
+        private readonly EmailService _emailService;
 
-        public ManagerController(EssDbV11Context context)
+        public ManagerController(EssDbV11Context context, EmailService emailService)
         {
             _context = context;
+            _emailService = emailService;
         }
 
         [HttpGet("SearchUserToInvite")]
@@ -61,8 +64,6 @@ namespace SEP490_G77_ESS.Controllers.RBAC.Bank
             if (ownerRecord == null)
                 return Forbid("Bạn không có quyền mời người dùng cho tài nguyên này.");
 
-
-
             var existingAccess = await _context.ResourceAccesses
                                                .FirstOrDefaultAsync(r => r.ResourceType == request.Resource.ResourceType &&
                                                                                            r.ResourceId == request.Resource.ResourceId && 
@@ -95,6 +96,35 @@ namespace SEP490_G77_ESS.Controllers.RBAC.Bank
                 RoleId = roleId,
                 IsOwner = false
             };
+
+            // 5. Lấy thông tin inviter & invited để gửi email
+            var inviterId = long.Parse(claimAccId);
+            var inviter = await _context.Accounts.FindAsync(inviterId);
+            var invitedUser = await _context.Accounts.FindAsync(request.Resource.Accid);
+
+            var invitedBy = inviter?.Email ?? inviterId.ToString();
+            var toEmail = invitedUser?.Email;
+            // Nếu resource là Bank, lấy tên ngân hàng từ DB
+            string resourceName;
+            if (request.Resource.ResourceType == "Bank")
+            {
+                var bank = await _context.Banks.FindAsync(request.Resource.ResourceId);
+                resourceName = bank?.Bankname ?? $"Bank #{request.Resource.ResourceId}";
+            }
+            else
+            {
+                resourceName = $"{request.Resource.ResourceType} #{request.Resource.ResourceId}";
+            }
+
+            // 6. Gọi service gửi mail
+            await _emailService.SendResourceInvitationEmailAsync(
+                toEmail,
+                resourceName,
+                request.AccessRole.RoleName,
+                request.AccessRole.CanModify.GetValueOrDefault(),
+                request.AccessRole.CanDelete.GetValueOrDefault(),
+                invitedBy
+            );
 
             _context.ResourceAccesses.Add(accessRec);
             await _context.SaveChangesAsync();

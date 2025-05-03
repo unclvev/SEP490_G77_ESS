@@ -1,19 +1,19 @@
 // components/ListMemberModal.jsx
-import React, { useState, useEffect } from 'react';
-import { Modal, Input, List, Avatar, message } from 'antd';
-import { useSelector } from 'react-redux';
-import {jwtDecode} from 'jwt-decode';
-import { getMembers, removeUser } from '../../../services/api';
+import React, { useState, useEffect } from "react";
+import { Modal, Input, List, Avatar, message } from "antd";
+import { useSelector } from "react-redux";
+import { jwtDecode } from "jwt-decode";
+import { checkIsOwner, getMembers, removeUser } from "../../../services/api";
 import { toast } from "react-toastify";
 
 // Import UpdateRoleModal vừa tạo
-import UpdateRoleModal from './UpdateRoleModal';
+import UpdateRoleModal from "./UpdateRoleModal";
 
 const ListMemberModal = ({ visible, onClose, bankId }) => {
   const [members, setMembers] = useState([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  
+  const [searchTerm, setSearchTerm] = useState("");
+
   // State dành cho modal xác nhận xóa
   const [confirmVisible, setConfirmVisible] = useState(false);
   const [selectedMember, setSelectedMember] = useState(null);
@@ -21,6 +21,7 @@ const ListMemberModal = ({ visible, onClose, bankId }) => {
   // State dành cho modal cập nhật vai trò
   const [updateRoleVisible, setUpdateRoleVisible] = useState(false);
   const [selectedMemberForUpdate, setSelectedMemberForUpdate] = useState(null);
+  const [isOwner, setIsOwner] = useState(true);
 
   // Lấy token từ Redux store
   const token = useSelector((state) => state.token);
@@ -30,9 +31,18 @@ const ListMemberModal = ({ visible, onClose, bankId }) => {
       const decoded = jwtDecode(token.token);
       accid = decoded.AccId || null;
     } catch (error) {
-      console.error('Invalid token', error);
+      console.error("Invalid token", error);
     }
   }
+
+  const fetchIsOwner = async () => {
+    try {
+      const response = await checkIsOwner(bankId);
+      setIsOwner(response.data.isOwner);
+    } catch (error) {
+      toast.error("Không kiểm tra được chủ ngân hàng");
+    }
+  };
 
   // Mặc định resourceType = "bank"
   const resourceType = "bank";
@@ -40,13 +50,14 @@ const ListMemberModal = ({ visible, onClose, bankId }) => {
   // Gọi API lấy danh sách thành viên khi modal hiển thị
   useEffect(() => {
     if (visible) {
+      fetchIsOwner();
       setLoadingMembers(true);
       getMembers(bankId, resourceType)
         .then((data) => {
           setMembers(data);
         })
         .catch((error) => {
-          message.error(error.message || 'Không thể tải danh sách thành viên.');
+          message.error(error.message || "Không thể tải danh sách thành viên.");
           console.error(error);
         })
         .finally(() => {
@@ -59,9 +70,9 @@ const ListMemberModal = ({ visible, onClose, bankId }) => {
   const filteredMembers = members.filter((member) => {
     const lowerSearch = searchTerm.toLowerCase();
     return (
-      (member.username || '').toLowerCase().includes(lowerSearch) ||
-      (member.email || '').toLowerCase().includes(lowerSearch) ||
-      (member.role || '').toLowerCase().includes(lowerSearch)
+      (member.username || "").toLowerCase().includes(lowerSearch) ||
+      (member.email || "").toLowerCase().includes(lowerSearch) ||
+      (member.role || "").toLowerCase().includes(lowerSearch)
     );
   });
 
@@ -87,7 +98,7 @@ const ListMemberModal = ({ visible, onClose, bankId }) => {
     if (selectedMember) {
       removeUser(bankId, selectedMember.accid)
         .then(() => {
-            toast.success(`Đã xóa thành viên: ${selectedMember.username}`);
+          toast.success(`Đã xóa thành viên: ${selectedMember.username}`);
 
           // Cập nhật lại danh sách thành viên
           setMembers((prevMembers) =>
@@ -95,7 +106,7 @@ const ListMemberModal = ({ visible, onClose, bankId }) => {
           );
         })
         .catch((error) => {
-          toast.error(error.message || 'Xóa thành viên thất bại');
+          toast.error(error.message || "Xóa thành viên thất bại");
           console.error(error);
         })
         .finally(() => {
@@ -140,32 +151,48 @@ const ListMemberModal = ({ visible, onClose, bankId }) => {
             <List.Item
               key={item.accid}
               actions={[
-                item.role !== "Owner" && (
-                  <button 
-                    key="edit" 
+                // Chỉ hiển thị Edit/Delete khi:
+                // - current user là chủ (isOwner)
+                // - item không phải Owner về role
+                // - item.accid khác current user's accid (không phải chính họ)
+                isOwner && item.accid != accid && (
+                  <button
+                    key="edit"
                     type="button"
                     onClick={() => handleEdit(item)}
-                    style={{ background: 'none', border: 'none', color: '#1890ff', cursor: 'pointer' }}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: "#1890ff",
+                      cursor: "pointer",
+                    }}
                   >
                     Edit
                   </button>
                 ),
-                item.role !== "Owner" && (
-                  <button 
-                    key="delete" 
+                isOwner && item.accid != accid && (
+                  <button
+                    key="delete"
                     type="button"
                     onClick={() => handleDelete(item)}
-                    style={{ background: 'none', border: 'none', color: '#1890ff', cursor: 'pointer' }}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: "#1890ff",
+                      cursor: "pointer",
+                    }}
                   >
                     Xóa
                   </button>
                 ),
-              ].filter(Boolean)} // Remove null/undefined items from the array
+              ].filter(Boolean)} // lọc bỏ các giá trị false/undefined
             >
               <List.Item.Meta
                 avatar={
-                  <Avatar style={{ backgroundColor: '#87d068' }}>
-                    {item.username ? item.username.charAt(0).toUpperCase() : 'U'}
+                  <Avatar style={{ backgroundColor: "#87d068" }}>
+                    {item.username
+                      ? item.username.charAt(0).toUpperCase()
+                      : "U"}
                   </Avatar>
                 }
                 title={<div>{item.email}</div>}
@@ -191,7 +218,8 @@ const ListMemberModal = ({ visible, onClose, bankId }) => {
         cancelText="Hủy bỏ"
       >
         <p>
-          Bạn có chắc chắn muốn xóa thành viên "{selectedMember ? selectedMember.username : ''}" không?
+          Bạn có chắc chắn muốn xóa thành viên "
+          {selectedMember ? selectedMember.username : ""}" không?
         </p>
       </Modal>
 

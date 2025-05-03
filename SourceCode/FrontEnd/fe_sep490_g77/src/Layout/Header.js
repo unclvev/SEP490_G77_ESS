@@ -14,7 +14,7 @@ const Header = ({ collapsed }) => {
   const dispatch = useDispatch();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const avatarRef = useRef(null);
-
+  const sidebarWidth = collapsed ? "5rem" : "16rem";
 
   useEffect(() => {
     if (token) {
@@ -68,16 +68,18 @@ const Header = ({ collapsed }) => {
 
   return (
     <div
-      className={`bg-white shadow-md p-4 flex justify-between items-center left-0 right-0 z-10 transition-all duration-300 ${
-        collapsed ? "ml-16 w-[calc(100%-4rem)]" : "ml-64 w-[calc(100%-16rem)]"
-      }`}
+    className="fixed top-0 right-0 bg-white shadow-md p-4 flex justify-between items-center z-10 transition-all duration-300"
+    style={{
+      left: sidebarWidth,
+      width: `calc(100% - ${sidebarWidth})`
+    }}
     >
       {/* Logo và tên hệ thống bên trái */}
       <div className="flex items-center">
         <img
           src="/logo.png"
           alt="ESS Logo"
-          className="w-10 h-10 rounded-full mr-2"
+          className="w-13 h-10 rounded-full mr-2"
         />
         <span className="font-semibold text-lg text-gray-700">
           ESS - Hệ thống hỗ trợ thi cử
