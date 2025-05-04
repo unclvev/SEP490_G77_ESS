@@ -1,9 +1,15 @@
 import Http from "./http";
 
 
-export const searchUserToInvite = (query) =>
-  Http.get("/Manager/SearchUserToInvite", { params: { search: query } })
-    .then((response) => response.data);
+export const searchUserToInvite = (query, resourceType, resourceId) =>
+  Http.get("/Manager/SearchUserToInvite", {
+    params: {
+      search: query,
+      resourceType,
+      resourceId
+    }
+  })
+  .then((response) => response.data);
 
 
 export const inviteUser = async (payload) => Http.post("/Manager/InviteUser", payload)
@@ -124,6 +130,18 @@ export const countQExam = (examid, qtype) => Http.get(`/Exam/${examid}/question-
 export const getSubjectNameById = (subjectId) => Http.get(`/Exam/subject-name/${subjectId}`);
 
 export const updateExamData = (examid, data) => Http.put(`/ExamData/UpdateExamData?examid=${examid}`, data);
+
+//exa -share api
+
+export const sharedExamUser = () => Http.get(`/Exam/shared`);
+
+export const isModifyExam = (examid) => Http.get(`/Exam/isModify/${examid}`);
+
+export const isDeleteExam = (examid) => Http.get(`/Exam/isDelete/${examid}`);
+
+export const isAnalysis = (examid) => Http.get(`/Exam/isAnalysis/${examid}`);
+
+export const isExamOwner = (examid) => Http.get(`/Exam/isowner/${examid}`)
 
 
 //exam-analysis-api

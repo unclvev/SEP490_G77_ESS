@@ -68,6 +68,8 @@ builder.Services.AddAuthorization(options =>
         policy.Requirements.Add(new ResourcePermissionRequirement("Exam", "Modify")));
     options.AddPolicy("ExamDelete", policy =>
         policy.Requirements.Add(new ResourcePermissionRequirement("Exam", "Delete")));
+    options.AddPolicy("ExamAnalysis", policy =>
+        policy.Requirements.Add(new ResourcePermissionRequirement("Exam", "Analysis")));
 
     // === Grade ===
     options.AddPolicy("GradeRead", policy =>
@@ -80,10 +82,7 @@ builder.Services.AddAuthorization(options =>
     // === Analysis ===
     options.AddPolicy("AnalysisRead", policy =>
         policy.Requirements.Add(new ResourcePermissionRequirement("Analysis", "Read")));
-    options.AddPolicy("AnalysisModify", policy =>
-        policy.Requirements.Add(new ResourcePermissionRequirement("Analysis", "Modify")));
-    options.AddPolicy("AnalysisDelete", policy =>
-        policy.Requirements.Add(new ResourcePermissionRequirement("Analysis", "Delete")));
+
 });
 
 

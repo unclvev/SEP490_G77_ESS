@@ -11,6 +11,7 @@ import {
   Col,
   Upload,
   Select,
+  message,
 } from "antd";
 import {
   DeleteOutlined,
@@ -25,6 +26,7 @@ import "katex/dist/katex.min.css";
 import { EditorState, ContentState, Modifier } from "draft-js";
 import { Editor } from "react-draft-wysiwyg";
 import "react-draft-wysiwyg/dist/react-draft-wysiwyg.css";
+import { isDeleteExam, isModifyExam } from "../../services/api";
 
 const { Text } = Typography;
 const { Option } = Select;
@@ -42,7 +44,10 @@ const latexPresets = [
 ];
 
 const normalizeText = (text = "") =>
-  text.replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").trim();
+  text
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .trim();
 
 const createEditorState = (text) => {
   const clean = normalizeText(text);
@@ -58,6 +63,7 @@ const QuestionCardV2 = ({
   onMoveDown,
   totalQuestions,
   onFullUpdate,
+  examId,
 }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [editorState, setEditorState] = useState(
@@ -67,7 +73,10 @@ const QuestionCardV2 = ({
   const [modalCorrectId, setModalCorrectId] = useState(null);
   const [imageUrl, setImageUrl] = useState(question.ImageUrl || "");
 
-  const correctAnswerId = question.CorrectAnswerId || question.Answers.find((ans) => ans.IsCorrect)?.AnswerId || null;
+  const correctAnswerId =
+    question.CorrectAnswerId ||
+    question.Answers.find((ans) => ans.IsCorrect)?.AnswerId ||
+    null;
 
   const openModal = () => {
     setEditorState(createEditorState(question.Content));
@@ -102,9 +111,16 @@ const QuestionCardV2 = ({
     setEditorState((prev) => {
       const content = prev.getCurrentContent();
       const selection = prev.getSelection();
-      const newContent = Modifier.replaceText(content, selection, `[MATH:${latex}]`);
+      const newContent = Modifier.replaceText(
+        content,
+        selection,
+        `[MATH:${latex}]`
+      );
       const newState = EditorState.push(prev, newContent, "insert-characters");
-      return EditorState.forceSelection(newState, newContent.getSelectionAfter());
+      return EditorState.forceSelection(
+        newState,
+        newContent.getSelectionAfter()
+      );
     });
   };
 
@@ -128,32 +144,114 @@ const QuestionCardV2 = ({
       <p key={idx} style={{ margin: "4px 0" }}>
         {line.split(/(\[MATH:[^\]]+\])/g).map((seg, i) => {
           const match = seg.match(/\[MATH:([^\]]+)\]/);
-          return match ? <InlineMath key={i}>{match[1]}</InlineMath> : <span key={i}>{seg}</span>;
+          return match ? (
+            <InlineMath key={i}>{match[1]}</InlineMath>
+          ) : (
+            <span key={i}>{seg}</span>
+          );
         })}
       </p>
     ));
   };
 
+  const handleEditClick = async () => {
+    try {
+      await isModifyExam(examId);
+      openModal();
+    } catch (err) {
+      message.error("Bạn không có quyền chỉnh sửa câu hỏi");
+    }
+  };
+
+  // Hàm thay thế onDelete
+  const handleDeleteClick = async () => {
+    try {
+      await isDeleteExam(examId);
+      onDelete(index);
+    } catch (err) {
+      message.error("Bạn không có quyền xóa câu hỏi");
+    }
+  };
+
+  const handleMoveUpClick = async (index) => {
+    try {
+      await isModifyExam(examId);
+      onMoveUp(index);
+    } catch (err) {
+      message.error("Bạn không có quyền sửa câu hỏi");
+    }
+  };
+
+  const handleMoveDownClick = async (index) => {
+    try {
+      await isModifyExam(examId);
+      onMoveDown(index);
+    } catch (err) {
+      message.error("Bạn không có quyền sửa câu hỏi");
+    }
+  };
+
   return (
     <>
-      <Card style={{ marginBottom: 16, borderRadius: 8, boxShadow: "0 2px 8px rgba(0,0,0,0.1)", padding: 16 }}>
-        <Space style={{ width: "100%", justifyContent: "space-between", marginBottom: 12 }}>
+      <Card
+        style={{
+          marginBottom: 16,
+          borderRadius: 8,
+          boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+          padding: 16,
+        }}
+      >
+        <Space
+          style={{
+            width: "100%",
+            justifyContent: "space-between",
+            marginBottom: 12,
+          }}
+        >
           <Space>
             <Text strong>{`Câu ${index + 1}`}</Text>
-            <Button size="small" icon={<ArrowUpOutlined />} onClick={() => onMoveUp(index)} disabled={index === 0} />
-            <Button size="small" icon={<ArrowDownOutlined />} onClick={() => onMoveDown(index)} disabled={index === totalQuestions - 1} />
+            <Button
+              size="small"
+              icon={<ArrowUpOutlined />}
+              onClick={() => handleMoveUpClick(index)}
+              disabled={index === 0}
+            />
+            <Button
+              size="small"
+              icon={<ArrowDownOutlined />}
+              onClick={() => handleMoveDownClick(index)}
+              disabled={index === totalQuestions - 1}
+            />
           </Space>
           <Space>
-            <Button type="text" icon={<EditOutlined />} onClick={openModal}>Chỉnh sửa</Button>
-            <Button type="text" icon={<DeleteOutlined />} onClick={() => onDelete(index)}>Xóa câu hỏi</Button>
+            <Button
+              type="text"
+              icon={<EditOutlined />}
+              onClick={handleEditClick}
+            >
+              Chỉnh sửa
+            </Button>
+            <Button
+              type="text"
+              icon={<DeleteOutlined />}
+              onClick={handleDeleteClick}
+            >
+              Xóa câu hỏi
+            </Button>
           </Space>
         </Space>
 
-        <div style={{ marginBottom: 12 }}>{renderContent(question.Content)}</div>
+        <div style={{ marginBottom: 12 }}>
+          {renderContent(question.Content)}
+        </div>
 
         {question.ImageUrl && (
           <div style={{ textAlign: "center", marginBottom: 16 }}>
-            <img src={question.ImageUrl} alt="Hình minh họa" style={{ maxWidth: "100%", maxHeight: 300, borderRadius: 8 }} />
+            <img
+              src={question.ImageUrl}
+              alt="Hình minh họa"
+              style={{ maxWidth: "100%", maxHeight: 300, borderRadius: 8 }}
+            />
           </div>
         )}
 
@@ -163,8 +261,13 @@ const QuestionCardV2 = ({
               const isCorrect = ans.AnswerId === correctAnswerId;
               return (
                 <Space key={ans.AnswerId} align="start">
-                  <Text strong style={isCorrect ? { color: "green" } : {}}>{`${String.fromCharCode(65 + i)}.`}</Text>
-                  {isCorrect && <CheckOutlined style={{ color: "green", marginLeft: 4 }} />}
+                  <Text
+                    strong
+                    style={isCorrect ? { color: "green" } : {}}
+                  >{`${String.fromCharCode(65 + i)}.`}</Text>
+                  {isCorrect && (
+                    <CheckOutlined style={{ color: "green", marginLeft: 4 }} />
+                  )}
                   <div>{renderContent(ans.Content)}</div>
                 </Space>
               );
@@ -178,12 +281,18 @@ const QuestionCardV2 = ({
         open={modalVisible}
         onOk={handleSaveModal}
         onCancel={() => setModalVisible(false)}
-        width={'140vh'}
+        width={"140vh"}
       >
         <div style={{ marginBottom: 12 }}>
-          <Select placeholder="Chèn công thức vào câu hỏi" onChange={insertKatexToQuestion} style={{ width: 240 }}>
+          <Select
+            placeholder="Chèn công thức vào câu hỏi"
+            onChange={insertKatexToQuestion}
+            style={{ width: 240 }}
+          >
             {latexPresets.map((p) => (
-              <Option key={p.value} value={p.value}>{p.label}</Option>
+              <Option key={p.value} value={p.value}>
+                {p.label}
+              </Option>
             ))}
           </Select>
         </div>
@@ -193,14 +302,40 @@ const QuestionCardV2 = ({
           onEditorStateChange={setEditorState}
           wrapperClassName="demo-wrapper"
           editorClassName="demo-editor"
-          editorStyle={{ minHeight: "150px", border: "1px solid #ddd", padding: "4px" }}
+          editorStyle={{
+            minHeight: "150px",
+            border: "1px solid #ddd",
+            padding: "4px",
+          }}
         />
 
         <div style={{ marginTop: 16 }}>
-          <Upload showUploadList={false} customRequest={handleImageUpload} accept="image/*">
-            <Button icon={<UploadOutlined />} style={{ marginBottom: 8 }}>Tải ảnh lên</Button>
+          <Upload
+            showUploadList={false}
+            customRequest={handleImageUpload}
+            accept="image/*"
+          >
+            <Button icon={<UploadOutlined />} style={{ marginBottom: 8 }}>
+              Tải ảnh lên
+            </Button>
           </Upload>
-          {imageUrl && <img src={imageUrl} alt="preview" style={{ maxWidth: "100%", marginBottom: 12 }} />}
+          {imageUrl && (
+            <Space align="center" style={{ marginBottom: 16 }}>
+              <img
+                src={imageUrl}
+                alt="Hình minh họa"
+                style={{ maxWidth: "100%", maxHeight: 300, borderRadius: 8 }}
+              />
+              <Button
+                type="text"
+                icon={<DeleteOutlined />}
+                onClick={() => setImageUrl("")}
+                danger
+              >
+                Xóa ảnh
+              </Button>
+            </Space>
+          )}
         </div>
 
         <div style={{ marginTop: 12 }}>
@@ -219,7 +354,15 @@ const QuestionCardV2 = ({
                   <Input
                     placeholder={`Đáp án ${String.fromCharCode(65 + i)}`}
                     value={ans.Content}
-                    onChange={(e) => setModalAnswers(prev => prev.map((item, idx) => idx === i ? { ...item, Content: e.target.value } : item))}
+                    onChange={(e) =>
+                      setModalAnswers((prev) =>
+                        prev.map((item, idx) =>
+                          idx === i
+                            ? { ...item, Content: e.target.value }
+                            : item
+                        )
+                      )
+                    }
                   />
                 </Col>
                 <Col span={2}>
@@ -230,7 +373,9 @@ const QuestionCardV2 = ({
                     style={{ width: "100%" }}
                   >
                     {latexPresets.map((p) => (
-                      <Option key={p.value} value={p.value}>{p.label}</Option>
+                      <Option key={p.value} value={p.value}>
+                        {p.label}
+                      </Option>
                     ))}
                   </Select>
                 </Col>

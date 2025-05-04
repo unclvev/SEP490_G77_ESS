@@ -2,11 +2,9 @@ import React, { useState } from 'react';
 import { Modal, Form, AutoComplete, Switch, Button, message, Card, Typography, Row, Col } from 'antd';
 import { searchUserToInvite, inviteUser } from '../../../services/api';
 import { useSelector } from 'react-redux';
-import {jwtDecode} from 'jwt-decode';
-import { toast } from 'react-toastify';
-import { 
-  FileTextOutlined, 
-  CheckCircleOutlined, 
+import { jwtDecode } from 'jwt-decode';
+import {
+  FileTextOutlined,
   BarChartOutlined,
   EyeOutlined,
   EditOutlined,
@@ -15,22 +13,23 @@ import {
 
 const { Title, Text } = Typography;
 
-const InviteUserForExam = ({ visible, onClose, examId, resourceType }) => {
+const InviteUserForExam = ({ visible, onClose, examId }) => {
   const [form] = Form.useForm();
   const [options, setOptions] = useState([]);
   const [loadingSearch, setLoadingSearch] = useState(false);
+  const [selectedResources, setSelectedResources] = useState([]);
 
   const token = useSelector((state) => state.token);
   let accid = null;
 
   if (token) {
-    try {     
+    try {
       const decoded = jwtDecode(token.token);
       accid = decoded.AccId || null;
     } catch (error) {
       console.error('Invalid token', error);
     }
-  }  
+  }
 
   const handleSearch = async (value) => {
     if (!value) {
@@ -40,7 +39,6 @@ const InviteUserForExam = ({ visible, onClose, examId, resourceType }) => {
     setLoadingSearch(true);
     try {
       const users = await searchUserToInvite(value);
-      console.log("users from API:", users);
       const newOptions = users.map((item) => ({
         label: `${item.name} - ${item.email}`,
         value: `${item.name} - ${item.email}`,
@@ -55,11 +53,18 @@ const InviteUserForExam = ({ visible, onClose, examId, resourceType }) => {
   };
 
   const handleSelect = (value, option) => {
-    console.log("Selected option:", option);
     form.setFieldsValue({
       displayValue: value,
       accid: option.accId,
     });
+  };
+
+  const handleResourceChange = (resourceType, checked) => {
+    if (checked) {
+      setSelectedResources([...selectedResources, resourceType]);
+    } else {
+      setSelectedResources(selectedResources.filter(r => r !== resourceType));
+    }
   };
 
   const onFinish = async (values) => {
@@ -73,19 +78,12 @@ const InviteUserForExam = ({ visible, onClose, examId, resourceType }) => {
       return;
     }
 
-    // Tạo mảng các resource types dựa trên switches được chọn
-    const selectedResources = [];
-    if (values.hasExamAccess) selectedResources.push('Exam');
-    if (values.hasGradingAccess) selectedResources.push('Grading');
-    if (values.hasAnalysisAccess) selectedResources.push('Analysis');
-
     if (selectedResources.length === 0) {
       message.error("Vui lòng chọn ít nhất một quyền truy cập!");
       return;
     }
 
     try {
-      // Gửi request cho mỗi loại resource được chọn
       for (const resourceType of selectedResources) {
         const payload = {
           resource: {
@@ -95,13 +93,12 @@ const InviteUserForExam = ({ visible, onClose, examId, resourceType }) => {
           },
           accessRole: {
             RoleName: values.roleName,
-            CanModify: values.canModify,
+            CanModify: resourceType === 'Exam' ? values.canModify : false,
             CanRead: true,
-            CanDelete: values.canDelete,
+            CanDelete: resourceType === 'Exam' ? values.canDelete : false,
           },
         };
 
-        console.log("Sending payload:", payload);
         await inviteUser(payload);
       }
 
@@ -109,7 +106,8 @@ const InviteUserForExam = ({ visible, onClose, examId, resourceType }) => {
       form.resetFields();
       onClose();
     } catch (error) {
-      message.error(error.message || "Quá trình mời người dùng thất bại.");
+      const errorText = await error?.response?.text?.();
+      message.error(errorText || "Quá trình mời người dùng thất bại.");
       console.error("Error details:", error);
     }
   };
@@ -157,7 +155,7 @@ const InviteUserForExam = ({ visible, onClose, examId, resourceType }) => {
             rules={[{ required: true, message: 'Vui lòng nhập tên vai trò!' }]}
             tooltip="Tên vai trò sẽ hiển thị trong hệ thống"
           >
-            <input 
+            <input
               type="text"
               className="ant-input"
               placeholder="Nhập tên vai trò"
@@ -177,21 +175,8 @@ const InviteUserForExam = ({ visible, onClose, examId, resourceType }) => {
                       <div className="text-gray-500">Truy cập và quản lý các đề thi</div>
                     </div>
                   </div>
-                  <Form.Item name="hasExamAccess" valuePropName="checked" initialValue={false} className="mb-0">
-                    <Switch />
-                  </Form.Item>
-                </div>
-
-                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <CheckCircleOutlined className="text-2xl text-green-500" />
-                    <div>
-                      <Text strong>Chấm điểm</Text>
-                      <div className="text-gray-500">Thực hiện chấm điểm bài thi</div>
-                    </div>
-                  </div>
-                  <Form.Item name="hasGradingAccess" valuePropName="checked" initialValue={false} className="mb-0">
-                    <Switch />
+                  <Form.Item name="hasExamAccess" valuePropName="checked" className="mb-0">
+                    <Switch onChange={(checked) => handleResourceChange('Exam', checked)} />
                   </Form.Item>
                 </div>
 
@@ -203,8 +188,8 @@ const InviteUserForExam = ({ visible, onClose, examId, resourceType }) => {
                       <div className="text-gray-500">Xem và phân tích kết quả thi</div>
                     </div>
                   </div>
-                  <Form.Item name="hasAnalysisAccess" valuePropName="checked" initialValue={false} className="mb-0">
-                    <Switch />
+                  <Form.Item name="hasAnalysisAccess" valuePropName="checked" className="mb-0">
+                    <Switch onChange={(checked) => handleResourceChange('Analysis', checked)} />
                   </Form.Item>
                 </div>
               </div>
@@ -214,44 +199,50 @@ const InviteUserForExam = ({ visible, onClose, examId, resourceType }) => {
           <Col span={12}>
             <Card title="Quyền thao tác" className="h-full">
               <div className="space-y-6">
-                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <EyeOutlined className="text-xl text-gray-500" />
-                    <div>
-                      <Text strong>Quyền đọc</Text>
-                      <div className="text-gray-500">Xem thông tin và dữ liệu</div>
+                {!selectedResources.includes('Exam') && (
+                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <EyeOutlined className="text-xl text-gray-500" />
+                      <div>
+                        <Text strong>Quyền đọc</Text>
+                        <div className="text-gray-500">Xem thông tin và dữ liệu</div>
+                      </div>
                     </div>
+                    <Form.Item name="canRead" valuePropName="checked" initialValue={true} className="mb-0">
+                      <Switch disabled />
+                    </Form.Item>
                   </div>
-                  <Form.Item name="canRead" valuePropName="checked" initialValue={true} className="mb-0">
-                    <Switch />
-                  </Form.Item>
-                </div>
+                )}
 
-                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <EditOutlined className="text-xl text-blue-500" />
-                    <div>
-                      <Text strong>Quyền sửa</Text>
-                      <div className="text-gray-500">Chỉnh sửa thông tin và dữ liệu</div>
+                {selectedResources.includes('Exam') && (
+                  <>
+                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <EditOutlined className="text-xl text-blue-500" />
+                        <div>
+                          <Text strong>Quyền sửa</Text>
+                          <div className="text-gray-500">Chỉnh sửa thông tin và dữ liệu</div>
+                        </div>
+                      </div>
+                      <Form.Item name="canModify" valuePropName="checked" initialValue={false} className="mb-0">
+                        <Switch />
+                      </Form.Item>
                     </div>
-                  </div>
-                  <Form.Item name="canModify" valuePropName="checked" initialValue={false} className="mb-0">
-                    <Switch />
-                  </Form.Item>
-                </div>
 
-                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <DeleteOutlined className="text-xl text-red-500" />
-                    <div>
-                      <Text strong>Quyền xóa</Text>
-                      <div className="text-gray-500">Xóa thông tin và dữ liệu</div>
+                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <DeleteOutlined className="text-xl text-red-500" />
+                        <div>
+                          <Text strong>Quyền xóa</Text>
+                          <div className="text-gray-500">Xóa thông tin và dữ liệu</div>
+                        </div>
+                      </div>
+                      <Form.Item name="canDelete" valuePropName="checked" initialValue={false} className="mb-0">
+                        <Switch />
+                      </Form.Item>
                     </div>
-                  </div>
-                  <Form.Item name="canDelete" valuePropName="checked" initialValue={false} className="mb-0">
-                    <Switch />
-                  </Form.Item>
-                </div>
+                  </>
+                )}
               </div>
             </Card>
           </Col>
@@ -261,8 +252,8 @@ const InviteUserForExam = ({ visible, onClose, examId, resourceType }) => {
           <Button onClick={onClose}>
             Hủy
           </Button>
-          <Button 
-            type="primary" 
+          <Button
+            type="primary"
             htmlType="submit"
             className="bg-blue-600 hover:bg-blue-700"
           >

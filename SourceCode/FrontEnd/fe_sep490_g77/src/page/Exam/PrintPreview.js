@@ -49,25 +49,39 @@ const PrintPreview = () => {
   const alphabetLabels = ["A", "B", "C", "D", "E", "F"];
 
   const renderInlineContent = (content) => {
-    const tokens = content.split(/(\[MATH:[^\]]+\])/);
+    // 1. Remove all tags except [MATH:...] placeholders
+    const cleanContent = content.replace(/<\/?[^>]+(>|$)/g, ""); // Remove all HTML tags
+
+    // 2. Split by math placeholders
+    const tokens = cleanContent.split(/(\[MATH:[^\]]+\])/);
+
+    // 3. Render
     return tokens.map((tok, i) => {
       const m = tok.match(/^\[MATH:([^\]]+)\]$/);
-      if (m) return <InlineMath key={i}>{m[1]}</InlineMath>;
-      return <span key={i} dangerouslySetInnerHTML={{ __html: tok }} />;
+      if (m) {
+        return (
+          <InlineMath
+            key={i}
+            math={m[1]}
+            style={{ display: "inline", verticalAlign: "baseline" }}
+          />
+        );
+      }
+      return <span key={i}>{tok}</span>;
     });
+  };
+
+  const isLongAnswer = (answers) => {
+    return answers.some(
+      (a) => a.Content.replace(/<\/?[^>]+(>|$)/g, "").length > 40
+    );
   };
 
   return (
     <div className="bg-gray-100 flex justify-center py-8 px-4 print:px-0">
       <div
-        className="bg-white p-8 shadow-md"
-        style={{
-          fontFamily: "Times New Roman",
-          fontSize: "13pt",
-          width: "320mm",
-          minHeight: "297mm",
-          boxShadow: "0 0 10px rgba(0,0,0,0.15)",
-        }}
+        className="print-container"
+        style={{ fontFamily: "Times New Roman" }}
       >
         <div className="flex justify-between items-center mb-6 print:hidden">
           <Button onClick={() => navigate(-1)}>← Quay lại</Button>
@@ -161,7 +175,11 @@ const PrintPreview = () => {
           {questions.map((q, idx) => {
             const isHorizontal = q.Answers.every((a) => a.Content.length <= 40);
             return (
-              <section key={q.QuestionId} className="mb-6">
+              <section
+                key={q.QuestionId}
+                className="mb-6"
+                style={{ pageBreakInside: "avoid" }}
+              >
                 <div className="flex flex-wrap items-start mb-2">
                   <span
                     className="font-semibold mr-2"
@@ -184,15 +202,21 @@ const PrintPreview = () => {
                 </div>
 
                 <div
-                  className={`ml-6 ${
-                    isHorizontal
-                      ? "flex flex-wrap space-x-6"
-                      : "flex flex-col space-y-2"
-                  }`}
+                  className={`ml-6 grid ${
+                    isLongAnswer(q.Answers) ? "grid-cols-2" : "grid-cols-4"
+                  } gap-x-12 gap-y-2`}
+                  style={{ maxWidth: "100%" }}
                 >
                   {q.Answers.map((ans, i) => (
-                    <div key={ans.AnswerId} className="flex items-start">
-                      <span className="font-semibold mr-1">
+                    <div
+                      key={ans.AnswerId}
+                      className="flex items-start"
+                      style={{ breakInside: "avoid", minWidth: "160px" }}
+                    >
+                      <span
+                        className="font-semibold mr-1"
+                        style={{ minWidth: 20 }}
+                      >
                         {alphabetLabels[i]}.
                       </span>
                       <div>{renderInlineContent(ans.Content)}</div>
@@ -205,14 +229,33 @@ const PrintPreview = () => {
         </main>
 
         <style>{`
+  @media screen {
+  .print-container {
+    width: 1123px; /* Kích thước A3 (portrait) gần đúng: 1123px = 297mm @ 96dpi */
+    min-height: 1587px; /* Kích thước A3 height gần đúng = 420mm @ 96dpi */
+    padding: 10px;
+    margin: 0 auto;
+    background: white;
+    box-shadow: 0 0 10px rgba(0,0,0,0.15);
+    font-size: 13pt;
+    box-sizing: border-box;
+  }
+
+  body {
+    overflow: auto;
+    background: #e5e7eb; /* giữ màu nền xám như trước */
+  }
+}
+
+
   @media print {
   @page {
-    size: A4 portrait;
+    size: A3 portrait;
     margin: 10mm;
   }
 
   html, body {
-    font-size: 13pt;
+    font-size: 12pt;
     background: white;
   }
 
@@ -221,14 +264,25 @@ const PrintPreview = () => {
     outline: none !important;
   }
 
-  .print\\:hidden {
+  .print\:hidden {
     display: none !important;
   }
 
   .shadow-md {
     box-shadow: none !important;
   }
+
+  img {
+    max-width: 100%;
+    max-height: 100%;
+    page-break-inside: avoid;
+  }
+
+  section {
+    page-break-inside: avoid;
+  }
 }
+
 
 `}</style>
       </div>

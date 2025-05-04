@@ -30,9 +30,19 @@ namespace SEP490_G77_ESS.Controllers.RBAC.Bank
                 return BadRequest("Search query cannot be empty.");
             }
 
+            var claimAccId = User.FindFirst("AccId")?.Value;
+            if (string.IsNullOrEmpty(claimAccId))
+            {
+                return Unauthorized();
+            }
+
+            long currentUserId = long.Parse(claimAccId); // Lấy AccId của người dùng hiện tại
+
+            // Truy vấn tìm kiếm người dùng, loại trừ người dùng hiện tại khỏi kết quả
             var users = await _context.Accounts
                 .Where(u => (u.Email != null && u.Email.Contains(search))
-                        || (u.Phone != null && u.Phone.Contains(search)))
+                            || (u.Phone != null && u.Phone.Contains(search)))
+                .Where(u => u.AccId != currentUserId) // Loại trừ chính mình
                 .Take(10)
                 .Select(u => new GetUserDTO
                 {
@@ -51,72 +61,86 @@ namespace SEP490_G77_ESS.Controllers.RBAC.Bank
         {
             var claimAccId = User.FindFirst("AccId")?.Value;
             if (string.IsNullOrEmpty(claimAccId))
-            {
                 return Unauthorized();
-            }
-            var ownerRecord = await _context.ResourceAccesses
-                                    .FirstOrDefaultAsync(r =>
-                                        r.ResourceType == request.Resource.ResourceType &&
-                                        r.ResourceId == request.Resource.ResourceId &&
-                                        r.Accid == long.Parse(claimAccId) &&
-                                        r.IsOwner == true
-                                    );
-            if (ownerRecord == null)
-                return Forbid("Bạn không có quyền mời người dùng cho tài nguyên này.");
+            var userId = long.Parse(claimAccId);
 
-            var existingAccess = await _context.ResourceAccesses
-                                               .FirstOrDefaultAsync(r => r.ResourceType == request.Resource.ResourceType &&
-                                                                                           r.ResourceId == request.Resource.ResourceId && 
-                                                                                           r.Accid == request.Resource.Accid);
+            var resType = request.Resource.ResourceType;
+            var resId = request.Resource.ResourceId;
+            bool isOwner = false;
 
-            if (existingAccess != null)
+            if (resType == "Bank")
             {
-                return Conflict("Người dùng đã được mời trước đó.");
-            }
-
-            var roleAc = new RoleAccess
-            {
-                RoleName = request.AccessRole.RoleName,
-                CanRead = request.AccessRole.CanRead,
-                CanModify = request.AccessRole.CanModify,
-                CanDelete = request.AccessRole.CanDelete
-            };
-            _context.RoleAccesses.Add(roleAc);
-
-            await _context.SaveChangesAsync();
-            // Tạo quyền truy cập cho người dùng mới
-
-
-            var roleId = roleAc.Roleid;
-            var accessRec = new ResourceAccess
-            {
-                ResourceType = request.Resource.ResourceType,
-                ResourceId = request.Resource.ResourceId,
-                Accid = request.Resource.Accid,
-                RoleId = roleId,
-                IsOwner = false
-            };
-
-            // 5. Lấy thông tin inviter & invited để gửi email
-            var inviterId = long.Parse(claimAccId);
-            var inviter = await _context.Accounts.FindAsync(inviterId);
-            var invitedUser = await _context.Accounts.FindAsync(request.Resource.Accid);
-
-            var invitedBy = inviter?.Email ?? inviterId.ToString();
-            var toEmail = invitedUser?.Email;
-            // Nếu resource là Bank, lấy tên ngân hàng từ DB
-            string resourceName;
-            if (request.Resource.ResourceType == "Bank")
-            {
-                var bank = await _context.Banks.FindAsync(request.Resource.ResourceId);
-                resourceName = bank?.Bankname ?? $"Bank #{request.Resource.ResourceId}";
+                isOwner = await _context.ResourceAccesses.AnyAsync(r =>
+                    // so sánh ResourceType bình thường (string == string)
+                    r.ResourceType == "Bank"
+                    && r.ResourceId == resId
+                    && r.Accid == userId
+                    // thêm == true để chuyển nullable bool? -> bool
+                    && r.IsOwner == true
+                );
+                if (!isOwner)
+                    return Forbid("Bạn không có quyền mời người dùng vào ngân hàng này.");
             }
             else
             {
-                resourceName = $"{request.Resource.ResourceType} #{request.Resource.ResourceId}";
+                isOwner = await _context.ResourceAccesses.AnyAsync(r =>
+                    r.ResourceType == "Exam"
+                    && r.ResourceId == resId
+                    && r.Accid == userId
+                    && r.IsOwner == true
+                );
+                if (!isOwner)
+                    return Forbid("Bạn không có quyền mời người dùng cho đề thi này.");
             }
 
-            // 6. Gọi service gửi mail
+            // 3. Kiểm tra đã invite chưa
+            var existing = await _context.ResourceAccesses.FirstOrDefaultAsync(r =>
+                r.ResourceType == resType &&
+                r.ResourceId == resId &&
+                r.Accid == request.Resource.Accid);
+            if (existing != null)
+                return Conflict("Người dùng đã được mời trước đó.");
+
+            // 4. Tạo RoleAccess mới
+            var roleAc = new RoleAccess
+            {
+                RoleName = request.AccessRole.RoleName,
+                CanRead = request.AccessRole.CanRead.GetValueOrDefault(),
+                CanModify = request.AccessRole.CanModify.GetValueOrDefault(),
+                CanDelete = request.AccessRole.CanDelete.GetValueOrDefault()
+            };
+            _context.RoleAccesses.Add(roleAc);
+            await _context.SaveChangesAsync();
+
+            // 5. Tạo ResourceAccess cho user mới
+            var accessRec = new ResourceAccess
+            {
+                ResourceType = resType,
+                ResourceId = resId,
+                Accid = request.Resource.Accid,
+                RoleId = roleAc.Roleid,
+                IsOwner = false
+            };
+            _context.ResourceAccesses.Add(accessRec);
+
+            // 6. Gửi email invitation (giữ nguyên logic hiện tại)
+            var inviter = await _context.Accounts.FindAsync(userId);
+            var invited = await _context.Accounts.FindAsync(request.Resource.Accid);
+            var invitedBy = inviter?.Email ?? inviter?.AccId.ToString();
+            var toEmail = invited?.Email;
+
+            string resourceName;
+            if (resType == "Bank")
+            {
+                var bank = await _context.Banks.FindAsync(resId);
+                resourceName = bank?.Bankname ?? $"Bank #{resId}";
+            }
+            else
+            {
+                var exam = await _context.Exams.FindAsync(resId);
+                resourceName = exam?.Examname ?? $"Exam #{resId}";
+            }
+
             await _emailService.SendResourceInvitationEmailAsync(
                 toEmail,
                 resourceName,
@@ -126,7 +150,6 @@ namespace SEP490_G77_ESS.Controllers.RBAC.Bank
                 invitedBy
             );
 
-            _context.ResourceAccesses.Add(accessRec);
             await _context.SaveChangesAsync();
             return Ok("Người dùng đã được mời thành công.");
         }
@@ -135,6 +158,7 @@ namespace SEP490_G77_ESS.Controllers.RBAC.Bank
         [HttpGet("Member/{bankId}/{resourceType}")]
         public async Task<IActionResult> GetInvitedUsers(long bankId, string resourceType)
         {
+            // Lấy userId từ claim
             var claimAccId = User.FindFirst("AccId")?.Value;
             if (string.IsNullOrEmpty(claimAccId))
             {
@@ -143,19 +167,54 @@ namespace SEP490_G77_ESS.Controllers.RBAC.Bank
 
             long currentUserId = long.Parse(claimAccId);
 
-            // Lấy danh sách các người dùng đã được mời vào ngân hàng
+            // Kiểm tra quyền truy cập vào tài nguyên Exam và Analysis
+            if (resourceType == "Exam")
+            {
+                var hasExamReadPermission = await _context.ResourceAccesses
+                    .AnyAsync(ra => ra.Accid == currentUserId && ra.ResourceType == "Exam" && ra.ResourceId == bankId && ra.Role.CanRead == true);
+
+                if (!hasExamReadPermission)
+                {
+                    return Forbid(); // Không có quyền đọc Exam
+                }
+            }
+
+            // Kiểm tra quyền truy cập vào Analysis (nếu resourceType là "Analysis")
+            if (resourceType == "Analysis")
+            {
+                var hasAnalysisReadPermission = await _context.ResourceAccesses
+                    .AnyAsync(ra => ra.Accid == currentUserId && ra.ResourceType == "Analysis" && ra.ResourceId == bankId && ra.Role.CanRead == true);
+
+                if (!hasAnalysisReadPermission)
+                {
+                    return Forbid(); // Không có quyền đọc Analysis
+                }
+            }
+
+            // Lấy danh sách các người dùng đã được mời vào ngân hàng (bankId)
             var invitedUsers = await _context.ResourceAccesses
-                                             .Where(ra => ra.ResourceId == bankId && ra.ResourceType == resourceType)
-                                             .Join(_context.Accounts, ra => ra.Accid, acc => acc.AccId, (ra, acc) => new
-                                             {
-                                                 Accid = acc.AccId,
-                                                 Username = acc.Username,
-                                                 Email = acc.Email,
-                                                 Phone = acc.Phone,
-                                                 Role = (bool)ra.IsOwner ? "Owner" : ra.Role.RoleName,
-                                                 IsOwner = ra.IsOwner
-                                             })
-                                             .ToListAsync();
+                .Where(ra => ra.ResourceId == bankId && ra.ResourceType == resourceType)
+                .Join(_context.Accounts, ra => ra.Accid, acc => acc.AccId, (ra, acc) => new
+                {
+                    Accid = acc.AccId,
+                    Username = acc.Username,
+                    Email = acc.Email,
+                    Phone = acc.Phone,
+                    Role = (bool)ra.IsOwner ? "Owner" : ra.Role.RoleName,
+                    IsOwner = ra.IsOwner
+                })
+                .ToListAsync();
+
+            // Kiểm tra nếu resourceType là "Bank" và chỉ có 1 người sở hữu (IsOwner)
+            if (resourceType == "Bank")
+            {
+                var ownerCount = invitedUsers.Count(user => user.IsOwner.HasValue && user.IsOwner.Value);
+
+                if (ownerCount > 1)
+                {
+                    return BadRequest("Mỗi ngân hàng chỉ có một người sở hữu.");
+                }
+            }
 
             // Trả về danh sách người dùng đã được mời
             return Ok(invitedUsers);
@@ -172,13 +231,6 @@ namespace SEP490_G77_ESS.Controllers.RBAC.Bank
 
             long currentUserId = long.Parse(claimAccId);
 
-            // Kiểm tra xem người dùng có phải là chủ ngân hàng không
-            var bank = await _context.Banks.FirstOrDefaultAsync(b => b.BankId == bankId && b.Accid == currentUserId);
-            if (bank == null)
-            {
-                return Unauthorized("Bạn không có quyền cập nhật quyền truy cập cho ngân hàng này.");
-            }
-
             // Kiểm tra xem người dùng có trong ngân hàng này hay không
             var resourceAccess = await _context.ResourceAccesses
                 .FirstOrDefaultAsync(ra => ra.ResourceId == bankId && ra.Accid == userId);
@@ -193,7 +245,7 @@ namespace SEP490_G77_ESS.Controllers.RBAC.Bank
             roleUpdate.RoleName = dto.RoleName;
             roleUpdate.CanModify = dto.CanModify;
             roleUpdate.CanRead = dto.CanRead;
-            roleUpdate.CanDelete = dto.CanDelete;    
+            roleUpdate.CanDelete = dto.CanDelete;
 
             // Lưu các thay đổi vào cơ sở dữ liệu
             await _context.SaveChangesAsync();
@@ -206,19 +258,9 @@ namespace SEP490_G77_ESS.Controllers.RBAC.Bank
         public async Task<IActionResult> RemoveUser(long bankId, long userId)
         {
             var claimAccId = User.FindFirst("AccId")?.Value;
-            if (string.IsNullOrEmpty(claimAccId))
-            {
-                return Unauthorized();
-            }
 
             long currentUserId = long.Parse(claimAccId);
 
-            // Kiểm tra xem người dùng có phải là chủ ngân hàng không
-            var bank = await _context.Banks.FirstOrDefaultAsync(b => b.BankId == bankId && b.Accid == currentUserId);
-            if (bank == null)
-            {
-                return Unauthorized("Bạn không có quyền xóa thành viên khỏi ngân hàng này.");
-            }
 
             // Kiểm tra xem người dùng có trong ngân hàng này hay không
             var resourceAccess = await _context.ResourceAccesses

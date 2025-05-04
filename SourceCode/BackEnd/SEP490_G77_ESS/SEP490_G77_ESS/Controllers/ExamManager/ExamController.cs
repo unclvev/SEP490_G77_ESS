@@ -101,6 +101,10 @@ namespace SEP490_G77_ESS.Controllers.ExamManager
             if (request?.GenerateData?.Topics == null || !request.GenerateData.Topics.Any())
                 return BadRequest("Dữ liệu đầu vào không hợp lệ.");
 
+            var accId = await GetAccIdFromToken();
+            if (accId == null)
+                return Unauthorized(new { message = "Không thể xác định tài khoản." });
+
             var examResponse = new ExamResponse
             {
                 ExamId = new Random().Next(1, 1000), // Tạo ID ngẫu nhiên cho exam
@@ -174,6 +178,7 @@ namespace SEP490_G77_ESS.Controllers.ExamManager
 
                         examResponse.Questions.Add(questionDto);
                     }
+                    
                 }
             }
 
@@ -181,7 +186,6 @@ namespace SEP490_G77_ESS.Controllers.ExamManager
         }
 
 
-        //Testingdotnet ef dbcontext scaffold "Server=DESKTOP-N81N3JT\SA;Database=ess_db_v11;uid=sa;pwd=123;" Microsoft.EntityFrameworkCore.SqlServer --output-dir Models -f
         [HttpGet]
         [Authorize]
         public async Task<ActionResult<IEnumerable<ExamDTO>>> GetExamByUser()
@@ -266,16 +270,45 @@ namespace SEP490_G77_ESS.Controllers.ExamManager
         [HttpGet("loadbs")]
         public async Task<IActionResult> GetBankList()
         {
-            var banks = await _context.Banks
-                .Select(b => new Bexs
-                {
-                    BankId = b.BankId,
-                    BankName = b.Bankname
-                })
+            var accId = await GetAccIdFromToken();
+            if (accId == null)
+                return Unauthorized(new { message = "Không thể xác định tài khoản." });
+
+            // Danh sách BankId được share cho user
+            var sharedBankIds = await _context.ResourceAccesses
+                .Where(ra =>
+                    ra.ResourceType == "Bank" &&
+                    ra.Accid == accId.Value &&
+                    ra.IsOwner == false)
+                .Select(ra => ra.ResourceId!.Value)
+                .Distinct()
                 .ToListAsync();
 
-            return Ok(banks);
+            // Các nhóm
+            var ownBanks = await _context.Banks
+                .Where(b => b.Accid == accId.Value)
+                .Select(b => new Bexs { BankId = b.BankId, BankName = b.Bankname })
+                .ToListAsync();
+
+            var sharedBanks = await _context.Banks
+                .Where(b => sharedBankIds.Contains(b.BankId))
+                .Select(b => new Bexs { BankId = b.BankId, BankName = b.Bankname })
+                .ToListAsync();
+
+            var systemBanks = await _context.Banks
+                .Where(b => b.Accid == null)
+                .Select(b => new Bexs { BankId = b.BankId, BankName = b.Bankname })
+                .ToListAsync();
+
+            return Ok(new
+            {
+                ownBanks,
+                sharedBanks,
+                systemBanks
+            });
         }
+
+
 
         //In process
         [HttpGet("loadb/{bankId}")]
@@ -390,6 +423,114 @@ namespace SEP490_G77_ESS.Controllers.ExamManager
 
             return Ok(results);
         }
+
+        [HttpGet("shared")]
+        public async Task<ActionResult<IEnumerable<ExamDTO>>> GetSharedExams()
+        {
+            var accId = await GetAccIdFromToken();
+            if (accId == null)
+                return Unauthorized(new { message = "Không thể xác định tài khoản." });
+
+            // 1. Lấy toàn bộ ResourceAccess ghi nhận share Exam cho user này (không phải owner)
+            var sharedAccesses = await _context.ResourceAccesses
+                .Where(ra =>
+                    ra.ResourceType == "Exam" &&
+                    ra.Accid == accId &&
+                    ra.IsOwner == false)
+                .ToListAsync();
+
+            // 2. Tập hợp danh sách ExamId
+            var examIds = sharedAccesses
+                .Where(ra => ra.ResourceId.HasValue)
+                .Select(ra => ra.ResourceId!.Value)
+                .Distinct()
+                .ToList();
+
+            if (!examIds.Any())
+                return Ok(new List<ExamDTO>()); // Trả về mảng rỗng nếu không có share
+
+            // 3. Lấy chi tiết các Exam
+            var sharedExams = await _context.Exams
+                .Where(e => examIds.Contains(e.ExamId))
+                .Select(e => new ExamDTO
+                {
+                    ExamId = e.ExamId,
+                    Examname = e.Examname,
+                    Createdate = e.Createdate,
+                    AccId = e.AccId
+                })
+                .ToListAsync();
+
+            return Ok(sharedExams);
+        }
+
+        // Cho phép sửa/ thêm câu hỏi vào exam
+        [HttpGet("isModify/{examId}")]
+        public async Task<ActionResult<bool>> AllowModifyExam(long examId)
+        {
+            var accId = await GetAccIdFromToken();
+            if (accId == null)
+                return Unauthorized(new { message = "Không thể xác định tài khoản." });
+
+            var authorizationResult = await _authorizationService
+                .AuthorizeAsync(User, examId, "ExamModify");
+            if (!authorizationResult.Succeeded)
+                return Forbid();
+
+            return Ok(true);
+        }
+
+        // Cho phép xóa câu hỏi trong exam
+        [HttpGet("isDelete/{examId}")]
+        public async Task<ActionResult<bool>> AllowDeleteExam(long examId)
+        {
+            var accId = await GetAccIdFromToken();
+            if (accId == null)
+                return Unauthorized(new { message = "Không thể xác định tài khoản." });
+
+            var authorizationResult = await _authorizationService
+                .AuthorizeAsync(User, examId, "ExamDelete");
+            if (!authorizationResult.Succeeded)
+                return Forbid();
+
+            return Ok(true);
+        }
+
+        // Cho phép xem phần phân tích kết quả exam
+        [HttpGet("isAnalysis/{examId}")]
+        public async Task<ActionResult<bool>> AllowAnalysisExam(long examId)
+        {
+            var accId = await GetAccIdFromToken();
+            if (accId == null)
+                return Unauthorized(new { message = "Không thể xác định tài khoản." });
+
+            var authorizationResult = await _authorizationService
+                .AuthorizeAsync(User, examId, "AnalysisRead");
+            if (!authorizationResult.Succeeded)
+                return Forbid();
+
+            return Ok(true);
+        }
+
+        [HttpGet("isowner/{examId}")]
+        public async Task<ActionResult<bool>> IsExamOwner(long examId)
+        {
+            // Lấy AccId từ token
+            var accId = await GetAccIdFromToken();
+            if (accId == null)
+                return Unauthorized(new { message = "Không thể xác định tài khoản." });
+
+            // Kiểm tra trong DB xem có exam nào cùng examId và AccId khớp không
+            var isOwner = await _context.Exams
+                                .AnyAsync(e => e.ExamId == examId && e.AccId == accId.Value);
+
+            return Ok(isOwner);
+        }
+
+
+
+
+
 
         ////get mcq exams by accid
         //[HttpGet("mcq/accid/{accId}")]

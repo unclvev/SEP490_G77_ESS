@@ -126,6 +126,17 @@ namespace SEP490_G77_ESS.Controllers.ExamManager
             _context.Exams.Add(exam);
             await _context.SaveChangesAsync();
 
+            var owner = new ResourceAccess
+            {
+                Accid = accId,
+                ResourceId = exam.ExamId,
+                ResourceType = "Exam",
+                IsOwner = true,
+
+            };
+            _context.ResourceAccesses.Add(owner);
+            await _context.SaveChangesAsync();
+
             return Ok(new { exam.ExamId, exam.Examdata });
         }
 

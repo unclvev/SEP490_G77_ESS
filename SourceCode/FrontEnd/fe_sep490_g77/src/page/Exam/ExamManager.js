@@ -13,7 +13,7 @@ import {
   PlusOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
-import { delExam, getExams, updateExam } from "../../services/api";
+import { delExam, getExams, getSharedBank, sharedExamUser, updateExam } from "../../services/api";
 import { toast } from "react-toastify";
 
 const ExamManagement = () => {
@@ -45,22 +45,11 @@ const ExamManagement = () => {
     fetchData();
   }, []);
 
-  const fetchSharedExams = async () => {
-    // Dữ liệu giả
-    return [
-      {
-        examId: 999,
-        examname: "Đề thi được chia sẻ",
-        createdate: new Date().toISOString(),
-      },
-    ];
-  };
-
   useEffect(() => {
-    if (activeTab === "shared" && sharedExams.length === 0) {
+    if (activeTab === "shared") {
       setLoading(true);
-      fetchSharedExams()
-        .then((data) => setSharedExams(data))
+      sharedExamUser()
+        .then((response) => setSharedExams(response.data))
         .catch(() => toast.error("Lỗi khi tải đề chia sẻ"))
         .finally(() => setLoading(false));
     }
@@ -122,7 +111,7 @@ const ExamManagement = () => {
     }
   };
 
-  const renderExamCards = (list, editable = true) => (
+  const renderExamCards = (list = [], editable = true) => (
     <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
       {list.length > 0 ? (
         list.map((exam) => (
@@ -136,7 +125,7 @@ const ExamManagement = () => {
             }
           >
             <p>
-              Ngày chia sẻ:{" "}
+              Ngày tạo:{" "}
               {new Date(exam.createdate).toLocaleString("vi-VN", {
                 day: "2-digit",
                 month: "2-digit",

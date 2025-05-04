@@ -22,6 +22,7 @@ import {
   TeamOutlined,
   EditOutlined,
   PlusOutlined,
+  GroupOutlined,
 } from "@ant-design/icons";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import {
@@ -30,23 +31,22 @@ import {
   loadGrade,
   loadSubject,
   updateExamData,
-  searchUserToInvite,
-  inviteUser,
-  getMembers,
-  removeUser,
+  isModifyExam,
+  isAnalysis,
+  isExamOwner,
+  isDeleteExam,
 } from "../../services/api";
 import { saveAs } from "file-saver";
 import { toast } from "react-toastify";
 import QuestionCardV2 from "../../components/Exam/QuestionCardv2";
 import AddQuestionModal from "../../components/Exam/AddQuestionModel";
 import ImportStudentModal from "../../components/Exam/ImportStudent";
-import InviteUserModal from "../Manager/components/InviteUserModal";
 import ListMemberModal from "../Manager/components/ListMemberModal";
 import useExamCodeManager from "../../components/Exam/ExamCodeManager";
 import InviteUserForExam from "../Manager/components/InviteUserForExam";
+import ListMemberForExam from "../Manager/components/ListMemberExam";
 
 const { Text, Title } = Typography;
-const { Option } = Select;
 const { TabPane } = Tabs;
 
 const ExamDetail = () => {
@@ -59,6 +59,7 @@ const ExamDetail = () => {
 
   const [initialPayload, setInitialPayload] = useState(null);
   const [isDirty, setIsDirty] = useState(false);
+  const [isowner, setIsOwner] = useState(true);
 
   const [questions, setQuestions] = useState([]);
 
@@ -96,6 +97,8 @@ const ExamDetail = () => {
   // Add new state variables for invite functionality
   const [inviteModalVisible, setInviteModalVisible] = useState(false);
   const [listMemberModalVisible, setListMemberModalVisible] = useState(false);
+  const [listMemberForExamModalVisible, setListMemberForExamModalVisible] =
+    useState(false);
 
   // --- Fetch exam data ---
   useEffect(() => {
@@ -167,76 +170,21 @@ const ExamDetail = () => {
     fetchOptions();
   }, []);
 
-  // --- Handlers for question-card interactions ---
-  const handleQuestionChange = (index, newContent) => {
-    setQuestions((prev) => {
-      const arr = [...prev];
-      arr[index] = { ...arr[index], Content: newContent };
-      return arr;
-    });
-  };
-
-  const handleAnswerChange = (qIndex, answerId, newContent) => {
-    setQuestions((prev) => {
-      const arr = [...prev];
-      arr[qIndex] = {
-        ...arr[qIndex],
-        Answers: arr[qIndex].Answers.map((a) =>
-          a.AnswerId === answerId ? { ...a, Content: newContent } : a
-        ),
-      };
-      return arr;
-    });
-  };
-
-  const handleCorrectChange = (qIdx, ansId) => {
-    setQuestions((prev) =>
-      prev.map((q, i) => {
-        if (i !== qIdx) return q;
-        return {
-          ...q,
-          CorrectAnswerId: ansId,
-          Answers: q.Answers.map((a) => ({
-            ...a,
-            IsCorrect: a.AnswerId === ansId,
-          })),
-        };
-      })
-    );
-  };
-
-  const handleAnswerDelete = (qIndex, answerId) => {
-    setQuestions((prev) => {
-      const arr = [...prev];
-      arr[qIndex] = {
-        ...arr[qIndex],
-        Answers: arr[qIndex].Answers.filter((a) => a.AnswerId !== answerId),
-      };
-      return arr;
-    });
-  };
-
-  const handleDeleteQuestion = (index) => {
-    setQuestions((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const handleMoveUp = (index) => {
-    if (index === 0) return;
-    setQuestions((prev) => {
-      const arr = [...prev];
-      [arr[index - 1], arr[index]] = [arr[index], arr[index - 1]];
-      return arr;
-    });
-  };
-
-  const handleMoveDown = (index) => {
-    if (index === questions.length - 1) return;
-    setQuestions((prev) => {
-      const arr = [...prev];
-      [arr[index + 1], arr[index]] = [arr[index], arr[index + 1]];
-      return arr;
-    });
-  };
+  useEffect(() => {
+    async function checkIsOwner() {
+      try {
+        // Gọi API
+        const response = await isExamOwner(examid);
+        // Giả sử API trả về { data: true/false }
+        setIsOwner(response.data);
+      } catch (error) {
+        console.error("Error checking exam ownership:", error);
+        // Mặc định không phải owner nếu gọi API thất bại
+        setIsOwner(false);
+      }
+    }
+    checkIsOwner();
+  });
 
   // --- Save exam ---
   const handleSave = async () => {
@@ -273,8 +221,6 @@ const ExamDetail = () => {
       })),
     };
 
-    console.log("Saving payload", JSON.stringify(payload, null, 2));
-
     try {
       await updateExamData(examid, payload);
       toast.success("Đã lưu thay đổi!");
@@ -305,19 +251,29 @@ const ExamDetail = () => {
   const handlePermissions = () => {
     setInviteModalVisible(true);
   };
-  const handleDeleteExam = () => {
-    Modal.confirm({
-      title: "Xác nhận xóa đề thi",
-      onOk: async () => {
-        try {
-          await delExam(examid);
-          toast.success("Đã xóa đề thi thành công!");
-          navigate("/exam");
-        } catch {
-          toast.error("Xóa đề thi thất bại!");
-        }
-      },
-    });
+
+  const handleDeleteExam = async () => {
+    try {
+      await isDeleteExam(examid);
+      Modal.confirm({
+        title: "Xác nhận xóa đề thi",
+        onOk: async () => {
+          try {
+            await delExam(examid);
+            toast.success("Đã xóa đề thi thành công!");
+            navigate("/exam");
+          } catch {
+            toast.error("Xóa đề thi thất bại!");
+          }
+        },
+      });
+    } catch (err) {
+      message.error("Bạn không có quyền xóa bài kiếm tra");
+    }
+  };
+
+  const handleListMembers = () => {
+    setListMemberForExamModalVisible(true);
   };
 
   const getMaxAnswerId = () => {
@@ -351,6 +307,15 @@ const ExamDetail = () => {
   const handleImportSuccess = (students) => {
     setImportedStudents(students);
     toast.success(`Đã import ${students.length} học sinh!`);
+  };
+
+  const handleAnalysisClick = async () => {
+    try {
+      await isAnalysis(examid);
+      handleStats();
+    } catch (err) {
+      message.error("Bạn không có quyền xem thống kê của bài thi này");
+    }
   };
 
   return (
@@ -396,7 +361,11 @@ const ExamDetail = () => {
             <Title level={4} style={{ margin: 0 }}>
               {examInfo.examName}
             </Title>
-            <Button icon={<EditOutlined />} onClick={handleEditName} />
+            <Button
+              icon={<EditOutlined />}
+              onClick={handleEditName}
+              disabled={!isowner}
+            />
           </Space>
 
           <Card size="small" title="Exam Info" style={{ marginBottom: 16 }}>
@@ -439,6 +408,7 @@ const ExamDetail = () => {
                 onChange={(e) => setExamCode(e.target.value)}
                 placeholder="Enter exam code"
                 style={{ marginTop: 8 }}
+                disabled={!isowner}
               />
             </div>
           </Card>
@@ -455,7 +425,17 @@ const ExamDetail = () => {
             <Button
               block
               icon={<PlusOutlined />}
-              onClick={() => setAddModalVisible(true)}
+              onClick={async () => {
+                try {
+                  // gọi API kiểm tra quyền Modify trên exam hiện tại
+                  await isModifyExam(Number(examid));
+                  // nếu OK mới mở modal
+                  setAddModalVisible(true);
+                } catch {
+                  // 403 → thông báo
+                  message.error("Bạn không có quyền thêm câu hỏi");
+                }
+              }}
             >
               Thêm câu hỏi
             </Button>
@@ -482,11 +462,23 @@ const ExamDetail = () => {
             >
               Tải mẫu
             </Button>
-            <Button block icon={<BarChartOutlined />} onClick={handleStats}>
+            <Button
+              block
+              icon={<BarChartOutlined />}
+              onClick={handleAnalysisClick}
+            >
               Thống kê
             </Button>
-            <Button block icon={<TeamOutlined />} onClick={handlePermissions}>
+            <Button
+              block
+              icon={<TeamOutlined />}
+              onClick={handlePermissions}
+              disabled={!isowner}
+            >
               Phân quyền
+            </Button>
+            <Button block icon={<GroupOutlined />} onClick={handleListMembers}>
+              Thành viên
             </Button>
             <Button
               block
@@ -528,6 +520,7 @@ const ExamDetail = () => {
                 ) : (
                   code.Questions.map((q, idx) => (
                     <QuestionCardV2
+                      examId={Number(examid)}
                       key={q.QuestionId}
                       question={q}
                       index={idx}
@@ -596,9 +589,9 @@ const ExamDetail = () => {
         onAdd={(newQuestion) => {
           const maxQid = getMaxQuestionId(examCodes);
           const maxAid = getMaxAnswerId(examCodes);
-        
+
           const newQid = maxQid + 1;
-        
+
           const newQuestionObj = {
             QuestionId: newQid,
             Content: newQuestion.Content,
@@ -609,14 +602,11 @@ const ExamDetail = () => {
               IsCorrect: ans.IsCorrect,
             })),
             ImageUrl: newQuestion.ImageUrl || "",
-            CorrectAnswerId:
-              newQuestion.Answers.find((a) => a.IsCorrect)
-                ? maxAid +
-                  newQuestion.Answers.findIndex((a) => a.IsCorrect) +
-                  1
-                : null,
+            CorrectAnswerId: newQuestion.Answers.find((a) => a.IsCorrect)
+              ? maxAid + newQuestion.Answers.findIndex((a) => a.IsCorrect) + 1
+              : null,
           };
-        
+
           // Gán vào examCodes[activeIndex]
           const updated = [...examCodes];
           updated[activeIndex].Questions.push(newQuestionObj);
@@ -652,7 +642,7 @@ const ExamDetail = () => {
         visible={inviteModalVisible}
         onClose={() => setInviteModalVisible(false)}
         examId={examid}
-        resourceType="exam"
+        resourceType="Exam"
       />
 
       <ListMemberModal
@@ -660,6 +650,12 @@ const ExamDetail = () => {
         onClose={() => setListMemberModalVisible(false)}
         bankId={examid}
         resourceType="exam"
+      />
+
+      <ListMemberForExam
+        visible={listMemberForExamModalVisible}
+        onClose={() => setListMemberForExamModalVisible(false)}
+        examId={examid}
       />
     </div>
   );

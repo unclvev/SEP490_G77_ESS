@@ -1,8 +1,19 @@
 import React, { useState } from "react";
-import { Modal, Input, Radio, Row, Col, Typography, Upload, Button, Space, Select } from "antd";
+import {
+  Modal,
+  Input,
+  Radio,
+  Row,
+  Col,
+  Typography,
+  Upload,
+  Button,
+  Space,
+  Select,
+} from "antd";
 import { EditorState, Modifier } from "draft-js";
 import { Editor } from "react-draft-wysiwyg";
-import { UploadOutlined } from "@ant-design/icons";
+import { UploadOutlined, DeleteOutlined } from "@ant-design/icons";
 import { BlockMath } from "react-katex";
 import "react-draft-wysiwyg/dist/react-draft-wysiwyg.css";
 import "katex/dist/katex.min.css";
@@ -29,15 +40,31 @@ const AddQuestionModal = ({ visible, onClose, onAdd }) => {
     setAnswers(updated);
   };
 
-  const handleCorrectChange = (index) => {
+  const latexPresets = [
+    { label: "Phân số", value: "\\frac{a}{b}" },
+    { label: "Căn bậc hai", value: "\\sqrt{x}" },
+    { label: "Tích phân", value: "\\int_a^b f(x)\\,dx" },
+    { label: "Đạo hàm", value: "\\frac{d}{dx}f(x)" },
+    { label: "Giới hạn", value: "\\lim_{x\\to0}\\frac{\\sin x}{x}" },
+    { label: "Tổng sigma", value: "\\sum_{i=1}^n i" },
+    {
+      label: "Ma trận 2×2",
+      value: "\\begin{pmatrix}a & b\\\\ c & d\\end{pmatrix}",
+    },
+    { label: "Mũ", value: "x^n" },
+    { label: "Góc", value: "\\angle ABC" },
+    { label: "Hàm lượng giác", value: "\\sin\\theta + \\cos\\theta" },
+  ];
+
+  const handleCorrectChange = (value) => {
     const updated = answers.map((ans, i) => ({
       ...ans,
-      IsCorrect: i === index,
+      IsCorrect: i === value,
     }));
     setAnswers(updated);
   };
 
-  const insertMathFormula = (target = "question") => {
+  const insertMathFormula = (target) => {
     if (!mathExpression.trim()) return;
     if (target === "question") {
       const contentState = editorState.getCurrentContent();
@@ -47,13 +74,23 @@ const AddQuestionModal = ({ visible, onClose, onAdd }) => {
         selection,
         `[MATH:${mathExpression}]`
       );
-      const newState = EditorState.push(editorState, newContent, "insert-characters");
-      setEditorState(EditorState.forceSelection(newState, newContent.getSelectionAfter()));
-    } else if (editingAnswerIndex !== null) {
-      const updated = [...answers];
-      updated[editingAnswerIndex].Content += ` [MATH:${mathExpression}]`;
-      setAnswers(updated);
+      const newState = EditorState.push(
+        editorState,
+        newContent,
+        "insert-characters"
+      );
+      setEditorState(
+        EditorState.forceSelection(newState, newContent.getSelectionAfter())
+      );
+    } else {
+      // chỗ này target = answer, editingAnswerIndex đã ghi nhận khi chọn
+      setAnswers((prev) => {
+        const arr = [...prev];
+        arr[editingAnswerIndex].Content += ` [MATH:${mathExpression}]`;
+        return arr;
+      });
     }
+    // reset
     setMathExpression("");
     setShowMathInput(false);
     setEditingAnswerIndex(null);
@@ -63,13 +100,12 @@ const AddQuestionModal = ({ visible, onClose, onAdd }) => {
     const rawText = editorState.getCurrentContent().getPlainText();
     if (!rawText.trim()) return;
 
-    const content = rawText;
     const validAnswers = answers.filter((a) => a.Content.trim() !== "");
-    const correct = validAnswers.find((a) => a.IsCorrect);
+    const correctIndex = validAnswers.findIndex((a) => a.IsCorrect);
 
     const newQuestion = {
       QuestionId: Date.now(),
-      Content: content,
+      Content: rawText,
       Type: "Trắc nghiệm",
       Answers: validAnswers.map((a, i) => ({
         AnswerId: Date.now() + i + 1,
@@ -77,12 +113,14 @@ const AddQuestionModal = ({ visible, onClose, onAdd }) => {
         IsCorrect: a.IsCorrect,
       })),
       ImageUrl: imageUrl,
-      CorrectAnswerId: correct ? Date.now() + validAnswers.findIndex((a) => a.IsCorrect) + 1 : null,
+      CorrectAnswerId:
+        correctIndex >= 0 ? validAnswers[correctIndex].AnswerId : null,
     };
 
     onAdd(newQuestion);
     onClose();
 
+    // Reset modal
     setEditorState(EditorState.createEmpty());
     setAnswers([
       { Content: "", IsCorrect: false },
@@ -99,21 +137,21 @@ const AddQuestionModal = ({ visible, onClose, onAdd }) => {
     const img = new Image();
     img.src = URL.createObjectURL(file);
 
-    img.onload = async () => {
+    img.onload = () => {
       if (img.width > 800 || img.height > 800) {
         return alert("Ảnh phải nhỏ hơn 800x800 pixels");
       }
       if (!isImage || !isLt2M) {
-        alert("Ảnh phải nhỏ hơn 2MB và đúng định dạng ảnh!");
-        return;
+        return alert("Ảnh phải nhỏ hơn 2MB và đúng định dạng ảnh!");
       }
       const reader = new FileReader();
       reader.readAsDataURL(file);
-      reader.onload = () => {
-        setImageUrl(reader.result);
-      };
+      reader.onload = () => setImageUrl(reader.result);
     };
   };
+
+  // Derive selected value for Radio.Group
+  const selectedCorrection = answers.findIndex((a) => a.IsCorrect);
 
   return (
     <Modal
@@ -125,63 +163,95 @@ const AddQuestionModal = ({ visible, onClose, onAdd }) => {
       okText="Thêm"
       cancelText="Hủy"
     >
-      <Button onClick={() => setShowMathInput(!showMathInput)} style={{ marginBottom: 12 }}>
-        {showMathInput ? "Ẩn khung thêm công thức" : "Thêm công thức toán học"}
-      </Button>
+      <>
+        <Button
+          type="dashed"
+          onClick={() => setShowMathInput((v) => !v)}
+          style={{ marginBottom: 12 }}
+        >
+          {showMathInput ? "Ẩn khung công thức" : "Thêm công thức toán"}
+        </Button>
 
-      {showMathInput && (
-        <div style={{ marginBottom: 16, border: '1px solid #ccc', padding: 12, borderRadius: 6 }}>
-          <Text strong>Chọn công thức mẫu:</Text>
-          <Space wrap style={{ marginTop: 8, marginBottom: 8 }}>
-            {["\\frac{a}{b}", "\\sqrt{x}", "\\int_{a}^{b} f(x) dx", "\\frac{d}{dx}", "x^n", "\\lim_{x \\to 0}", "\\sum_{i=1}^n i", "\\begin{bmatrix} a & b \\ c & d \\end{bmatrix}", "\\pi", "\\angle ABC"].map((latex, idx) => (
-              <Button key={idx} size="small" onClick={() => setMathExpression(latex)}>
-                {latex}
-              </Button>
-            ))}
-          </Space>
-
-          <Input
-            value={mathExpression}
-            onChange={(e) => setMathExpression(e.target.value)}
-            placeholder="Hoặc nhập công thức LaTeX tùy chỉnh"
-            style={{ marginBottom: 8 }}
-          />
-
-          <Select
-            style={{ width: 200, marginBottom: 8 }}
-            placeholder="Chọn vị trí chèn"
-            value={editingAnswerIndex === null ? "question" : `answer-${editingAnswerIndex}`}
-            onChange={(val) => {
-              if (val === "question") setEditingAnswerIndex(null);
-              else setEditingAnswerIndex(parseInt(val.replace("answer-", ""), 10));
+        {showMathInput && (
+          <div
+            style={{
+              border: "1px solid #ccc",
+              padding: 16,
+              borderRadius: 6,
+              marginBottom: 16,
             }}
           >
-            <Select.Option value="question">Chèn vào câu hỏi</Select.Option>
-            {answers.map((_, idx) => (
-              <Select.Option key={idx} value={`answer-${idx}`}>
-                Đáp án {String.fromCharCode(65 + idx)}
-              </Select.Option>
-            ))}
-          </Select>
+            <Text strong>Chọn công thức mẫu:</Text>
+            <Space wrap style={{ margin: "8px 0" }}>
+              {latexPresets.map((p, i) => (
+                <Button
+                  key={i}
+                  size="small"
+                  onClick={() => setMathExpression(p.value)}
+                >
+                  {p.label}
+                </Button>
+              ))}
+            </Space>
 
-          {mathExpression && (
-            <div style={{ marginBottom: 8 }}>
-              <BlockMath>{mathExpression}</BlockMath>
-            </div>
-          )}
+            <Input
+              value={mathExpression}
+              onChange={(e) => setMathExpression(e.target.value)}
+              placeholder="Hoặc nhập LaTeX tự do"
+              style={{ marginBottom: 12 }}
+            />
 
-          <Button type="primary" onClick={() => insertMathFormula(editingAnswerIndex !== null ? "answer" : "question")}>
-            Chèn công thức
-          </Button>
-        </div>
-      )}
+            <Select
+              style={{ width: 200, marginRight: 12 }}
+              placeholder="Chèn vào"
+              value={
+                editingAnswerIndex == null
+                  ? "question"
+                  : `answer-${editingAnswerIndex}`
+              }
+              onChange={(val) => {
+                if (val === "question") setEditingAnswerIndex(null);
+                else setEditingAnswerIndex(+val.split("-")[1]);
+              }}
+            >
+              <Select.Option value="question">Câu hỏi</Select.Option>
+              {answers.map((_, idx) => (
+                <Select.Option key={idx} value={`answer-${idx}`}>
+                  Đáp án {String.fromCharCode(65 + idx)}
+                </Select.Option>
+              ))}
+            </Select>
+
+            {mathExpression && (
+              <div style={{ marginBottom: 12 }}>
+                <BlockMath>{mathExpression}</BlockMath>
+              </div>
+            )}
+
+            <Button
+              type="primary"
+              onClick={() =>
+                insertMathFormula(
+                  editingAnswerIndex == null ? "question" : "answer"
+                )
+              }
+            >
+              Chèn công thức
+            </Button>
+          </div>
+        )}
+      </>
 
       <Editor
         editorState={editorState}
         onEditorStateChange={setEditorState}
         wrapperClassName="demo-wrapper"
         editorClassName="demo-editor"
-        editorStyle={{ minHeight: "200px", border: "1px solid #ddd", padding: "4px" }}
+        editorStyle={{
+          minHeight: "200px",
+          border: "1px solid #ddd",
+          padding: "4px",
+        }}
       />
 
       <div style={{ marginTop: 12 }}>Ảnh minh họa:</div>
@@ -195,18 +265,33 @@ const AddQuestionModal = ({ visible, onClose, onAdd }) => {
         </Button>
       </Upload>
       {imageUrl && (
-        <img src={imageUrl} alt="preview" style={{ maxWidth: "100%", marginBottom: 12 }} />
+        <Space align="center" style={{ marginBottom: 12 }}>
+          <img
+            src={imageUrl}
+            alt="preview"
+            style={{ maxWidth: "100%", maxHeight: 200 }}
+          />
+          <Button
+            type="text"
+            icon={<DeleteOutlined />}
+            onClick={() => setImageUrl("")}
+            danger
+          >
+            Xóa ảnh
+          </Button>
+        </Space>
       )}
 
       <div style={{ marginTop: 12 }}>Đáp án:</div>
-      <Radio.Group style={{ width: "100%" }}>
+      <Radio.Group
+        style={{ width: "100%" }}
+        onChange={(e) => handleCorrectChange(e.target.value)}
+        value={selectedCorrection}
+      >
         {answers.map((ans, idx) => (
           <Row key={idx} gutter={8} style={{ marginBottom: 8 }}>
             <Col span={2}>
-              <Radio
-                checked={ans.IsCorrect}
-                onChange={() => handleCorrectChange(idx)}
-              />
+              <Radio value={idx} />
             </Col>
             <Col span={22}>
               <Input

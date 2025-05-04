@@ -94,8 +94,21 @@ const QuestionCard = ({ question, index, onQuestionChange, onAnswerChange, onCor
           </Space>
         </Space>
 
+        {/* Nội dung câu hỏi */}
         <div style={{ marginBottom: 12 }}>{renderContent(question.Content)}</div>
 
+        {/* Hiển thị ảnh câu hỏi nếu có */}
+        {question.ImageUrl && (
+          <div style={{ textAlign: 'center', margin: '12px 0' }}>
+            <img
+              src={question.ImageUrl}
+              alt={`question-${question.QuestionId}`}
+              style={{ maxWidth: '100%', maxHeight: 250, borderRadius: 4, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
+            />
+          </div>
+        )}
+
+        {/* Danh sách đáp án */}
         <div style={{ marginTop: 8 }}>
           <Space direction='vertical' style={{ width: '100%' }}>
             {question.Answers.map((ans, i) => {
@@ -105,7 +118,6 @@ const QuestionCard = ({ question, index, onQuestionChange, onAnswerChange, onCor
                   <Text strong style={isCorrect ? { color: 'green' } : {}}>{`${String.fromCharCode(65 + i)}.`}</Text>
                   {isCorrect && <CheckOutlined style={{ color: 'green', marginLeft: 4 }} />}
                   <div>{renderContent(ans.Content)}</div>
-                  {/* <Button type='text' icon={<DeleteOutlined />} onClick={() => onAnswerDelete(index, ans.AnswerId)} /> */}
                 </Space>
               );
             })}
@@ -113,6 +125,7 @@ const QuestionCard = ({ question, index, onQuestionChange, onAnswerChange, onCor
         </div>
       </Card>
 
+      {/* Modal chỉnh sửa câu hỏi và đáp án */}
       <Modal title={`Chỉnh sửa Câu ${index + 1}`} open={modalVisible} onOk={handleSaveModal} onCancel={() => setModalVisible(false)} width={800}>
         <Select placeholder='Chèn công thức vào câu hỏi' onChange={insertKatexToQuestion} style={{ marginBottom: 12, width: 240 }}>
           {latexPresets.map(p => <Option key={p.value} value={p.value}>{p.label}</Option>)}
