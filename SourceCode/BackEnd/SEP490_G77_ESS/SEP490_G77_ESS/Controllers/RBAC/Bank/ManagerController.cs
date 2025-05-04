@@ -220,6 +220,7 @@ namespace SEP490_G77_ESS.Controllers.RBAC.Bank
             return Ok(invitedUsers);
         }
 
+
         [HttpPut("UpdateRole/{bankId}/{userId}")]
         public async Task<IActionResult> UpdateRole(long bankId, long userId, [FromBody] UpdateRoleDTO dto)
         {
@@ -258,34 +259,37 @@ namespace SEP490_G77_ESS.Controllers.RBAC.Bank
         public async Task<IActionResult> RemoveUser(long bankId, long userId)
         {
             var claimAccId = User.FindFirst("AccId")?.Value;
-
             long currentUserId = long.Parse(claimAccId);
 
+            // Lấy tất cả quyền truy cập của user với bankId này
+            var resourceAccesses = await _context.ResourceAccesses
+                .Where(ra => ra.ResourceId == bankId && ra.Accid == userId)
+                .ToListAsync();
 
-            // Kiểm tra xem người dùng có trong ngân hàng này hay không
-            var resourceAccess = await _context.ResourceAccesses
-                .FirstOrDefaultAsync(ra => ra.ResourceId == bankId && ra.Accid == userId);
-
-            if (resourceAccess == null)
+            if (resourceAccesses == null || resourceAccesses.Count == 0)
             {
                 return NotFound("Người dùng không tồn tại trong ngân hàng này.");
             }
-            var roleAccess = await _context.RoleAccesses.FirstOrDefaultAsync(ra => ra.Roleid == resourceAccess.RoleId);
-            if (roleAccess != null)
-            {
-                // Xóa chức danh (role) của người dùng khỏi bảng RoleAccesses
-                _context.RoleAccesses.Remove(roleAccess);
-            }
 
-            // Xóa quyền truy cập của người dùng khỏi ngân hàng
-            _context.ResourceAccesses.Remove(resourceAccess);
+            // Lấy tất cả roleId liên quan
+            var roleIds = resourceAccesses.Select(ra => ra.RoleId).ToList();
+
+            // Lấy tất cả RoleAccesses liên quan
+            var roleAccesses = await _context.RoleAccesses
+                .Where(ra => roleIds.Contains(ra.Roleid))
+                .ToListAsync();
+
+            // Xóa tất cả RoleAccesses liên quan
+            _context.RoleAccesses.RemoveRange(roleAccesses);
+
+            // Xóa tất cả ResourceAccesses liên quan
+            _context.ResourceAccesses.RemoveRange(resourceAccesses);
 
             // Lưu các thay đổi vào cơ sở dữ liệu
             await _context.SaveChangesAsync();
 
-            return Ok("Thành viên đã được xóa.");
+            return Ok("Thành viên đã được xóa khỏi tất cả quyền truy cập.");
         }
-
 
 
 

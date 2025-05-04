@@ -15,7 +15,10 @@ export const searchUserToInvite = (query, resourceType, resourceId) =>
 export const inviteUser = async (payload) => Http.post("/Manager/InviteUser", payload)
   .then((response) => response.data)
   .catch((error) => {
-    throw new Error(error.response?.data?.message || "Invite user failed");
+    if (error.response?.status === 409) {
+      throw new Error("Người dùng đã được mời hoặc đã là thành viên của đề thi này.");
+    }
+    throw new Error(error.response?.data?.message || "Không thể mời người dùng. Vui lòng thử lại sau.");
   });
   
   export const getMembers = (bankId, resourceType) =>

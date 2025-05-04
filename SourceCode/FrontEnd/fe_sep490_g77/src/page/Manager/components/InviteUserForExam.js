@@ -18,6 +18,7 @@ const InviteUserForExam = ({ visible, onClose, examId }) => {
   const [options, setOptions] = useState([]);
   const [loadingSearch, setLoadingSearch] = useState(false);
   const [selectedResources, setSelectedResources] = useState([]);
+  const [loadingInvite, setLoadingInvite] = useState(false);
 
   const token = useSelector((state) => state.token);
   let accid = null;
@@ -83,23 +84,43 @@ const InviteUserForExam = ({ visible, onClose, examId }) => {
       return;
     }
 
+    setLoadingInvite(true);
+
     try {
-      for (const resourceType of selectedResources) {
-        const payload = {
+      // Xử lý Analysis trước nếu được chọn
+      if (selectedResources.includes('Analysis')) {
+        const analysisPayload = {
           resource: {
-            ResourceType: resourceType,
+            ResourceType: 'Analysis',
             ResourceId: examId,
             accid: values.accid
           },
           accessRole: {
             RoleName: values.roleName,
-            CanModify: resourceType === 'Exam' ? values.canModify : false,
+            CanModify: false,
             CanRead: true,
-            CanDelete: resourceType === 'Exam' ? values.canDelete : false,
+            CanDelete: false,
           },
         };
+        await inviteUser(analysisPayload);
+      }
 
-        await inviteUser(payload);
+      // Sau đó xử lý Exam nếu được chọn
+      if (selectedResources.includes('Exam')) {
+        const examPayload = {
+          resource: {
+            ResourceType: 'Exam',
+            ResourceId: examId,
+            accid: values.accid
+          },
+          accessRole: {
+            RoleName: values.roleName,
+            CanModify: values.canModify,
+            CanRead: true,
+            CanDelete: values.canDelete,
+          },
+        };
+        await inviteUser(examPayload);
       }
 
       message.success("Người dùng đã được mời thành công.");
@@ -109,6 +130,8 @@ const InviteUserForExam = ({ visible, onClose, examId }) => {
       const errorText = await error?.response?.text?.();
       message.error(errorText || "Quá trình mời người dùng thất bại.");
       console.error("Error details:", error);
+    } finally {
+      setLoadingInvite(false);
     }
   };
 
@@ -256,6 +279,8 @@ const InviteUserForExam = ({ visible, onClose, examId }) => {
             type="primary"
             htmlType="submit"
             className="bg-blue-600 hover:bg-blue-700"
+            loading={loadingInvite}
+            disabled={loadingInvite}
           >
             Mời Người Dùng
           </Button>
