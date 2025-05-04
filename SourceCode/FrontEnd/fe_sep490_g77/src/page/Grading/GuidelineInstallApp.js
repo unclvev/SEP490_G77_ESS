@@ -28,11 +28,6 @@ const Guideline = () => {
                 2. Video Hướng Dẫn
               </a>
             </li>
-            <li className="px-3 py-1 bg-blue-50 rounded-full">
-              <a href="#support" className="text-blue-600 hover:underline">
-                3. Hỗ Trợ
-              </a>
-            </li>
           </ul>
         </nav>
       </header>
@@ -65,20 +60,6 @@ const Guideline = () => {
             Trình duyệt của bạn không hỗ trợ video.
           </video>
         </div>
-      </section>
-
-      {/* 3. Hỗ trợ */}
-      <section id="support" className="bg-white p-4 rounded-lg shadow">
-        <h2 className="text-2xl font-semibold text-gray-800 mb-3">
-          3. Hướng dẫn tải App
-        </h2>
-        <p className="text-base text-gray-700">
-          Nếu gặp khó khăn trong quá trình cài đặt hoặc sử dụng, vui lòng liên hệ:
-        </p>
-        <ul className="mt-2 text-base text-gray-700 space-y-1">
-          <li>Email: <a href="mailto:essnotifycation@gmail.com" className="text-blue-600 hover:underline">essnotifycation@gmail.com</a></li>
-          <li>Hotline: <a href="tel:0818165923" className="text-blue-600 hover:underline">0818 165 923</a></li>
-        </ul>
       </section>
     </div>
   );
